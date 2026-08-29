@@ -1,0 +1,2 @@
+# aitrad
+Trading Intelligence Terminal
