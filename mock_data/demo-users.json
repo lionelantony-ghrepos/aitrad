@@ -1,0 +1,95 @@
+{
+ "users": [
+  {
+   "email": "demo.trader@meridian.test",
+   "password": "Meridian!Demo1",
+   "role": "trader",
+   "display_name": "Dana Trader",
+   "experience_level": "intermediate"
+  },
+  {
+   "email": "demo.novice@meridian.test",
+   "password": "Meridian!Demo1",
+   "role": "trader",
+   "display_name": "Norm Novice",
+   "experience_level": "novice"
+  },
+  {
+   "email": "demo.admin@meridian.test",
+   "password": "Meridian!Demo1",
+   "role": "admin",
+   "display_name": "Ada Admin",
+   "experience_level": "advanced"
+  },
+  {
+   "email": "demo.compliance@meridian.test",
+   "password": "Meridian!Demo1",
+   "role": "compliance",
+   "display_name": "Cole Compliance",
+   "experience_level": "advanced"
+  }
+ ],
+ "portfolios": {
+  "demo.trader@meridian.test": {
+   "cash": 34550.0,
+   "positions": [
+    {
+     "symbol": "AAPL",
+     "qty": 60,
+     "avg_cost": 195.4
+    },
+    {
+     "symbol": "NVDA",
+     "qty": 80,
+     "avg_cost": 132.1
+    },
+    {
+     "symbol": "MSFT",
+     "qty": 25,
+     "avg_cost": 441.0
+    },
+    {
+     "symbol": "JPM",
+     "qty": 40,
+     "avg_cost": 265.25
+    },
+    {
+     "symbol": "XOM",
+     "qty": 90,
+     "avg_cost": 109.8
+    },
+    {
+     "symbol": "SPY",
+     "qty": 15,
+     "avg_cost": 588.3
+    }
+   ],
+   "watchlists": {
+    "Core Tech": [
+     "AAPL",
+     "MSFT",
+     "NVDA",
+     "AMD",
+     "AVGO",
+     "TSM"
+    ],
+    "AI & Cloud": [
+     "PLTR",
+     "SNOW",
+     "DDOG",
+     "NET",
+     "CRWD",
+     "NOW"
+    ],
+    "Income": [
+     "KO",
+     "PG",
+     "JNJ",
+     "VZ",
+     "DUK",
+     "SO"
+    ]
+   }
+  }
+ }
+}

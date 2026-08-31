@@ -25,8 +25,8 @@ This clone currently holds **spec + seed JSON only**. Application code (`apps/`,
 | Path | Role |
 |---|---|
 | `docs/` | Canonical product, architecture, PRD, tests, rules, seed, agent, user docs |
-| `data_mock/` | Seed JSON (instruments, fundamentals, news templates, demo users). Specs also call this `mock-data/` — keep generators in `@meridian/mock-data`; do not fork a second universe |
-| `.cursor/rules/meridian.mdc` | Always-on build rules |
+| `mock_data/` | Seed JSON (instruments, fundamentals, news templates, demo users). Specs also call this `mock-data/` — keep generators in `@meridian/mock-data`; do not fork a second universe |
+| `.cursor/rules/aitrad.mdc` | Always-on build rules |
 
 ## Stack (normative — doc 02)
 
@@ -55,7 +55,7 @@ InsForge access only through `apps/web/lib/api` (repository layer) or shared fun
 
 ## How to work (doc 07)
 
-1. Human: InsForge project + InsForge MCP in Cursor; copy rules from `.cursor/rules/meridian.mdc`.
+1. Human: InsForge project + InsForge MCP in Cursor; copy rules from `.cursor/rules/aitrad.mdc`.
 2. Build **strictly** `docs/03` PBI-001 → PBI-031. One PBI per chat session.
 3. Prepend the PRD prompt preamble to every PBI prompt.
 4. Tests named in `docs/04` are the source of truth. Tick Status boxes in the **same commit** as the passing tests.

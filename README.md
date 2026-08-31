@@ -13,8 +13,8 @@ This GitHub repo is named `aitrad`; the product name in all specs is **Meridian*
 | Artifact | Location |
 |---|---|
 | Product, architecture, PRD, tests, rules | [`docs/`](docs/00-README.md) |
-| Agent / Cursor profile | [`AGENTS.md`](AGENTS.md), [`.cursor/rules/meridian.mdc`](.cursor/rules/meridian.mdc) |
-| Seed JSON | [`data_mock/`](data_mock/) (150 instruments, fundamentals, news templates, demo users) |
+| Agent / Cursor profile | [`AGENTS.md`](AGENTS.md), [`.cursor/rules/aitrad.mdc`](.cursor/rules/aitrad.mdc) |
+| Seed JSON | [`mock_data/`](mock_data/) (150 instruments, fundamentals, news templates, demo users) |
 
 ## What v1 includes
 
@@ -50,7 +50,7 @@ packages/mock-data/          # generators + seed scripts
 insforge/functions/          # Deno edge functions
 insforge/migrations/         # append-only SQL
 docs/                        # this documentation set
-data_mock/                   # static seed JSON (checked in)
+mock_data/                   # static seed JSON (checked in)
 ```
 
 InsForge is isolated behind a repository layer so migrations stay portable SQL if the backend is swapped later.
@@ -95,7 +95,7 @@ Until PBI-001 lands there is no `pnpm install` / `pnpm dev` at the repo root.
 
 ## Demo users (after seed)
 
-Defined in `data_mock/demo-users.json` and doc 06. After `scripts/seed-all.ts` exists and has been run: trader / admin / compliance accounts use password `Meridian!Demo1`. **Paper accounts only.**
+Defined in `mock_data/demo-users.json` and doc 06. After `scripts/seed-all.ts` exists and has been run: trader / admin / compliance accounts use password `Meridian!Demo1`. **Paper accounts only.**
 
 ## Compliance posture
 

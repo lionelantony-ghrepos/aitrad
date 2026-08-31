@@ -1,0 +1,197 @@
+{
+ "earnings": [
+  {
+   "headline": "{company} beats Q{q} estimates as {segment} revenue jumps {pct}%",
+   "sentiment": [
+    0.4,
+    0.9
+   ]
+  },
+  {
+   "headline": "{company} misses on Q{q} earnings; guidance cut sends shares lower",
+   "sentiment": [
+    -0.9,
+    -0.4
+   ]
+  },
+  {
+   "headline": "{company} reports in-line Q{q} results, maintains full-year outlook",
+   "sentiment": [
+    -0.1,
+    0.2
+   ]
+  }
+ ],
+ "analyst": [
+  {
+   "headline": "{bank} upgrades {company} to Buy, lifts target to ${target}",
+   "sentiment": [
+    0.3,
+    0.8
+   ]
+  },
+  {
+   "headline": "{bank} downgrades {company} on {concern} concerns",
+   "sentiment": [
+    -0.8,
+    -0.3
+   ]
+  },
+  {
+   "headline": "{bank} initiates {company} at Neutral, sees balanced risk/reward",
+   "sentiment": [
+    -0.1,
+    0.15
+   ]
+  }
+ ],
+ "product": [
+  {
+   "headline": "{company} unveils {product}, targeting the {market} market",
+   "sentiment": [
+    0.2,
+    0.7
+   ]
+  },
+  {
+   "headline": "{company} delays {product} launch to address quality issues",
+   "sentiment": [
+    -0.7,
+    -0.2
+   ]
+  }
+ ],
+ "macro": [
+  {
+   "headline": "Fed signals {stance} path; {sector} stocks {direction}",
+   "sentiment": [
+    -0.5,
+    0.5
+   ]
+  },
+  {
+   "headline": "{sector} sector rallies as Treasury yields {yielddir}",
+   "sentiment": [
+    0.1,
+    0.6
+   ]
+  },
+  {
+   "headline": "Inflation print comes in {inflation}; futures {futdir}",
+   "sentiment": [
+    -0.6,
+    0.6
+   ]
+  }
+ ],
+ "regulatory": [
+  {
+   "headline": "{company} faces {agency} probe over {issue}",
+   "sentiment": [
+    -0.9,
+    -0.4
+   ]
+  },
+  {
+   "headline": "{company} settles {agency} case; overhang removed",
+   "sentiment": [
+    0.1,
+    0.5
+   ]
+  }
+ ],
+ "mna": [
+  {
+   "headline": "{company} to acquire {targetco} in ${dealsize}B deal",
+   "sentiment": [
+    -0.2,
+    0.6
+   ]
+  },
+  {
+   "headline": "Report: {company} explores strategic alternatives for {segment} unit",
+   "sentiment": [
+    0.0,
+    0.4
+   ]
+  }
+ ],
+ "fills": {
+  "bank": [
+   "Goldman Sachs",
+   "Morgan Stanley",
+   "JPMorgan",
+   "Barclays",
+   "UBS",
+   "Jefferies",
+   "Piper Sandler"
+  ],
+  "concern": [
+   "valuation",
+   "margin compression",
+   "demand softness",
+   "competitive pressure",
+   "execution"
+  ],
+  "segment": [
+   "cloud",
+   "AI",
+   "consumer",
+   "enterprise",
+   "international",
+   "services"
+  ],
+  "product": [
+   "next-gen AI platform",
+   "flagship device",
+   "autonomous suite",
+   "subscription tier"
+  ],
+  "market": [
+   "enterprise AI",
+   "consumer robotics",
+   "digital health",
+   "edge computing"
+  ],
+  "stance": [
+   "a slower easing",
+   "a data-dependent",
+   "an extended hold"
+  ],
+  "direction": [
+   "climb",
+   "slip",
+   "churn sideways"
+  ],
+  "yielddir": [
+   "ease",
+   "spike"
+  ],
+  "inflation": [
+   "cooler than expected",
+   "hotter than expected",
+   "in line"
+  ],
+  "futdir": [
+   "rise",
+   "fall",
+   "hold steady"
+  ],
+  "agency": [
+   "SEC",
+   "FTC",
+   "DOJ",
+   "EU Commission"
+  ],
+  "issue": [
+   "disclosure practices",
+   "market dominance",
+   "data handling"
+  ],
+  "targetco": [
+   "a private AI startup",
+   "a logistics platform",
+   "a fintech challenger"
+  ]
+ }
+}
