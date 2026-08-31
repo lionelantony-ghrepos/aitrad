@@ -1,0 +1,3022 @@
+[
+ {
+  "symbol": "AAPL",
+  "metrics": {
+   "pe": 44.9,
+   "eps_ttm": 4.72,
+   "revenue_b": 260.7,
+   "revenue_growth_pct": 12.5,
+   "gross_margin_pct": 51.1,
+   "net_margin_pct": 6.0,
+   "dividend_yield": 1.37,
+   "shares_out_m": 4789,
+   "week52_low": 131.24,
+   "week52_high": 243.61,
+   "analyst": {
+    "buy": 7,
+    "hold": 13,
+    "sell": 5
+   },
+   "next_earnings": "2026-07-08"
+  }
+ },
+ {
+  "symbol": "MSFT",
+  "metrics": {
+   "pe": 23.6,
+   "eps_ttm": 19.83,
+   "revenue_b": 14.5,
+   "revenue_growth_pct": 8.2,
+   "gross_margin_pct": 50.8,
+   "net_margin_pct": 11.2,
+   "dividend_yield": 2.28,
+   "shares_out_m": 3986,
+   "week52_low": 333.11,
+   "week52_high": 643.74,
+   "analyst": {
+    "buy": 23,
+    "hold": 11,
+    "sell": 3
+   },
+   "next_earnings": "2026-07-26"
+  }
+ },
+ {
+  "symbol": "NVDA",
+  "metrics": {
+   "pe": 32.9,
+   "eps_ttm": 4.8,
+   "revenue_b": 164.0,
+   "revenue_growth_pct": -1.2,
+   "gross_margin_pct": 59.5,
+   "net_margin_pct": 13.7,
+   "dividend_yield": 0,
+   "shares_out_m": 623,
+   "week52_low": 117.87,
+   "week52_high": 211.84,
+   "analyst": {
+    "buy": 6,
+    "hold": 8,
+    "sell": 5
+   },
+   "next_earnings": "2026-08-26"
+  }
+ },
+ {
+  "symbol": "GOOGL",
+  "metrics": {
+   "pe": 29.5,
+   "eps_ttm": 6.17,
+   "revenue_b": 101.0,
+   "revenue_growth_pct": 2.6,
+   "gross_margin_pct": 46.9,
+   "net_margin_pct": 15.9,
+   "dividend_yield": 2.47,
+   "shares_out_m": 2373,
+   "week52_low": 113.74,
+   "week52_high": 266.72,
+   "analyst": {
+    "buy": 19,
+    "hold": 14,
+    "sell": 6
+   },
+   "next_earnings": "2026-09-04"
+  }
+ },
+ {
+  "symbol": "AMZN",
+  "metrics": {
+   "pe": 16.0,
+   "eps_ttm": 13.62,
+   "revenue_b": 399.7,
+   "revenue_growth_pct": 28.4,
+   "gross_margin_pct": 78.1,
+   "net_margin_pct": 32.6,
+   "dividend_yield": 1.62,
+   "shares_out_m": 3988,
+   "week52_low": 133.88,
+   "week52_high": 268.24,
+   "analyst": {
+    "buy": 6,
+    "hold": 4,
+    "sell": 3
+   },
+   "next_earnings": "2026-07-13"
+  }
+ },
+ {
+  "symbol": "META",
+  "metrics": {
+   "pe": 18.8,
+   "eps_ttm": 37.34,
+   "revenue_b": 314.1,
+   "revenue_growth_pct": 13.2,
+   "gross_margin_pct": 45.4,
+   "net_margin_pct": 33.6,
+   "dividend_yield": 0.61,
+   "shares_out_m": 7964,
+   "week52_low": 503.14,
+   "week52_high": 964.05,
+   "analyst": {
+    "buy": 9,
+    "hold": 5,
+    "sell": 2
+   },
+   "next_earnings": "2026-07-02"
+  }
+ },
+ {
+  "symbol": "TSLA",
+  "metrics": {
+   "pe": 26.6,
+   "eps_ttm": 11.92,
+   "revenue_b": 217.8,
+   "revenue_growth_pct": 24.9,
+   "gross_margin_pct": 23.4,
+   "net_margin_pct": 21.3,
+   "dividend_yield": 0,
+   "shares_out_m": 1428,
+   "week52_low": 265.72,
+   "week52_high": 344.28,
+   "analyst": {
+    "buy": 10,
+    "hold": 3,
+    "sell": 4
+   },
+   "next_earnings": "2026-07-22"
+  }
+ },
+ {
+  "symbol": "AVGO",
+  "metrics": {
+   "pe": 41.8,
+   "eps_ttm": 6.32,
+   "revenue_b": 162.7,
+   "revenue_growth_pct": 32.7,
+   "gross_margin_pct": 54.2,
+   "net_margin_pct": 21.1,
+   "dividend_yield": 1.16,
+   "shares_out_m": 510,
+   "week52_low": 151.69,
+   "week52_high": 355.3,
+   "analyst": {
+    "buy": 23,
+    "hold": 10,
+    "sell": 2
+   },
+   "next_earnings": "2026-08-07"
+  }
+ },
+ {
+  "symbol": "BRK.B",
+  "metrics": {
+   "pe": 15.0,
+   "eps_ttm": 32.33,
+   "revenue_b": 127.0,
+   "revenue_growth_pct": 5.6,
+   "gross_margin_pct": 27.9,
+   "net_margin_pct": 23.3,
+   "dividend_yield": 0,
+   "shares_out_m": 7499,
+   "week52_low": 268.11,
+   "week52_high": 644.82,
+   "analyst": {
+    "buy": 23,
+    "hold": 3,
+    "sell": 0
+   },
+   "next_earnings": "2026-09-07"
+  }
+ },
+ {
+  "symbol": "JPM",
+  "metrics": {
+   "pe": 13.6,
+   "eps_ttm": 21.25,
+   "revenue_b": 54.7,
+   "revenue_growth_pct": 9.0,
+   "gross_margin_pct": 24.1,
+   "net_margin_pct": 10.1,
+   "dividend_yield": 1.93,
+   "shares_out_m": 2423,
+   "week52_low": 196.94,
+   "week52_high": 374.1,
+   "analyst": {
+    "buy": 14,
+    "hold": 11,
+    "sell": 6
+   },
+   "next_earnings": "2026-09-17"
+  }
+ },
+ {
+  "symbol": "V",
+  "metrics": {
+   "pe": 9.1,
+   "eps_ttm": 39.01,
+   "revenue_b": 327.2,
+   "revenue_growth_pct": 7.0,
+   "gross_margin_pct": 59.8,
+   "net_margin_pct": 33.0,
+   "dividend_yield": 1.6,
+   "shares_out_m": 1035,
+   "week52_low": 254.17,
+   "week52_high": 416.26,
+   "analyst": {
+    "buy": 24,
+    "hold": 5,
+    "sell": 5
+   },
+   "next_earnings": "2026-08-07"
+  }
+ },
+ {
+  "symbol": "MA",
+  "metrics": {
+   "pe": 15.2,
+   "eps_ttm": 37.11,
+   "revenue_b": 341.5,
+   "revenue_growth_pct": 15.2,
+   "gross_margin_pct": 35.1,
+   "net_margin_pct": 32.0,
+   "dividend_yield": 1.64,
+   "shares_out_m": 596,
+   "week52_low": 417.52,
+   "week52_high": 802.69,
+   "analyst": {
+    "buy": 6,
+    "hold": 2,
+    "sell": 2
+   },
+   "next_earnings": "2026-07-21"
+  }
+ },
+ {
+  "symbol": "LLY",
+  "metrics": {
+   "pe": 29.7,
+   "eps_ttm": 26.33,
+   "revenue_b": 66.3,
+   "revenue_growth_pct": 12.7,
+   "gross_margin_pct": 62.3,
+   "net_margin_pct": 20.5,
+   "dividend_yield": 3.41,
+   "shares_out_m": 5590,
+   "week52_low": 465.07,
+   "week52_high": 833.78,
+   "analyst": {
+    "buy": 16,
+    "hold": 11,
+    "sell": 4
+   },
+   "next_earnings": "2026-07-14"
+  }
+ },
+ {
+  "symbol": "UNH",
+  "metrics": {
+   "pe": 16.0,
+   "eps_ttm": 19.06,
+   "revenue_b": 124.7,
+   "revenue_growth_pct": 31.0,
+   "gross_margin_pct": 67.8,
+   "net_margin_pct": 30.4,
+   "dividend_yield": 3.07,
+   "shares_out_m": 7212,
+   "week52_low": 186.97,
+   "week52_high": 354.5,
+   "analyst": {
+    "buy": 8,
+    "hold": 7,
+    "sell": 6
+   },
+   "next_earnings": "2026-09-28"
+  }
+ },
+ {
+  "symbol": "XOM",
+  "metrics": {
+   "pe": 10.4,
+   "eps_ttm": 10.96,
+   "revenue_b": 249.0,
+   "revenue_growth_pct": 1.2,
+   "gross_margin_pct": 75.8,
+   "net_margin_pct": 30.5,
+   "dividend_yield": 3.37,
+   "shares_out_m": 7075,
+   "week52_low": 63.55,
+   "week52_high": 157.49,
+   "analyst": {
+    "buy": 15,
+    "hold": 14,
+    "sell": 3
+   },
+   "next_earnings": "2026-09-28"
+  }
+ },
+ {
+  "symbol": "JNJ",
+  "metrics": {
+   "pe": 25.8,
+   "eps_ttm": 6.05,
+   "revenue_b": 100.8,
+   "revenue_growth_pct": 1.4,
+   "gross_margin_pct": 62.1,
+   "net_margin_pct": 14.6,
+   "dividend_yield": 0.87,
+   "shares_out_m": 502,
+   "week52_low": 107.83,
+   "week52_high": 177.81,
+   "analyst": {
+    "buy": 19,
+    "hold": 7,
+    "sell": 2
+   },
+   "next_earnings": "2026-07-08"
+  }
+ },
+ {
+  "symbol": "WMT",
+  "metrics": {
+   "pe": 18.2,
+   "eps_ttm": 5.38,
+   "revenue_b": 78.9,
+   "revenue_growth_pct": 8.1,
+   "gross_margin_pct": 71.9,
+   "net_margin_pct": 33.9,
+   "dividend_yield": 0.89,
+   "shares_out_m": 3317,
+   "week52_low": 82.75,
+   "week52_high": 126.55,
+   "analyst": {
+    "buy": 5,
+    "hold": 3,
+    "sell": 2
+   },
+   "next_earnings": "2026-07-19"
+  }
+ },
+ {
+  "symbol": "PG",
+  "metrics": {
+   "pe": 27.6,
+   "eps_ttm": 5.83,
+   "revenue_b": 107.7,
+   "revenue_growth_pct": -0.7,
+   "gross_margin_pct": 46.1,
+   "net_margin_pct": 26.0,
+   "dividend_yield": 2.89,
+   "shares_out_m": 2647,
+   "week52_low": 117.83,
+   "week52_high": 206.1,
+   "analyst": {
+    "buy": 17,
+    "hold": 11,
+    "sell": 1
+   },
+   "next_earnings": "2026-08-02"
+  }
+ },
+ {
+  "symbol": "HD",
+  "metrics": {
+   "pe": 29.2,
+   "eps_ttm": 12.57,
+   "revenue_b": 2.7,
+   "revenue_growth_pct": 32.0,
+   "gross_margin_pct": 52.3,
+   "net_margin_pct": 25.7,
+   "dividend_yield": 1.11,
+   "shares_out_m": 3041,
+   "week52_low": 209.55,
+   "week52_high": 495.05,
+   "analyst": {
+    "buy": 15,
+    "hold": 11,
+    "sell": 2
+   },
+   "next_earnings": "2026-09-28"
+  }
+ },
+ {
+  "symbol": "COST",
+  "metrics": {
+   "pe": 19.2,
+   "eps_ttm": 51.3,
+   "revenue_b": 360.2,
+   "revenue_growth_pct": 15.3,
+   "gross_margin_pct": 60.0,
+   "net_margin_pct": 12.8,
+   "dividend_yield": 0,
+   "shares_out_m": 5638,
+   "week52_low": 705.58,
+   "week52_high": 1119.28,
+   "analyst": {
+    "buy": 26,
+    "hold": 8,
+    "sell": 5
+   },
+   "next_earnings": "2026-09-06"
+  }
+ },
+ {
+  "symbol": "ORCL",
+  "metrics": {
+   "pe": 36.2,
+   "eps_ttm": 6.33,
+   "revenue_b": 121.8,
+   "revenue_growth_pct": 16.9,
+   "gross_margin_pct": 20.0,
+   "net_margin_pct": 11.5,
+   "dividend_yield": 0,
+   "shares_out_m": 5307,
+   "week52_low": 157.89,
+   "week52_high": 286.01,
+   "analyst": {
+    "buy": 11,
+    "hold": 10,
+    "sell": 3
+   },
+   "next_earnings": "2026-09-06"
+  }
+ },
+ {
+  "symbol": "KO",
+  "metrics": {
+   "pe": 24.6,
+   "eps_ttm": 2.85,
+   "revenue_b": 114.9,
+   "revenue_growth_pct": 21.6,
+   "gross_margin_pct": 57.2,
+   "net_margin_pct": 5.1,
+   "dividend_yield": 1.87,
+   "shares_out_m": 7626,
+   "week52_low": 43.43,
+   "week52_high": 83.28,
+   "analyst": {
+    "buy": 30,
+    "hold": 5,
+    "sell": 1
+   },
+   "next_earnings": "2026-07-02"
+  }
+ },
+ {
+  "symbol": "PEP",
+  "metrics": {
+   "pe": 20.4,
+   "eps_ttm": 6.52,
+   "revenue_b": 191.1,
+   "revenue_growth_pct": 29.0,
+   "gross_margin_pct": 24.4,
+   "net_margin_pct": 15.7,
+   "dividend_yield": 0.66,
+   "shares_out_m": 5632,
+   "week52_low": 92.88,
+   "week52_high": 154.25,
+   "analyst": {
+    "buy": 25,
+    "hold": 13,
+    "sell": 0
+   },
+   "next_earnings": "2026-07-25"
+  }
+ },
+ {
+  "symbol": "BAC",
+  "metrics": {
+   "pe": 12.8,
+   "eps_ttm": 3.67,
+   "revenue_b": 72.0,
+   "revenue_growth_pct": 33.3,
+   "gross_margin_pct": 51.1,
+   "net_margin_pct": 3.7,
+   "dividend_yield": 0.63,
+   "shares_out_m": 2144,
+   "week52_low": 37.81,
+   "week52_high": 59.0,
+   "analyst": {
+    "buy": 30,
+    "hold": 9,
+    "sell": 5
+   },
+   "next_earnings": "2026-09-18"
+  }
+ },
+ {
+  "symbol": "ABBV",
+  "metrics": {
+   "pe": 23.5,
+   "eps_ttm": 7.96,
+   "revenue_b": 380.1,
+   "revenue_growth_pct": 30.7,
+   "gross_margin_pct": 56.8,
+   "net_margin_pct": 25.7,
+   "dividend_yield": 0,
+   "shares_out_m": 4473,
+   "week52_low": 153.18,
+   "week52_high": 258.93,
+   "analyst": {
+    "buy": 20,
+    "hold": 9,
+    "sell": 2
+   },
+   "next_earnings": "2026-07-27"
+  }
+ },
+ {
+  "symbol": "CVX",
+  "metrics": {
+   "pe": 11.8,
+   "eps_ttm": 12.54,
+   "revenue_b": 306.8,
+   "revenue_growth_pct": 15.9,
+   "gross_margin_pct": 57.6,
+   "net_margin_pct": 11.1,
+   "dividend_yield": 1.13,
+   "shares_out_m": 804,
+   "week52_low": 94.09,
+   "week52_high": 173.5,
+   "analyst": {
+    "buy": 15,
+    "hold": 10,
+    "sell": 0
+   },
+   "next_earnings": "2026-07-05"
+  }
+ },
+ {
+  "symbol": "MRK",
+  "metrics": {
+   "pe": 17.7,
+   "eps_ttm": 4.58,
+   "revenue_b": 278.2,
+   "revenue_growth_pct": 23.3,
+   "gross_margin_pct": 23.9,
+   "net_margin_pct": 15.5,
+   "dividend_yield": 0.0,
+   "shares_out_m": 1813,
+   "week52_low": 54.76,
+   "week52_high": 118.03,
+   "analyst": {
+    "buy": 23,
+    "hold": 13,
+    "sell": 0
+   },
+   "next_earnings": "2026-09-13"
+  }
+ },
+ {
+  "symbol": "ADBE",
+  "metrics": {
+   "pe": 33.0,
+   "eps_ttm": 11.76,
+   "revenue_b": 377.2,
+   "revenue_growth_pct": 6.9,
+   "gross_margin_pct": 43.4,
+   "net_margin_pct": 31.4,
+   "dividend_yield": 0.87,
+   "shares_out_m": 6719,
+   "week52_low": 276.05,
+   "week52_high": 535.67,
+   "analyst": {
+    "buy": 30,
+    "hold": 11,
+    "sell": 1
+   },
+   "next_earnings": "2026-08-08"
+  }
+ },
+ {
+  "symbol": "CRM",
+  "metrics": {
+   "pe": 28.3,
+   "eps_ttm": 9.61,
+   "revenue_b": 195.3,
+   "revenue_growth_pct": 10.6,
+   "gross_margin_pct": 60.1,
+   "net_margin_pct": 28.3,
+   "dividend_yield": 0.83,
+   "shares_out_m": 7372,
+   "week52_low": 229.63,
+   "week52_high": 350.98,
+   "analyst": {
+    "buy": 17,
+    "hold": 11,
+    "sell": 4
+   },
+   "next_earnings": "2026-09-01"
+  }
+ },
+ {
+  "symbol": "NFLX",
+  "metrics": {
+   "pe": 15.5,
+   "eps_ttm": 83.23,
+   "revenue_b": 172.6,
+   "revenue_growth_pct": 29.7,
+   "gross_margin_pct": 30.9,
+   "net_margin_pct": 10.6,
+   "dividend_yield": 0,
+   "shares_out_m": 2753,
+   "week52_low": 885.47,
+   "week52_high": 1550.42,
+   "analyst": {
+    "buy": 17,
+    "hold": 6,
+    "sell": 6
+   },
+   "next_earnings": "2026-08-09"
+  }
+ },
+ {
+  "symbol": "AMD",
+  "metrics": {
+   "pe": 41.2,
+   "eps_ttm": 3.35,
+   "revenue_b": 189.2,
+   "revenue_growth_pct": 25.0,
+   "gross_margin_pct": 23.1,
+   "net_margin_pct": 33.4,
+   "dividend_yield": 1.27,
+   "shares_out_m": 7667,
+   "week52_low": 77.57,
+   "week52_high": 146.83,
+   "analyst": {
+    "buy": 12,
+    "hold": 5,
+    "sell": 6
+   },
+   "next_earnings": "2026-07-20"
+  }
+ },
+ {
+  "symbol": "INTC",
+  "metrics": {
+   "pe": 25.5,
+   "eps_ttm": 0.9,
+   "revenue_b": 52.2,
+   "revenue_growth_pct": 21.8,
+   "gross_margin_pct": 53.8,
+   "net_margin_pct": 9.2,
+   "dividend_yield": 1.65,
+   "shares_out_m": 5656,
+   "week52_low": 17.94,
+   "week52_high": 25.89,
+   "analyst": {
+    "buy": 24,
+    "hold": 13,
+    "sell": 5
+   },
+   "next_earnings": "2026-07-25"
+  }
+ },
+ {
+  "symbol": "QCOM",
+  "metrics": {
+   "pe": 40.8,
+   "eps_ttm": 3.9,
+   "revenue_b": 386.0,
+   "revenue_growth_pct": -0.7,
+   "gross_margin_pct": 21.5,
+   "net_margin_pct": 12.3,
+   "dividend_yield": 0,
+   "shares_out_m": 3294,
+   "week52_low": 121.56,
+   "week52_high": 172.39,
+   "analyst": {
+    "buy": 27,
+    "hold": 15,
+    "sell": 5
+   },
+   "next_earnings": "2026-07-04"
+  }
+ },
+ {
+  "symbol": "TXN",
+  "metrics": {
+   "pe": 38.0,
+   "eps_ttm": 5.55,
+   "revenue_b": 122.0,
+   "revenue_growth_pct": 22.4,
+   "gross_margin_pct": 68.3,
+   "net_margin_pct": 28.3,
+   "dividend_yield": 0,
+   "shares_out_m": 4614,
+   "week52_low": 118.65,
+   "week52_high": 272.13,
+   "analyst": {
+    "buy": 26,
+    "hold": 7,
+    "sell": 0
+   },
+   "next_earnings": "2026-09-21"
+  }
+ },
+ {
+  "symbol": "MU",
+  "metrics": {
+   "pe": 29.8,
+   "eps_ttm": 4.09,
+   "revenue_b": 340.1,
+   "revenue_growth_pct": 27.9,
+   "gross_margin_pct": 26.3,
+   "net_margin_pct": 33.7,
+   "dividend_yield": 0,
+   "shares_out_m": 5717,
+   "week52_low": 83.04,
+   "week52_high": 168.39,
+   "analyst": {
+    "buy": 25,
+    "hold": 6,
+    "sell": 4
+   },
+   "next_earnings": "2026-09-25"
+  }
+ },
+ {
+  "symbol": "AMAT",
+  "metrics": {
+   "pe": 33.1,
+   "eps_ttm": 5.56,
+   "revenue_b": 175.4,
+   "revenue_growth_pct": 24.2,
+   "gross_margin_pct": 36.1,
+   "net_margin_pct": 30.1,
+   "dividend_yield": 0,
+   "shares_out_m": 6680,
+   "week52_low": 105.98,
+   "week52_high": 266.2,
+   "analyst": {
+    "buy": 12,
+    "hold": 14,
+    "sell": 3
+   },
+   "next_earnings": "2026-09-20"
+  }
+ },
+ {
+  "symbol": "LRCX",
+  "metrics": {
+   "pe": 37.4,
+   "eps_ttm": 2.59,
+   "revenue_b": 135.9,
+   "revenue_growth_pct": 14.8,
+   "gross_margin_pct": 39.5,
+   "net_margin_pct": 18.1,
+   "dividend_yield": 0.63,
+   "shares_out_m": 2381,
+   "week52_low": 70.7,
+   "week52_high": 140.27,
+   "analyst": {
+    "buy": 22,
+    "hold": 2,
+    "sell": 4
+   },
+   "next_earnings": "2026-07-03"
+  }
+ },
+ {
+  "symbol": "KLAC",
+  "metrics": {
+   "pe": 27.6,
+   "eps_ttm": 31.23,
+   "revenue_b": 163.8,
+   "revenue_growth_pct": 17.2,
+   "gross_margin_pct": 34.4,
+   "net_margin_pct": 17.7,
+   "dividend_yield": 1.93,
+   "shares_out_m": 5752,
+   "week52_low": 590.0,
+   "week52_high": 911.79,
+   "analyst": {
+    "buy": 14,
+    "hold": 5,
+    "sell": 3
+   },
+   "next_earnings": "2026-09-08"
+  }
+ },
+ {
+  "symbol": "ASML",
+  "metrics": {
+   "pe": 29.0,
+   "eps_ttm": 27.03,
+   "revenue_b": 233.5,
+   "revenue_growth_pct": 13.9,
+   "gross_margin_pct": 51.9,
+   "net_margin_pct": 16.0,
+   "dividend_yield": 1.17,
+   "shares_out_m": 5682,
+   "week52_low": 494.92,
+   "week52_high": 911.9,
+   "analyst": {
+    "buy": 8,
+    "hold": 13,
+    "sell": 1
+   },
+   "next_earnings": "2026-08-04"
+  }
+ },
+ {
+  "symbol": "TSM",
+  "metrics": {
+   "pe": 39.1,
+   "eps_ttm": 5.83,
+   "revenue_b": 380.4,
+   "revenue_growth_pct": 22.6,
+   "gross_margin_pct": 31.5,
+   "net_margin_pct": 26.4,
+   "dividend_yield": 0.12,
+   "shares_out_m": 2357,
+   "week52_low": 165.73,
+   "week52_high": 317.4,
+   "analyst": {
+    "buy": 24,
+    "hold": 6,
+    "sell": 0
+   },
+   "next_earnings": "2026-07-10"
+  }
+ },
+ {
+  "symbol": "CSCO",
+  "metrics": {
+   "pe": 27.2,
+   "eps_ttm": 2.43,
+   "revenue_b": 73.4,
+   "revenue_growth_pct": -4.4,
+   "gross_margin_pct": 52.0,
+   "net_margin_pct": 11.1,
+   "dividend_yield": 2.7,
+   "shares_out_m": 5640,
+   "week52_low": 38.8,
+   "week52_high": 95.09,
+   "analyst": {
+    "buy": 20,
+    "hold": 3,
+    "sell": 6
+   },
+   "next_earnings": "2026-07-19"
+  }
+ },
+ {
+  "symbol": "IBM",
+  "metrics": {
+   "pe": 28.5,
+   "eps_ttm": 9.93,
+   "revenue_b": 192.5,
+   "revenue_growth_pct": 8.6,
+   "gross_margin_pct": 77.9,
+   "net_margin_pct": 10.3,
+   "dividend_yield": 0.95,
+   "shares_out_m": 6921,
+   "week52_low": 165.34,
+   "week52_high": 305.47,
+   "analyst": {
+    "buy": 20,
+    "hold": 3,
+    "sell": 4
+   },
+   "next_earnings": "2026-09-22"
+  }
+ },
+ {
+  "symbol": "ACN",
+  "metrics": {
+   "pe": 23.2,
+   "eps_ttm": 13.45,
+   "revenue_b": 61.4,
+   "revenue_growth_pct": 17.5,
+   "gross_margin_pct": 38.2,
+   "net_margin_pct": 34.8,
+   "dividend_yield": 2.7,
+   "shares_out_m": 4929,
+   "week52_low": 245.61,
+   "week52_high": 359.29,
+   "analyst": {
+    "buy": 21,
+    "hold": 8,
+    "sell": 3
+   },
+   "next_earnings": "2026-08-10"
+  }
+ },
+ {
+  "symbol": "NOW",
+  "metrics": {
+   "pe": 41.8,
+   "eps_ttm": 24.16,
+   "revenue_b": 396.0,
+   "revenue_growth_pct": 7.2,
+   "gross_margin_pct": 57.3,
+   "net_margin_pct": 22.1,
+   "dividend_yield": 2.58,
+   "shares_out_m": 5973,
+   "week52_low": 842.62,
+   "week52_high": 1154.94,
+   "analyst": {
+    "buy": 11,
+    "hold": 6,
+    "sell": 5
+   },
+   "next_earnings": "2026-07-06"
+  }
+ },
+ {
+  "symbol": "INTU",
+  "metrics": {
+   "pe": 27.5,
+   "eps_ttm": 27.71,
+   "revenue_b": 221.7,
+   "revenue_growth_pct": 1.3,
+   "gross_margin_pct": 44.5,
+   "net_margin_pct": 24.7,
+   "dividend_yield": 0.9,
+   "shares_out_m": 2447,
+   "week52_low": 483.73,
+   "week52_high": 1094.86,
+   "analyst": {
+    "buy": 7,
+    "hold": 12,
+    "sell": 1
+   },
+   "next_earnings": "2026-08-26"
+  }
+ },
+ {
+  "symbol": "SNOW",
+  "metrics": {
+   "pe": 40.2,
+   "eps_ttm": 5.42,
+   "revenue_b": 236.7,
+   "revenue_growth_pct": 27.2,
+   "gross_margin_pct": 31.9,
+   "net_margin_pct": 5.8,
+   "dividend_yield": 1.26,
+   "shares_out_m": 1954,
+   "week52_low": 129.64,
+   "week52_high": 254.96,
+   "analyst": {
+    "buy": 9,
+    "hold": 3,
+    "sell": 0
+   },
+   "next_earnings": "2026-07-26"
+  }
+ },
+ {
+  "symbol": "PLTR",
+  "metrics": {
+   "pe": 29.1,
+   "eps_ttm": 4.88,
+   "revenue_b": 300.1,
+   "revenue_growth_pct": 17.8,
+   "gross_margin_pct": 37.3,
+   "net_margin_pct": 6.1,
+   "dividend_yield": 0.5,
+   "shares_out_m": 7553,
+   "week52_low": 99.42,
+   "week52_high": 180.65,
+   "analyst": {
+    "buy": 7,
+    "hold": 11,
+    "sell": 0
+   },
+   "next_earnings": "2026-08-24"
+  }
+ },
+ {
+  "symbol": "DDOG",
+  "metrics": {
+   "pe": 29.4,
+   "eps_ttm": 4.56,
+   "revenue_b": 101.6,
+   "revenue_growth_pct": -1.3,
+   "gross_margin_pct": 77.7,
+   "net_margin_pct": 29.6,
+   "dividend_yield": 0,
+   "shares_out_m": 4687,
+   "week52_low": 111.92,
+   "week52_high": 200.97,
+   "analyst": {
+    "buy": 26,
+    "hold": 15,
+    "sell": 2
+   },
+   "next_earnings": "2026-09-02"
+  }
+ },
+ {
+  "symbol": "NET",
+  "metrics": {
+   "pe": 39.6,
+   "eps_ttm": 4.7,
+   "revenue_b": 71.7,
+   "revenue_growth_pct": 15.8,
+   "gross_margin_pct": 46.5,
+   "net_margin_pct": 11.2,
+   "dividend_yield": 2.48,
+   "shares_out_m": 6551,
+   "week52_low": 156.37,
+   "week52_high": 234.64,
+   "analyst": {
+    "buy": 18,
+    "hold": 7,
+    "sell": 2
+   },
+   "next_earnings": "2026-09-04"
+  }
+ },
+ {
+  "symbol": "CRWD",
+  "metrics": {
+   "pe": 41.7,
+   "eps_ttm": 11.46,
+   "revenue_b": 133.3,
+   "revenue_growth_pct": 22.7,
+   "gross_margin_pct": 37.3,
+   "net_margin_pct": 33.2,
+   "dividend_yield": 1.18,
+   "shares_out_m": 6546,
+   "week52_low": 341.78,
+   "week52_high": 599.73,
+   "analyst": {
+    "buy": 15,
+    "hold": 6,
+    "sell": 2
+   },
+   "next_earnings": "2026-07-25"
+  }
+ },
+ {
+  "symbol": "PANW",
+  "metrics": {
+   "pe": 31.3,
+   "eps_ttm": 6.45,
+   "revenue_b": 206.8,
+   "revenue_growth_pct": 34.5,
+   "gross_margin_pct": 59.5,
+   "net_margin_pct": 19.9,
+   "dividend_yield": 0.54,
+   "shares_out_m": 3022,
+   "week52_low": 156.94,
+   "week52_high": 268.95,
+   "analyst": {
+    "buy": 29,
+    "hold": 2,
+    "sell": 1
+   },
+   "next_earnings": "2026-08-18"
+  }
+ },
+ {
+  "symbol": "ZS",
+  "metrics": {
+   "pe": 25.0,
+   "eps_ttm": 12.16,
+   "revenue_b": 116.6,
+   "revenue_growth_pct": 30.2,
+   "gross_margin_pct": 49.1,
+   "net_margin_pct": 3.0,
+   "dividend_yield": 1.6,
+   "shares_out_m": 5114,
+   "week52_low": 240.1,
+   "week52_high": 416.3,
+   "analyst": {
+    "buy": 14,
+    "hold": 10,
+    "sell": 0
+   },
+   "next_earnings": "2026-09-14"
+  }
+ },
+ {
+  "symbol": "FTNT",
+  "metrics": {
+   "pe": 24.1,
+   "eps_ttm": 4.32,
+   "revenue_b": 396.9,
+   "revenue_growth_pct": 31.5,
+   "gross_margin_pct": 47.7,
+   "net_margin_pct": 5.9,
+   "dividend_yield": 1.9,
+   "shares_out_m": 5790,
+   "week52_low": 73.08,
+   "week52_high": 122.0,
+   "analyst": {
+    "buy": 20,
+    "hold": 9,
+    "sell": 1
+   },
+   "next_earnings": "2026-08-18"
+  }
+ },
+ {
+  "symbol": "SHOP",
+  "metrics": {
+   "pe": 25.3,
+   "eps_ttm": 4.66,
+   "revenue_b": 77.9,
+   "revenue_growth_pct": 19.0,
+   "gross_margin_pct": 64.8,
+   "net_margin_pct": 6.5,
+   "dividend_yield": 0,
+   "shares_out_m": 745,
+   "week52_low": 92.25,
+   "week52_high": 169.27,
+   "analyst": {
+    "buy": 15,
+    "hold": 14,
+    "sell": 4
+   },
+   "next_earnings": "2026-08-27"
+  }
+ },
+ {
+  "symbol": "SQ",
+  "metrics": {
+   "pe": 9.0,
+   "eps_ttm": 7.56,
+   "revenue_b": 291.0,
+   "revenue_growth_pct": 28.5,
+   "gross_margin_pct": 54.8,
+   "net_margin_pct": 23.8,
+   "dividend_yield": 2.06,
+   "shares_out_m": 3978,
+   "week52_low": 44.18,
+   "week52_high": 94.74,
+   "analyst": {
+    "buy": 17,
+    "hold": 9,
+    "sell": 2
+   },
+   "next_earnings": "2026-07-23"
+  }
+ },
+ {
+  "symbol": "PYPL",
+  "metrics": {
+   "pe": 11.1,
+   "eps_ttm": 6.67,
+   "revenue_b": 154.4,
+   "revenue_growth_pct": 29.2,
+   "gross_margin_pct": 44.6,
+   "net_margin_pct": 12.5,
+   "dividend_yield": 0.22,
+   "shares_out_m": 3889,
+   "week52_low": 60.98,
+   "week52_high": 90.39,
+   "analyst": {
+    "buy": 26,
+    "hold": 14,
+    "sell": 6
+   },
+   "next_earnings": "2026-09-05"
+  }
+ },
+ {
+  "symbol": "COIN",
+  "metrics": {
+   "pe": 13.5,
+   "eps_ttm": 26.07,
+   "revenue_b": 16.7,
+   "revenue_growth_pct": 15.1,
+   "gross_margin_pct": 55.4,
+   "net_margin_pct": 30.7,
+   "dividend_yield": 2.11,
+   "shares_out_m": 4302,
+   "week52_low": 241.85,
+   "week52_high": 484.04,
+   "analyst": {
+    "buy": 18,
+    "hold": 15,
+    "sell": 5
+   },
+   "next_earnings": "2026-07-03"
+  }
+ },
+ {
+  "symbol": "HOOD",
+  "metrics": {
+   "pe": 13.2,
+   "eps_ttm": 6.97,
+   "revenue_b": 387.7,
+   "revenue_growth_pct": 8.5,
+   "gross_margin_pct": 61.6,
+   "net_margin_pct": 23.4,
+   "dividend_yield": 0.28,
+   "shares_out_m": 6844,
+   "week52_low": 74.12,
+   "week52_high": 132.18,
+   "analyst": {
+    "buy": 17,
+    "hold": 7,
+    "sell": 5
+   },
+   "next_earnings": "2026-09-25"
+  }
+ },
+ {
+  "symbol": "GS",
+  "metrics": {
+   "pe": 13.4,
+   "eps_ttm": 52.39,
+   "revenue_b": 217.3,
+   "revenue_growth_pct": 19.7,
+   "gross_margin_pct": 34.1,
+   "net_margin_pct": 24.6,
+   "dividend_yield": 1.0,
+   "shares_out_m": 905,
+   "week52_low": 592.14,
+   "week52_high": 977.3,
+   "analyst": {
+    "buy": 27,
+    "hold": 15,
+    "sell": 0
+   },
+   "next_earnings": "2026-08-06"
+  }
+ },
+ {
+  "symbol": "MS",
+  "metrics": {
+   "pe": 15.2,
+   "eps_ttm": 9.34,
+   "revenue_b": 361.6,
+   "revenue_growth_pct": -3.2,
+   "gross_margin_pct": 67.8,
+   "net_margin_pct": 11.7,
+   "dividend_yield": 2.04,
+   "shares_out_m": 3124,
+   "week52_low": 84.3,
+   "week52_high": 183.04,
+   "analyst": {
+    "buy": 23,
+    "hold": 12,
+    "sell": 6
+   },
+   "next_earnings": "2026-07-06"
+  }
+ },
+ {
+  "symbol": "WFC",
+  "metrics": {
+   "pe": 10.6,
+   "eps_ttm": 7.74,
+   "revenue_b": 244.6,
+   "revenue_growth_pct": 10.3,
+   "gross_margin_pct": 61.0,
+   "net_margin_pct": 18.4,
+   "dividend_yield": 0.44,
+   "shares_out_m": 5176,
+   "week52_low": 56.41,
+   "week52_high": 110.71,
+   "analyst": {
+    "buy": 30,
+    "hold": 9,
+    "sell": 2
+   },
+   "next_earnings": "2026-09-18"
+  }
+ },
+ {
+  "symbol": "C",
+  "metrics": {
+   "pe": 10.4,
+   "eps_ttm": 8.27,
+   "revenue_b": 177.8,
+   "revenue_growth_pct": 8.8,
+   "gross_margin_pct": 55.3,
+   "net_margin_pct": 23.1,
+   "dividend_yield": 0.76,
+   "shares_out_m": 3510,
+   "week52_low": 53.75,
+   "week52_high": 123.01,
+   "analyst": {
+    "buy": 11,
+    "hold": 8,
+    "sell": 6
+   },
+   "next_earnings": "2026-08-04"
+  }
+ },
+ {
+  "symbol": "SCHW",
+  "metrics": {
+   "pe": 11.1,
+   "eps_ttm": 8.29,
+   "revenue_b": 229.6,
+   "revenue_growth_pct": 18.0,
+   "gross_margin_pct": 79.6,
+   "net_margin_pct": 11.7,
+   "dividend_yield": 2.94,
+   "shares_out_m": 2341,
+   "week52_low": 66.22,
+   "week52_high": 124.99,
+   "analyst": {
+    "buy": 28,
+    "hold": 2,
+    "sell": 4
+   },
+   "next_earnings": "2026-09-16"
+  }
+ },
+ {
+  "symbol": "BLK",
+  "metrics": {
+   "pe": 16.5,
+   "eps_ttm": 64.12,
+   "revenue_b": 361.4,
+   "revenue_growth_pct": 26.0,
+   "gross_margin_pct": 33.8,
+   "net_margin_pct": 28.5,
+   "dividend_yield": 0.96,
+   "shares_out_m": 1908,
+   "week52_low": 642.25,
+   "week52_high": 1230.22,
+   "analyst": {
+    "buy": 29,
+    "hold": 13,
+    "sell": 6
+   },
+   "next_earnings": "2026-09-22"
+  }
+ },
+ {
+  "symbol": "AXP",
+  "metrics": {
+   "pe": 16.5,
+   "eps_ttm": 19.52,
+   "revenue_b": 252.0,
+   "revenue_growth_pct": 31.1,
+   "gross_margin_pct": 58.8,
+   "net_margin_pct": 12.2,
+   "dividend_yield": 0,
+   "shares_out_m": 5912,
+   "week52_low": 185.81,
+   "week52_high": 380.86,
+   "analyst": {
+    "buy": 28,
+    "hold": 8,
+    "sell": 1
+   },
+   "next_earnings": "2026-07-05"
+  }
+ },
+ {
+  "symbol": "SPGI",
+  "metrics": {
+   "pe": 16.1,
+   "eps_ttm": 32.8,
+   "revenue_b": 350.8,
+   "revenue_growth_pct": 9.6,
+   "gross_margin_pct": 50.1,
+   "net_margin_pct": 11.0,
+   "dividend_yield": 1.77,
+   "shares_out_m": 1483,
+   "week52_low": 435.19,
+   "week52_high": 778.74,
+   "analyst": {
+    "buy": 30,
+    "hold": 6,
+    "sell": 5
+   },
+   "next_earnings": "2026-08-26"
+  }
+ },
+ {
+  "symbol": "ICE",
+  "metrics": {
+   "pe": 10.0,
+   "eps_ttm": 17.8,
+   "revenue_b": 385.2,
+   "revenue_growth_pct": 0.6,
+   "gross_margin_pct": 78.0,
+   "net_margin_pct": 30.4,
+   "dividend_yield": 0.66,
+   "shares_out_m": 7745,
+   "week52_low": 140.86,
+   "week52_high": 216.2,
+   "analyst": {
+    "buy": 30,
+    "hold": 8,
+    "sell": 0
+   },
+   "next_earnings": "2026-08-18"
+  }
+ },
+ {
+  "symbol": "CME",
+  "metrics": {
+   "pe": 10.1,
+   "eps_ttm": 27.33,
+   "revenue_b": 148.7,
+   "revenue_growth_pct": 25.0,
+   "gross_margin_pct": 35.7,
+   "net_margin_pct": 14.6,
+   "dividend_yield": 0,
+   "shares_out_m": 5181,
+   "week52_low": 182.56,
+   "week52_high": 373.61,
+   "analyst": {
+    "buy": 20,
+    "hold": 2,
+    "sell": 4
+   },
+   "next_earnings": "2026-09-11"
+  }
+ },
+ {
+  "symbol": "PGR",
+  "metrics": {
+   "pe": 17.2,
+   "eps_ttm": 15.23,
+   "revenue_b": 90.1,
+   "revenue_growth_pct": -2.5,
+   "gross_margin_pct": 69.4,
+   "net_margin_pct": 32.0,
+   "dividend_yield": 0.8,
+   "shares_out_m": 1290,
+   "week52_low": 218.48,
+   "week52_high": 310.98,
+   "analyst": {
+    "buy": 20,
+    "hold": 3,
+    "sell": 0
+   },
+   "next_earnings": "2026-07-18"
+  }
+ },
+ {
+  "symbol": "ALL",
+  "metrics": {
+   "pe": 10.2,
+   "eps_ttm": 19.41,
+   "revenue_b": 182.6,
+   "revenue_growth_pct": 21.8,
+   "gross_margin_pct": 64.6,
+   "net_margin_pct": 33.2,
+   "dividend_yield": 2.36,
+   "shares_out_m": 3469,
+   "week52_low": 152.99,
+   "week52_high": 221.67,
+   "analyst": {
+    "buy": 18,
+    "hold": 12,
+    "sell": 0
+   },
+   "next_earnings": "2026-08-20"
+  }
+ },
+ {
+  "symbol": "MET",
+  "metrics": {
+   "pe": 12.7,
+   "eps_ttm": 6.46,
+   "revenue_b": 380.7,
+   "revenue_growth_pct": -3.7,
+   "gross_margin_pct": 42.2,
+   "net_margin_pct": 16.6,
+   "dividend_yield": 3.45,
+   "shares_out_m": 975,
+   "week52_low": 61.97,
+   "week52_high": 106.19,
+   "analyst": {
+    "buy": 25,
+    "hold": 7,
+    "sell": 0
+   },
+   "next_earnings": "2026-08-09"
+  }
+ },
+ {
+  "symbol": "PFE",
+  "metrics": {
+   "pe": 17.0,
+   "eps_ttm": 1.47,
+   "revenue_b": 50.6,
+   "revenue_growth_pct": 28.9,
+   "gross_margin_pct": 47.3,
+   "net_margin_pct": 23.9,
+   "dividend_yield": 0.48,
+   "shares_out_m": 5205,
+   "week52_low": 18.23,
+   "week52_high": 26.49,
+   "analyst": {
+    "buy": 30,
+    "hold": 7,
+    "sell": 1
+   },
+   "next_earnings": "2026-07-26"
+  }
+ },
+ {
+  "symbol": "BMY",
+  "metrics": {
+   "pe": 23.0,
+   "eps_ttm": 2.09,
+   "revenue_b": 29.3,
+   "revenue_growth_pct": 25.6,
+   "gross_margin_pct": 32.4,
+   "net_margin_pct": 9.1,
+   "dividend_yield": 1.93,
+   "shares_out_m": 1351,
+   "week52_low": 39.37,
+   "week52_high": 50.46,
+   "analyst": {
+    "buy": 9,
+    "hold": 4,
+    "sell": 4
+   },
+   "next_earnings": "2026-08-26"
+  }
+ },
+ {
+  "symbol": "AMGN",
+  "metrics": {
+   "pe": 16.8,
+   "eps_ttm": 16.79,
+   "revenue_b": 265.1,
+   "revenue_growth_pct": -4.0,
+   "gross_margin_pct": 20.9,
+   "net_margin_pct": 28.1,
+   "dividend_yield": 0.42,
+   "shares_out_m": 2056,
+   "week52_low": 182.49,
+   "week52_high": 318.21,
+   "analyst": {
+    "buy": 6,
+    "hold": 4,
+    "sell": 5
+   },
+   "next_earnings": "2026-08-17"
+  }
+ },
+ {
+  "symbol": "GILD",
+  "metrics": {
+   "pe": 15.8,
+   "eps_ttm": 7.09,
+   "revenue_b": 27.3,
+   "revenue_growth_pct": 12.9,
+   "gross_margin_pct": 41.7,
+   "net_margin_pct": 21.6,
+   "dividend_yield": 0.39,
+   "shares_out_m": 4998,
+   "week52_low": 86.04,
+   "week52_high": 163.4,
+   "analyst": {
+    "buy": 26,
+    "hold": 10,
+    "sell": 2
+   },
+   "next_earnings": "2026-08-21"
+  }
+ },
+ {
+  "symbol": "VRTX",
+  "metrics": {
+   "pe": 29.4,
+   "eps_ttm": 15.03,
+   "revenue_b": 26.2,
+   "revenue_growth_pct": 14.2,
+   "gross_margin_pct": 44.1,
+   "net_margin_pct": 24.6,
+   "dividend_yield": 1.45,
+   "shares_out_m": 4024,
+   "week52_low": 363.73,
+   "week52_high": 478.72,
+   "analyst": {
+    "buy": 7,
+    "hold": 7,
+    "sell": 4
+   },
+   "next_earnings": "2026-07-03"
+  }
+ },
+ {
+  "symbol": "REGN",
+  "metrics": {
+   "pe": 16.0,
+   "eps_ttm": 34.25,
+   "revenue_b": 250.5,
+   "revenue_growth_pct": 18.4,
+   "gross_margin_pct": 62.7,
+   "net_margin_pct": 14.6,
+   "dividend_yield": 0.38,
+   "shares_out_m": 4143,
+   "week52_low": 372.12,
+   "week52_high": 770.98,
+   "analyst": {
+    "buy": 8,
+    "hold": 15,
+    "sell": 5
+   },
+   "next_earnings": "2026-09-25"
+  }
+ },
+ {
+  "symbol": "MRNA",
+  "metrics": {
+   "pe": 22.8,
+   "eps_ttm": 1.23,
+   "revenue_b": 346.5,
+   "revenue_growth_pct": 12.2,
+   "gross_margin_pct": 73.3,
+   "net_margin_pct": 15.7,
+   "dividend_yield": 0.62,
+   "shares_out_m": 6654,
+   "week52_low": 18.75,
+   "week52_high": 38.59,
+   "analyst": {
+    "buy": 15,
+    "hold": 8,
+    "sell": 2
+   },
+   "next_earnings": "2026-09-09"
+  }
+ },
+ {
+  "symbol": "BIIB",
+  "metrics": {
+   "pe": 20.0,
+   "eps_ttm": 6.6,
+   "revenue_b": 62.8,
+   "revenue_growth_pct": 31.9,
+   "gross_margin_pct": 24.0,
+   "net_margin_pct": 29.4,
+   "dividend_yield": 1.65,
+   "shares_out_m": 5963,
+   "week52_low": 104.75,
+   "week52_high": 171.65,
+   "analyst": {
+    "buy": 23,
+    "hold": 10,
+    "sell": 4
+   },
+   "next_earnings": "2026-08-22"
+  }
+ },
+ {
+  "symbol": "ISRG",
+  "metrics": {
+   "pe": 16.0,
+   "eps_ttm": 33.0,
+   "revenue_b": 142.7,
+   "revenue_growth_pct": 21.6,
+   "gross_margin_pct": 65.0,
+   "net_margin_pct": 30.6,
+   "dividend_yield": 1.5,
+   "shares_out_m": 5824,
+   "week52_low": 443.79,
+   "week52_high": 697.06,
+   "analyst": {
+    "buy": 16,
+    "hold": 3,
+    "sell": 4
+   },
+   "next_earnings": "2026-09-07"
+  }
+ },
+ {
+  "symbol": "MDT",
+  "metrics": {
+   "pe": 16.5,
+   "eps_ttm": 5.33,
+   "revenue_b": 193.9,
+   "revenue_growth_pct": 28.9,
+   "gross_margin_pct": 41.0,
+   "net_margin_pct": 20.4,
+   "dividend_yield": 1.93,
+   "shares_out_m": 1964,
+   "week52_low": 59.73,
+   "week52_high": 114.61,
+   "analyst": {
+    "buy": 29,
+    "hold": 15,
+    "sell": 4
+   },
+   "next_earnings": "2026-09-22"
+  }
+ },
+ {
+  "symbol": "ABT",
+  "metrics": {
+   "pe": 24.3,
+   "eps_ttm": 5.43,
+   "revenue_b": 12.4,
+   "revenue_growth_pct": 32.2,
+   "gross_margin_pct": 69.8,
+   "net_margin_pct": 10.8,
+   "dividend_yield": 1.84,
+   "shares_out_m": 1607,
+   "week52_low": 100.43,
+   "week52_high": 156.95,
+   "analyst": {
+    "buy": 15,
+    "hold": 7,
+    "sell": 0
+   },
+   "next_earnings": "2026-07-28"
+  }
+ },
+ {
+  "symbol": "SYK",
+  "metrics": {
+   "pe": 16.3,
+   "eps_ttm": 24.05,
+   "revenue_b": 263.6,
+   "revenue_growth_pct": -2.2,
+   "gross_margin_pct": 64.5,
+   "net_margin_pct": 34.1,
+   "dividend_yield": 2.44,
+   "shares_out_m": 3134,
+   "week52_low": 268.95,
+   "week52_high": 439.37,
+   "analyst": {
+    "buy": 14,
+    "hold": 13,
+    "sell": 2
+   },
+   "next_earnings": "2026-09-20"
+  }
+ },
+ {
+  "symbol": "BSX",
+  "metrics": {
+   "pe": 15.4,
+   "eps_ttm": 6.62,
+   "revenue_b": 22.9,
+   "revenue_growth_pct": 1.3,
+   "gross_margin_pct": 57.1,
+   "net_margin_pct": 24.2,
+   "dividend_yield": 2.0,
+   "shares_out_m": 2322,
+   "week52_low": 76.36,
+   "week52_high": 129.39,
+   "analyst": {
+    "buy": 19,
+    "hold": 8,
+    "sell": 2
+   },
+   "next_earnings": "2026-07-25"
+  }
+ },
+ {
+  "symbol": "TMO",
+  "metrics": {
+   "pe": 22.2,
+   "eps_ttm": 22.16,
+   "revenue_b": 139.4,
+   "revenue_growth_pct": -0.6,
+   "gross_margin_pct": 60.7,
+   "net_margin_pct": 21.6,
+   "dividend_yield": 0.18,
+   "shares_out_m": 1920,
+   "week52_low": 415.9,
+   "week52_high": 528.73,
+   "analyst": {
+    "buy": 11,
+    "hold": 6,
+    "sell": 1
+   },
+   "next_earnings": "2026-07-25"
+  }
+ },
+ {
+  "symbol": "DHR",
+  "metrics": {
+   "pe": 18.1,
+   "eps_ttm": 11.16,
+   "revenue_b": 132.6,
+   "revenue_growth_pct": -4.7,
+   "gross_margin_pct": 64.8,
+   "net_margin_pct": 7.8,
+   "dividend_yield": 1.03,
+   "shares_out_m": 3166,
+   "week52_low": 153.74,
+   "week52_high": 257.57,
+   "analyst": {
+    "buy": 26,
+    "hold": 14,
+    "sell": 2
+   },
+   "next_earnings": "2026-07-13"
+  }
+ },
+ {
+  "symbol": "CVS",
+  "metrics": {
+   "pe": 27.8,
+   "eps_ttm": 2.45,
+   "revenue_b": 18.8,
+   "revenue_growth_pct": -4.3,
+   "gross_margin_pct": 75.3,
+   "net_margin_pct": 30.4,
+   "dividend_yield": 0,
+   "shares_out_m": 5734,
+   "week52_low": 45.92,
+   "week52_high": 74.92,
+   "analyst": {
+    "buy": 5,
+    "hold": 7,
+    "sell": 1
+   },
+   "next_earnings": "2026-09-15"
+  }
+ },
+ {
+  "symbol": "CI",
+  "metrics": {
+   "pe": 27.3,
+   "eps_ttm": 11.43,
+   "revenue_b": 368.1,
+   "revenue_growth_pct": -1.5,
+   "gross_margin_pct": 70.7,
+   "net_margin_pct": 10.0,
+   "dividend_yield": 0.48,
+   "shares_out_m": 4793,
+   "week52_low": 220.64,
+   "week52_high": 383.17,
+   "analyst": {
+    "buy": 14,
+    "hold": 13,
+    "sell": 2
+   },
+   "next_earnings": "2026-07-11"
+  }
+ },
+ {
+  "symbol": "HUM",
+  "metrics": {
+   "pe": 26.5,
+   "eps_ttm": 9.13,
+   "revenue_b": 32.4,
+   "revenue_growth_pct": 20.3,
+   "gross_margin_pct": 51.8,
+   "net_margin_pct": 8.4,
+   "dividend_yield": 1.38,
+   "shares_out_m": 7674,
+   "week52_low": 179.96,
+   "week52_high": 270.18,
+   "analyst": {
+    "buy": 8,
+    "hold": 4,
+    "sell": 2
+   },
+   "next_earnings": "2026-07-06"
+  }
+ },
+ {
+  "symbol": "MCD",
+  "metrics": {
+   "pe": 27.0,
+   "eps_ttm": 11.04,
+   "revenue_b": 304.6,
+   "revenue_growth_pct": 21.2,
+   "gross_margin_pct": 30.6,
+   "net_margin_pct": 27.5,
+   "dividend_yield": 0.1,
+   "shares_out_m": 4054,
+   "week52_low": 231.35,
+   "week52_high": 414.8,
+   "analyst": {
+    "buy": 19,
+    "hold": 12,
+    "sell": 4
+   },
+   "next_earnings": "2026-09-21"
+  }
+ },
+ {
+  "symbol": "SBUX",
+  "metrics": {
+   "pe": 34.7,
+   "eps_ttm": 2.71,
+   "revenue_b": 130.6,
+   "revenue_growth_pct": 33.8,
+   "gross_margin_pct": 39.0,
+   "net_margin_pct": 16.5,
+   "dividend_yield": 0,
+   "shares_out_m": 6411,
+   "week52_low": 68.38,
+   "week52_high": 113.59,
+   "analyst": {
+    "buy": 7,
+    "hold": 6,
+    "sell": 3
+   },
+   "next_earnings": "2026-08-02"
+  }
+ },
+ {
+  "symbol": "CMG",
+  "metrics": {
+   "pe": 16.1,
+   "eps_ttm": 3.23,
+   "revenue_b": 333.0,
+   "revenue_growth_pct": -1.9,
+   "gross_margin_pct": 71.9,
+   "net_margin_pct": 30.2,
+   "dividend_yield": 1.53,
+   "shares_out_m": 4997,
+   "week52_low": 36.51,
+   "week52_high": 65.43,
+   "analyst": {
+    "buy": 22,
+    "hold": 14,
+    "sell": 5
+   },
+   "next_earnings": "2026-07-15"
+  }
+ },
+ {
+  "symbol": "NKE",
+  "metrics": {
+   "pe": 33.2,
+   "eps_ttm": 2.17,
+   "revenue_b": 229.5,
+   "revenue_growth_pct": 2.5,
+   "gross_margin_pct": 56.3,
+   "net_margin_pct": 18.5,
+   "dividend_yield": 2.47,
+   "shares_out_m": 6526,
+   "week52_low": 57.69,
+   "week52_high": 107.43,
+   "analyst": {
+    "buy": 7,
+    "hold": 10,
+    "sell": 5
+   },
+   "next_earnings": "2026-07-02"
+  }
+ },
+ {
+  "symbol": "LULU",
+  "metrics": {
+   "pe": 20.0,
+   "eps_ttm": 12.1,
+   "revenue_b": 176.2,
+   "revenue_growth_pct": 12.6,
+   "gross_margin_pct": 51.4,
+   "net_margin_pct": 7.2,
+   "dividend_yield": 0.86,
+   "shares_out_m": 3108,
+   "week52_low": 153.64,
+   "week52_high": 298.61,
+   "analyst": {
+    "buy": 15,
+    "hold": 12,
+    "sell": 4
+   },
+   "next_earnings": "2026-07-26"
+  }
+ },
+ {
+  "symbol": "TJX",
+  "metrics": {
+   "pe": 27.6,
+   "eps_ttm": 4.64,
+   "revenue_b": 135.2,
+   "revenue_growth_pct": 8.2,
+   "gross_margin_pct": 53.5,
+   "net_margin_pct": 14.8,
+   "dividend_yield": 1.17,
+   "shares_out_m": 7722,
+   "week52_low": 93.54,
+   "week52_high": 143.06,
+   "analyst": {
+    "buy": 7,
+    "hold": 11,
+    "sell": 5
+   },
+   "next_earnings": "2026-07-12"
+  }
+ },
+ {
+  "symbol": "LOW",
+  "metrics": {
+   "pe": 21.2,
+   "eps_ttm": 10.75,
+   "revenue_b": 263.1,
+   "revenue_growth_pct": 21.5,
+   "gross_margin_pct": 27.7,
+   "net_margin_pct": 25.4,
+   "dividend_yield": 3.54,
+   "shares_out_m": 861,
+   "week52_low": 163.63,
+   "week52_high": 305.42,
+   "analyst": {
+    "buy": 15,
+    "hold": 15,
+    "sell": 1
+   },
+   "next_earnings": "2026-09-23"
+  }
+ },
+ {
+  "symbol": "TGT",
+  "metrics": {
+   "pe": 31.6,
+   "eps_ttm": 3.1,
+   "revenue_b": 296.0,
+   "revenue_growth_pct": 22.4,
+   "gross_margin_pct": 51.6,
+   "net_margin_pct": 23.3,
+   "dividend_yield": 0.19,
+   "shares_out_m": 3028,
+   "week52_low": 59.2,
+   "week52_high": 112.35,
+   "analyst": {
+    "buy": 29,
+    "hold": 9,
+    "sell": 1
+   },
+   "next_earnings": "2026-07-05"
+  }
+ },
+ {
+  "symbol": "DG",
+  "metrics": {
+   "pe": 18.1,
+   "eps_ttm": 6.19,
+   "revenue_b": 119.7,
+   "revenue_growth_pct": 26.5,
+   "gross_margin_pct": 50.5,
+   "net_margin_pct": 19.8,
+   "dividend_yield": 1.73,
+   "shares_out_m": 5961,
+   "week52_low": 79.29,
+   "week52_high": 150.96,
+   "analyst": {
+    "buy": 29,
+    "hold": 11,
+    "sell": 1
+   },
+   "next_earnings": "2026-09-13"
+  }
+ },
+ {
+  "symbol": "BKNG",
+  "metrics": {
+   "pe": 18.1,
+   "eps_ttm": 302.76,
+   "revenue_b": 74.0,
+   "revenue_growth_pct": 22.7,
+   "gross_margin_pct": 57.5,
+   "net_margin_pct": 31.8,
+   "dividend_yield": 1.14,
+   "shares_out_m": 3042,
+   "week52_low": 4197.0,
+   "week52_high": 8145.01,
+   "analyst": {
+    "buy": 24,
+    "hold": 6,
+    "sell": 6
+   },
+   "next_earnings": "2026-09-26"
+  }
+ },
+ {
+  "symbol": "ABNB",
+  "metrics": {
+   "pe": 24.0,
+   "eps_ttm": 5.58,
+   "revenue_b": 214.5,
+   "revenue_growth_pct": 7.4,
+   "gross_margin_pct": 68.5,
+   "net_margin_pct": 17.5,
+   "dividend_yield": 0.85,
+   "shares_out_m": 6714,
+   "week52_low": 88.49,
+   "week52_high": 197.81,
+   "analyst": {
+    "buy": 19,
+    "hold": 9,
+    "sell": 6
+   },
+   "next_earnings": "2026-08-25"
+  }
+ },
+ {
+  "symbol": "MAR",
+  "metrics": {
+   "pe": 22.6,
+   "eps_ttm": 11.86,
+   "revenue_b": 211.9,
+   "revenue_growth_pct": 33.7,
+   "gross_margin_pct": 69.0,
+   "net_margin_pct": 28.4,
+   "dividend_yield": 1.79,
+   "shares_out_m": 5201,
+   "week52_low": 217.68,
+   "week52_high": 348.28,
+   "analyst": {
+    "buy": 8,
+    "hold": 13,
+    "sell": 6
+   },
+   "next_earnings": "2026-09-28"
+  }
+ },
+ {
+  "symbol": "UBER",
+  "metrics": {
+   "pe": 24.9,
+   "eps_ttm": 3.69,
+   "revenue_b": 35.4,
+   "revenue_growth_pct": 1.4,
+   "gross_margin_pct": 47.0,
+   "net_margin_pct": 18.9,
+   "dividend_yield": 1.9,
+   "shares_out_m": 6682,
+   "week52_low": 53.13,
+   "week52_high": 134.29,
+   "analyst": {
+    "buy": 19,
+    "hold": 7,
+    "sell": 0
+   },
+   "next_earnings": "2026-08-02"
+  }
+ },
+ {
+  "symbol": "DASH",
+  "metrics": {
+   "pe": 22.9,
+   "eps_ttm": 10.57,
+   "revenue_b": 150.8,
+   "revenue_growth_pct": 10.4,
+   "gross_margin_pct": 24.9,
+   "net_margin_pct": 9.4,
+   "dividend_yield": 0.97,
+   "shares_out_m": 5775,
+   "week52_low": 157.44,
+   "week52_high": 270.0,
+   "analyst": {
+    "buy": 6,
+    "hold": 6,
+    "sell": 6
+   },
+   "next_earnings": "2026-08-23"
+  }
+ },
+ {
+  "symbol": "F",
+  "metrics": {
+   "pe": 31.6,
+   "eps_ttm": 0.35,
+   "revenue_b": 304.0,
+   "revenue_growth_pct": 13.8,
+   "gross_margin_pct": 56.9,
+   "net_margin_pct": 31.9,
+   "dividend_yield": 1.7,
+   "shares_out_m": 348,
+   "week52_low": 6.76,
+   "week52_high": 12.29,
+   "analyst": {
+    "buy": 28,
+    "hold": 11,
+    "sell": 4
+   },
+   "next_earnings": "2026-08-04"
+  }
+ },
+ {
+  "symbol": "GM",
+  "metrics": {
+   "pe": 30.5,
+   "eps_ttm": 1.7,
+   "revenue_b": 96.6,
+   "revenue_growth_pct": -0.1,
+   "gross_margin_pct": 34.3,
+   "net_margin_pct": 23.1,
+   "dividend_yield": 0.89,
+   "shares_out_m": 6726,
+   "week52_low": 36.4,
+   "week52_high": 67.14,
+   "analyst": {
+    "buy": 25,
+    "hold": 10,
+    "sell": 4
+   },
+   "next_earnings": "2026-07-23"
+  }
+ },
+ {
+  "symbol": "DIS",
+  "metrics": {
+   "pe": 16.6,
+   "eps_ttm": 7.35,
+   "revenue_b": 172.8,
+   "revenue_growth_pct": 19.6,
+   "gross_margin_pct": 34.4,
+   "net_margin_pct": 15.7,
+   "dividend_yield": 0.9,
+   "shares_out_m": 5382,
+   "week52_low": 70.23,
+   "week52_high": 181.61,
+   "analyst": {
+    "buy": 7,
+    "hold": 10,
+    "sell": 4
+   },
+   "next_earnings": "2026-09-26"
+  }
+ },
+ {
+  "symbol": "CMCSA",
+  "metrics": {
+   "pe": 31.8,
+   "eps_ttm": 1.07,
+   "revenue_b": 222.6,
+   "revenue_growth_pct": 10.6,
+   "gross_margin_pct": 48.2,
+   "net_margin_pct": 23.0,
+   "dividend_yield": 2.11,
+   "shares_out_m": 327,
+   "week52_low": 26.74,
+   "week52_high": 40.98,
+   "analyst": {
+    "buy": 28,
+    "hold": 12,
+    "sell": 5
+   },
+   "next_earnings": "2026-07-25"
+  }
+ },
+ {
+  "symbol": "T",
+  "metrics": {
+   "pe": 24.5,
+   "eps_ttm": 1.14,
+   "revenue_b": 303.2,
+   "revenue_growth_pct": 0.3,
+   "gross_margin_pct": 41.1,
+   "net_margin_pct": 13.2,
+   "dividend_yield": 1.09,
+   "shares_out_m": 5214,
+   "week52_low": 22.38,
+   "week52_high": 38.03,
+   "analyst": {
+    "buy": 27,
+    "hold": 9,
+    "sell": 5
+   },
+   "next_earnings": "2026-07-26"
+  }
+ },
+ {
+  "symbol": "VZ",
+  "metrics": {
+   "pe": 16.4,
+   "eps_ttm": 2.56,
+   "revenue_b": 287.0,
+   "revenue_growth_pct": 32.7,
+   "gross_margin_pct": 22.2,
+   "net_margin_pct": 8.7,
+   "dividend_yield": 1.84,
+   "shares_out_m": 2662,
+   "week52_low": 27.01,
+   "week52_high": 51.63,
+   "analyst": {
+    "buy": 22,
+    "hold": 9,
+    "sell": 2
+   },
+   "next_earnings": "2026-07-25"
+  }
+ },
+ {
+  "symbol": "TMUS",
+  "metrics": {
+   "pe": 25.6,
+   "eps_ttm": 9.06,
+   "revenue_b": 115.9,
+   "revenue_growth_pct": 29.5,
+   "gross_margin_pct": 22.9,
+   "net_margin_pct": 23.6,
+   "dividend_yield": 0,
+   "shares_out_m": 2331,
+   "week52_low": 183.23,
+   "week52_high": 289.22,
+   "analyst": {
+    "buy": 17,
+    "hold": 13,
+    "sell": 3
+   },
+   "next_earnings": "2026-08-11"
+  }
+ },
+ {
+  "symbol": "SPOT",
+  "metrics": {
+   "pe": 31.5,
+   "eps_ttm": 22.6,
+   "revenue_b": 199.5,
+   "revenue_growth_pct": 14.9,
+   "gross_margin_pct": 75.5,
+   "net_margin_pct": 19.1,
+   "dividend_yield": 1.81,
+   "shares_out_m": 816,
+   "week52_low": 520.28,
+   "week52_high": 1011.08,
+   "analyst": {
+    "buy": 22,
+    "hold": 6,
+    "sell": 2
+   },
+   "next_earnings": "2026-07-03"
+  }
+ },
+ {
+  "symbol": "RBLX",
+  "metrics": {
+   "pe": 19.9,
+   "eps_ttm": 5.43,
+   "revenue_b": 119.7,
+   "revenue_growth_pct": 12.8,
+   "gross_margin_pct": 63.1,
+   "net_margin_pct": 7.5,
+   "dividend_yield": 0,
+   "shares_out_m": 3662,
+   "week52_low": 73.89,
+   "week52_high": 148.72,
+   "analyst": {
+    "buy": 16,
+    "hold": 11,
+    "sell": 3
+   },
+   "next_earnings": "2026-08-21"
+  }
+ },
+ {
+  "symbol": "EA",
+  "metrics": {
+   "pe": 31.6,
+   "eps_ttm": 4.81,
+   "revenue_b": 379.3,
+   "revenue_growth_pct": -2.0,
+   "gross_margin_pct": 58.3,
+   "net_margin_pct": 14.0,
+   "dividend_yield": 1.77,
+   "shares_out_m": 7632,
+   "week52_low": 90.11,
+   "week52_high": 201.16,
+   "analyst": {
+    "buy": 30,
+    "hold": 9,
+    "sell": 0
+   },
+   "next_earnings": "2026-07-03"
+  }
+ },
+ {
+  "symbol": "TTWO",
+  "metrics": {
+   "pe": 18.2,
+   "eps_ttm": 12.53,
+   "revenue_b": 258.8,
+   "revenue_growth_pct": 9.5,
+   "gross_margin_pct": 77.0,
+   "net_margin_pct": 3.1,
+   "dividend_yield": 0,
+   "shares_out_m": 1397,
+   "week52_low": 156.17,
+   "week52_high": 277.46,
+   "analyst": {
+    "buy": 19,
+    "hold": 14,
+    "sell": 0
+   },
+   "next_earnings": "2026-09-05"
+  }
+ },
+ {
+  "symbol": "PINS",
+  "metrics": {
+   "pe": 23.5,
+   "eps_ttm": 1.53,
+   "revenue_b": 160.4,
+   "revenue_growth_pct": 21.0,
+   "gross_margin_pct": 35.0,
+   "net_margin_pct": 5.7,
+   "dividend_yield": 1.07,
+   "shares_out_m": 3219,
+   "week52_low": 25.87,
+   "week52_high": 42.04,
+   "analyst": {
+    "buy": 13,
+    "hold": 13,
+    "sell": 3
+   },
+   "next_earnings": "2026-07-20"
+  }
+ },
+ {
+  "symbol": "BA",
+  "metrics": {
+   "pe": 17.9,
+   "eps_ttm": 11.84,
+   "revenue_b": 366.8,
+   "revenue_growth_pct": 14.6,
+   "gross_margin_pct": 27.4,
+   "net_margin_pct": 30.1,
+   "dividend_yield": 0,
+   "shares_out_m": 3726,
+   "week52_low": 173.76,
+   "week52_high": 265.06,
+   "analyst": {
+    "buy": 7,
+    "hold": 14,
+    "sell": 5
+   },
+   "next_earnings": "2026-08-22"
+  }
+ },
+ {
+  "symbol": "LMT",
+  "metrics": {
+   "pe": 18.5,
+   "eps_ttm": 25.51,
+   "revenue_b": 27.8,
+   "revenue_growth_pct": 16.7,
+   "gross_margin_pct": 73.5,
+   "net_margin_pct": 30.1,
+   "dividend_yield": 0.55,
+   "shares_out_m": 5174,
+   "week52_low": 371.99,
+   "week52_high": 603.66,
+   "analyst": {
+    "buy": 8,
+    "hold": 5,
+    "sell": 6
+   },
+   "next_earnings": "2026-07-08"
+  }
+ },
+ {
+  "symbol": "RTX",
+  "metrics": {
+   "pe": 22.9,
+   "eps_ttm": 6.2,
+   "revenue_b": 12.5,
+   "revenue_growth_pct": 17.2,
+   "gross_margin_pct": 42.1,
+   "net_margin_pct": 28.5,
+   "dividend_yield": 0,
+   "shares_out_m": 4503,
+   "week52_low": 104.17,
+   "week52_high": 154.61,
+   "analyst": {
+    "buy": 14,
+    "hold": 8,
+    "sell": 5
+   },
+   "next_earnings": "2026-09-16"
+  }
+ },
+ {
+  "symbol": "NOC",
+  "metrics": {
+   "pe": 20.3,
+   "eps_ttm": 25.22,
+   "revenue_b": 308.1,
+   "revenue_growth_pct": 27.9,
+   "gross_margin_pct": 24.4,
+   "net_margin_pct": 34.1,
+   "dividend_yield": 0.38,
+   "shares_out_m": 5505,
+   "week52_low": 334.52,
+   "week52_high": 739.88,
+   "analyst": {
+    "buy": 29,
+    "hold": 10,
+    "sell": 5
+   },
+   "next_earnings": "2026-09-06"
+  }
+ },
+ {
+  "symbol": "GE",
+  "metrics": {
+   "pe": 22.7,
+   "eps_ttm": 10.93,
+   "revenue_b": 53.4,
+   "revenue_growth_pct": 15.1,
+   "gross_margin_pct": 72.1,
+   "net_margin_pct": 29.4,
+   "dividend_yield": 0.18,
+   "shares_out_m": 4241,
+   "week52_low": 159.03,
+   "week52_high": 278.48,
+   "analyst": {
+    "buy": 27,
+    "hold": 5,
+    "sell": 2
+   },
+   "next_earnings": "2026-09-10"
+  }
+ },
+ {
+  "symbol": "CAT",
+  "metrics": {
+   "pe": 23.5,
+   "eps_ttm": 16.68,
+   "revenue_b": 101.7,
+   "revenue_growth_pct": 20.4,
+   "gross_margin_pct": 53.1,
+   "net_margin_pct": 6.1,
+   "dividend_yield": 0.72,
+   "shares_out_m": 4120,
+   "week52_low": 235.43,
+   "week52_high": 577.7,
+   "analyst": {
+    "buy": 9,
+    "hold": 4,
+    "sell": 5
+   },
+   "next_earnings": "2026-09-24"
+  }
+ },
+ {
+  "symbol": "DE",
+  "metrics": {
+   "pe": 24.0,
+   "eps_ttm": 21.33,
+   "revenue_b": 136.4,
+   "revenue_growth_pct": 32.0,
+   "gross_margin_pct": 22.5,
+   "net_margin_pct": 30.5,
+   "dividend_yield": 2.6,
+   "shares_out_m": 834,
+   "week52_low": 427.3,
+   "week52_high": 715.24,
+   "analyst": {
+    "buy": 13,
+    "hold": 12,
+    "sell": 1
+   },
+   "next_earnings": "2026-09-14"
+  }
+ },
+ {
+  "symbol": "HON",
+  "metrics": {
+   "pe": 21.2,
+   "eps_ttm": 10.94,
+   "revenue_b": 14.1,
+   "revenue_growth_pct": 30.6,
+   "gross_margin_pct": 52.7,
+   "net_margin_pct": 23.2,
+   "dividend_yield": 0.91,
+   "shares_out_m": 6497,
+   "week52_low": 155.86,
+   "week52_high": 290.95,
+   "analyst": {
+    "buy": 27,
+    "hold": 2,
+    "sell": 1
+   },
+   "next_earnings": "2026-08-14"
+  }
+ },
+ {
+  "symbol": "UPS",
+  "metrics": {
+   "pe": 19.8,
+   "eps_ttm": 5.15,
+   "revenue_b": 83.2,
+   "revenue_growth_pct": 19.3,
+   "gross_margin_pct": 38.8,
+   "net_margin_pct": 25.7,
+   "dividend_yield": 2.05,
+   "shares_out_m": 5927,
+   "week52_low": 82.44,
+   "week52_high": 151.87,
+   "analyst": {
+    "buy": 9,
+    "hold": 14,
+    "sell": 2
+   },
+   "next_earnings": "2026-09-18"
+  }
+ },
+ {
+  "symbol": "FDX",
+  "metrics": {
+   "pe": 16.1,
+   "eps_ttm": 15.03,
+   "revenue_b": 98.2,
+   "revenue_growth_pct": -0.1,
+   "gross_margin_pct": 47.0,
+   "net_margin_pct": 6.6,
+   "dividend_yield": 3.95,
+   "shares_out_m": 6940,
+   "week52_low": 163.46,
+   "week52_high": 358.94,
+   "analyst": {
+    "buy": 10,
+    "hold": 15,
+    "sell": 2
+   },
+   "next_earnings": "2026-09-24"
+  }
+ },
+ {
+  "symbol": "UNP",
+  "metrics": {
+   "pe": 18.1,
+   "eps_ttm": 12.82,
+   "revenue_b": 305.7,
+   "revenue_growth_pct": 14.9,
+   "gross_margin_pct": 50.9,
+   "net_margin_pct": 18.5,
+   "dividend_yield": 2.1,
+   "shares_out_m": 2607,
+   "week52_low": 129.21,
+   "week52_high": 342.28,
+   "analyst": {
+    "buy": 21,
+    "hold": 9,
+    "sell": 1
+   },
+   "next_earnings": "2026-07-19"
+  }
+ },
+ {
+  "symbol": "DAL",
+  "metrics": {
+   "pe": 18.5,
+   "eps_ttm": 2.81,
+   "revenue_b": 22.1,
+   "revenue_growth_pct": 14.8,
+   "gross_margin_pct": 72.9,
+   "net_margin_pct": 23.6,
+   "dividend_yield": 0,
+   "shares_out_m": 6808,
+   "week52_low": 35.32,
+   "week52_high": 75.25,
+   "analyst": {
+    "buy": 28,
+    "hold": 7,
+    "sell": 6
+   },
+   "next_earnings": "2026-08-12"
+  }
+ },
+ {
+  "symbol": "UAL",
+  "metrics": {
+   "pe": 15.5,
+   "eps_ttm": 5.29,
+   "revenue_b": 22.4,
+   "revenue_growth_pct": 17.5,
+   "gross_margin_pct": 41.8,
+   "net_margin_pct": 11.5,
+   "dividend_yield": 1.47,
+   "shares_out_m": 3214,
+   "week52_low": 56.18,
+   "week52_high": 106.39,
+   "analyst": {
+    "buy": 24,
+    "hold": 12,
+    "sell": 4
+   },
+   "next_earnings": "2026-07-05"
+  }
+ },
+ {
+  "symbol": "COP",
+  "metrics": {
+   "pe": 13.9,
+   "eps_ttm": 6.91,
+   "revenue_b": 158.8,
+   "revenue_growth_pct": 26.8,
+   "gross_margin_pct": 40.3,
+   "net_margin_pct": 33.0,
+   "dividend_yield": 1.22,
+   "shares_out_m": 4171,
+   "week52_low": 67.2,
+   "week52_high": 102.76,
+   "analyst": {
+    "buy": 9,
+    "hold": 13,
+    "sell": 2
+   },
+   "next_earnings": "2026-08-17"
+  }
+ },
+ {
+  "symbol": "SLB",
+  "metrics": {
+   "pe": 10.7,
+   "eps_ttm": 3.36,
+   "revenue_b": 243.3,
+   "revenue_growth_pct": 15.6,
+   "gross_margin_pct": 39.7,
+   "net_margin_pct": 22.2,
+   "dividend_yield": 0.4,
+   "shares_out_m": 1468,
+   "week52_low": 30.5,
+   "week52_high": 49.78,
+   "analyst": {
+    "buy": 14,
+    "hold": 11,
+    "sell": 2
+   },
+   "next_earnings": "2026-09-27"
+  }
+ },
+ {
+  "symbol": "EOG",
+  "metrics": {
+   "pe": 11.1,
+   "eps_ttm": 10.99,
+   "revenue_b": 197.0,
+   "revenue_growth_pct": 17.5,
+   "gross_margin_pct": 48.5,
+   "net_margin_pct": 2.5,
+   "dividend_yield": 0.92,
+   "shares_out_m": 3449,
+   "week52_low": 78.36,
+   "week52_high": 177.44,
+   "analyst": {
+    "buy": 27,
+    "hold": 12,
+    "sell": 0
+   },
+   "next_earnings": "2026-09-16"
+  }
+ },
+ {
+  "symbol": "OXY",
+  "metrics": {
+   "pe": 9.6,
+   "eps_ttm": 4.58,
+   "revenue_b": 262.9,
+   "revenue_growth_pct": 33.9,
+   "gross_margin_pct": 54.7,
+   "net_margin_pct": 9.5,
+   "dividend_yield": 1.7,
+   "shares_out_m": 601,
+   "week52_low": 30.54,
+   "week52_high": 56.58,
+   "analyst": {
+    "buy": 28,
+    "hold": 11,
+    "sell": 6
+   },
+   "next_earnings": "2026-08-05"
+  }
+ },
+ {
+  "symbol": "NEE",
+  "metrics": {
+   "pe": 19.1,
+   "eps_ttm": 3.87,
+   "revenue_b": 98.4,
+   "revenue_growth_pct": 17.9,
+   "gross_margin_pct": 62.0,
+   "net_margin_pct": 8.3,
+   "dividend_yield": 0.03,
+   "shares_out_m": 3421,
+   "week52_low": 45.23,
+   "week52_high": 94.41,
+   "analyst": {
+    "buy": 24,
+    "hold": 9,
+    "sell": 6
+   },
+   "next_earnings": "2026-09-24"
+  }
+ },
+ {
+  "symbol": "DUK",
+  "metrics": {
+   "pe": 15.3,
+   "eps_ttm": 7.71,
+   "revenue_b": 57.0,
+   "revenue_growth_pct": 3.3,
+   "gross_margin_pct": 39.5,
+   "net_margin_pct": 23.9,
+   "dividend_yield": 1.65,
+   "shares_out_m": 4299,
+   "week52_low": 76.01,
+   "week52_high": 133.1,
+   "analyst": {
+    "buy": 22,
+    "hold": 7,
+    "sell": 4
+   },
+   "next_earnings": "2026-08-22"
+  }
+ },
+ {
+  "symbol": "SO",
+  "metrics": {
+   "pe": 18.9,
+   "eps_ttm": 4.87,
+   "revenue_b": 288.9,
+   "revenue_growth_pct": 20.7,
+   "gross_margin_pct": 61.6,
+   "net_margin_pct": 22.1,
+   "dividend_yield": 1.52,
+   "shares_out_m": 4553,
+   "week52_low": 56.81,
+   "week52_high": 136.88,
+   "analyst": {
+    "buy": 14,
+    "hold": 14,
+    "sell": 2
+   },
+   "next_earnings": "2026-09-07"
+  }
+ },
+ {
+  "symbol": "LIN",
+  "metrics": {
+   "pe": 16.9,
+   "eps_ttm": 27.34,
+   "revenue_b": 196.6,
+   "revenue_growth_pct": 14.2,
+   "gross_margin_pct": 53.6,
+   "net_margin_pct": 32.8,
+   "dividend_yield": 2.04,
+   "shares_out_m": 5829,
+   "week52_low": 293.99,
+   "week52_high": 604.33,
+   "analyst": {
+    "buy": 22,
+    "hold": 8,
+    "sell": 3
+   },
+   "next_earnings": "2026-08-25"
+  }
+ },
+ {
+  "symbol": "FCX",
+  "metrics": {
+   "pe": 18.0,
+   "eps_ttm": 2.56,
+   "revenue_b": 117.6,
+   "revenue_growth_pct": 6.5,
+   "gross_margin_pct": 62.8,
+   "net_margin_pct": 13.4,
+   "dividend_yield": 0.34,
+   "shares_out_m": 3937,
+   "week52_low": 28.09,
+   "week52_high": 59.45,
+   "analyst": {
+    "buy": 22,
+    "hold": 13,
+    "sell": 2
+   },
+   "next_earnings": "2026-07-04"
+  }
+ },
+ {
+  "symbol": "NEM",
+  "metrics": {
+   "pe": 16.2,
+   "eps_ttm": 3.58,
+   "revenue_b": 235.6,
+   "revenue_growth_pct": 4.7,
+   "gross_margin_pct": 60.2,
+   "net_margin_pct": 19.5,
+   "dividend_yield": 1.53,
+   "shares_out_m": 5176,
+   "week52_low": 32.81,
+   "week52_high": 71.69,
+   "analyst": {
+    "buy": 27,
+    "hold": 9,
+    "sell": 0
+   },
+   "next_earnings": "2026-09-25"
+  }
+ },
+ {
+  "symbol": "PLD",
+  "metrics": {
+   "pe": 27.1,
+   "eps_ttm": 4.13,
+   "revenue_b": 385.9,
+   "revenue_growth_pct": 34.1,
+   "gross_margin_pct": 29.5,
+   "net_margin_pct": 23.5,
+   "dividend_yield": 2.2,
+   "shares_out_m": 5274,
+   "week52_low": 87.0,
+   "week52_high": 132.08,
+   "analyst": {
+    "buy": 14,
+    "hold": 12,
+    "sell": 0
+   },
+   "next_earnings": "2026-07-21"
+  }
+ },
+ {
+  "symbol": "AMT",
+  "metrics": {
+   "pe": 33.6,
+   "eps_ttm": 6.49,
+   "revenue_b": 215.0,
+   "revenue_growth_pct": 23.9,
+   "gross_margin_pct": 76.2,
+   "net_margin_pct": 32.1,
+   "dividend_yield": 0.27,
+   "shares_out_m": 1566,
+   "week52_low": 177.6,
+   "week52_high": 246.14,
+   "analyst": {
+    "buy": 6,
+    "hold": 15,
+    "sell": 3
+   },
+   "next_earnings": "2026-08-06"
+  }
+ },
+ {
+  "symbol": "SPY",
+  "metrics": {
+   "expense_ratio": 0.38,
+   "aum_b": 577.5,
+   "dividend_yield": 3.28
+  }
+ },
+ {
+  "symbol": "QQQ",
+  "metrics": {
+   "expense_ratio": 0.35,
+   "aum_b": 10.5,
+   "dividend_yield": 2.2
+  }
+ },
+ {
+  "symbol": "IWM",
+  "metrics": {
+   "expense_ratio": 0.07,
+   "aum_b": 589.9,
+   "dividend_yield": 1.35
+  }
+ },
+ {
+  "symbol": "DIA",
+  "metrics": {
+   "expense_ratio": 0.4,
+   "aum_b": 328.3,
+   "dividend_yield": 1.98
+  }
+ },
+ {
+  "symbol": "XLK",
+  "metrics": {
+   "expense_ratio": 0.38,
+   "aum_b": 511.4,
+   "dividend_yield": 1.9
+  }
+ },
+ {
+  "symbol": "XLF",
+  "metrics": {
+   "expense_ratio": 0.1,
+   "aum_b": 72.0,
+   "dividend_yield": 0.99
+  }
+ },
+ {
+  "symbol": "XLE",
+  "metrics": {
+   "expense_ratio": 0.2,
+   "aum_b": 158.1,
+   "dividend_yield": 1.06
+  }
+ },
+ {
+  "symbol": "GLD",
+  "metrics": {
+   "expense_ratio": 0.3,
+   "aum_b": 475.5,
+   "dividend_yield": 2.2
+  }
+ },
+ {
+  "symbol": "TLT",
+  "metrics": {
+   "expense_ratio": 0.31,
+   "aum_b": 109.4,
+   "dividend_yield": 3.07
+  }
+ },
+ {
+  "symbol": "VTI",
+  "metrics": {
+   "expense_ratio": 0.36,
+   "aum_b": 497.1,
+   "dividend_yield": 2.05
+  }
+ }
+]
