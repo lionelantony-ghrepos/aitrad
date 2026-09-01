@@ -25,12 +25,12 @@ Seeded via `scripts/seed-all.ts` (see doc 06): 150 instruments, 5y daily + 5d 1m
 ### PBI-002 InsForge baseline
 | ID | Criterion / Test | Pri | Status |
 |---|---|---|---|
-| AC-002-01 | Migrations apply idempotently; re-run is a no-op | P0 | ☐ |
-| AC-002-02 | RLS: user A cannot read user B's account/profile rows | P0 | ☐ |
-| AC-002-03 | audit_log rejects UPDATE/DELETE | P0 | ☐ |
-| TC-002-01 | Apply 0001 twice → second run no-op (AC-002-01) | P0 | ☐ |
-| TC-002-02 | Query accounts with user-A JWT → only A's rows; B's id → 0 rows (AC-002-02) | P0 | ☐ |
-| TC-002-03 | UPDATE audit_log → error raised (AC-002-03) | P0 | ☐ |
+| AC-002-01 | Migrations apply idempotently; re-run is a no-op | P0 | ☑ |
+| AC-002-02 | RLS: user A cannot read user B's account/profile rows | P0 | ☑ |
+| AC-002-03 | audit_log rejects UPDATE/DELETE | P0 | ☑ |
+| TC-002-01 | Apply 0001 twice → second run no-op (AC-002-01) | P0 | ☑ |
+| TC-002-02 | Query accounts with user-A JWT → only A's rows; B's id → 0 rows (AC-002-02) | P0 | ☑ |
+| TC-002-03 | UPDATE audit_log → error raised (AC-002-03) | P0 | ☑ |
 
 ### PBI-003 Terminal shell
 | ID | Criterion / Test | Pri | Status |
