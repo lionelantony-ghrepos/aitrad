@@ -20,7 +20,7 @@ Personas: active retail trader, research-driven investor, power/quant hobbyist, 
 
 ## Current repo state
 
-This clone has the **PBI-001 monorepo** (pnpm + Turborepo, `apps/web`, empty `@meridian/*` packages, CI). InsForge schema work starts at PBI-002.
+This clone currently holds **spec + seed JSON only**. Application code (`apps/`, `packages/`, `insforge/`) is not scaffolded until PBI-001 / PBI-002.
 
 | Path | Role |
 |---|---|
@@ -91,24 +91,3 @@ Traceability: `PBI-nnn` → `AC-nnn-xx` → `TC-nnn-xx`.
 ## Definition of Done (per PBI)
 
 Code in · P0/P1 TCs for that PBI pass · `docs/04` boxes ticked · no lint/type errors · audit + entitlement on new mutating endpoints · no hard-coded policy (spot-check magic numbers).
-
-<!-- INSFORGE:START -->
-## InsForge backend
-
-This project uses [InsForge](https://insforge.dev): an all-in-one, open-source Postgres-based backend (BaaS) that gives this app a database, authentication, file storage, edge functions, realtime, an AI model gateway, and payments through one platform.
-
-- **Project:** **aitrad** (API base `https://byt7rrs3.ap-southeast.insforge.app`)
-- **Skills:** these InsForge skills are installed for supported coding agents. Reach for them before implementing any InsForge feature instead of guessing the API:
-  - `insforge`: app code with the `@insforge/sdk` client (database CRUD, auth, storage, edge functions, realtime, AI, email, and Stripe payments).
-  - `insforge-cli`: backend and infrastructure via the `insforge` CLI (projects, SQL, migrations, RLS policies, storage buckets, functions, secrets, payment setup, schedules, deploys).
-  - `insforge-debug`: diagnosing failures (SDK/HTTP errors, RLS denials, auth and OAuth issues) and running security or performance audits.
-  - `insforge-integrations`: wiring external auth providers (Clerk, Auth0, WorkOS, Better Auth, etc.) for JWT-based RLS, or the OKX x402 payment facilitator.
-  - `find-skills`: discovering additional skills on demand.
-- **Credentials:** app code reads keys from `.env.local`; the CLI reads `.insforge/project.json`. Never hardcode or commit keys.
-
-Key patterns:
-
-- Database inserts take an array: `insert([{ ... }])`.
-- Reference users with `auth.users(id)`; use `auth.uid()` in RLS policies.
-- For storage uploads, persist both the returned `url` and `key`.
-<!-- INSFORGE:END -->
