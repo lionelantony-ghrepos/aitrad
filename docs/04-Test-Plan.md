@@ -17,9 +17,9 @@ Seeded via `scripts/seed-all.ts` (see doc 06): 150 instruments, 5y daily + 5d 1m
 ### PBI-001 Monorepo scaffold & CI
 | ID | Criterion / Test | Pri | Status |
 |---|---|---|---|
-| AC-001-01 | `pnpm build`, `pnpm test`, `pnpm lint` pass from clean clone | P0 | ☐ |
+| AC-001-01 | `pnpm build`, `pnpm test`, `pnpm lint` pass from clean clone | P0 | ☑ |
 | AC-001-02 | CI runs typecheck+lint+test on PR and fails on introduced type error | P1 | ☐ |
-| TC-001-01 | Clean clone → install → build/test/lint all green (AC-001-01) | P0 | ☐ |
+| TC-001-01 | Clean clone → install → build/test/lint all green (AC-001-01) | P0 | ☑ |
 | TC-001-02 | PR with deliberate type error → CI red (AC-001-02) | P1 | ☐ |
 
 ### PBI-002 InsForge baseline

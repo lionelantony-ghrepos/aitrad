@@ -1,0 +1,10 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./apps/web" },
+    { "path": "./packages/schemas" },
+    { "path": "./packages/rules-engine" },
+    { "path": "./packages/paper-engine" },
+    { "path": "./packages/mock-data" }
+  ]
+}
