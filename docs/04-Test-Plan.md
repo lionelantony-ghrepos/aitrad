@@ -303,6 +303,14 @@ Seeded via `scripts/seed-all.ts` (see doc 06): 150 instruments, 5y daily + 5d 1m
 | TC-030-01 | Throw in panel dev hook → other panels alive, error reported (AC-030-01) | P1 | ☐ |
 | TC-030-02 | k6 + Lighthouse CI budgets green (AC-030-02) | P1 | ☐ |
 
+### DOC Knowledge-base process (not a product PBI)
+| ID | Criterion / Test | Pri | Status |
+|---|---|---|---|
+| AC-DOC-01 | `feat(PBI-NNN)` commits include `docs/kb/as-built/PBI-NNN.md` with required headings and no TBD sections | P1 | ☑ |
+| AC-DOC-02 | `pnpm docs:generate` snapshots under `docs/kb/generated/` are current in CI | P1 | ☑ |
+| TC-DOC-01 | `pnpm docs:kb-check` and `node --test scripts/check-kb.test.mjs` pass (AC-DOC-01) | P1 | ☑ |
+| TC-DOC-02 | `pnpm docs:generate` then git working tree clean for `docs/kb/generated` (AC-DOC-02) | P1 | ☑ |
+
 ### PBI-031 Regression suite
 | ID | Criterion / Test | Pri | Status |
 |---|---|---|---|

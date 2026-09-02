@@ -13,6 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: pnpm/action-setup@v4
         with:
           version: 9.15.9
@@ -28,3 +30,21 @@ jobs:
         run: pnpm lint
       - name: Test
         run: pnpm test
+      - name: Collect commit subjects for kb gate
+        run: |
+          set -e
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git fetch origin "${{ github.base_ref }}" --depth=1
+            git log --format=%s "origin/${{ github.base_ref }}...HEAD" > /tmp/kb-subjects.txt
+          else
+            BEFORE="${{ github.event.before }}"
+            if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+              git log -1 --format=%s > /tmp/kb-subjects.txt
+            else
+              git log --format=%s "${BEFORE}..HEAD" > /tmp/kb-subjects.txt || git log -1 --format=%s > /tmp/kb-subjects.txt
+            fi
+          fi
+      - name: Knowledge base check
+        run: pnpm docs:kb-test && pnpm docs:kb-check -- --commits-file /tmp/kb-subjects.txt
+      - name: Generated kb snapshots
+        run: pnpm docs:generate && git diff --exit-code -- docs/kb/generated

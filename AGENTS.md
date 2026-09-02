@@ -59,8 +59,9 @@ InsForge access only through `apps/web/lib/api` (repository layer) or shared fun
 2. Build **strictly** `docs/03` PBI-001 → PBI-031. One PBI per chat session.
 3. Prepend the PRD prompt preamble to every PBI prompt.
 4. Tests named in `docs/04` are the source of truth. Tick Status boxes in the **same commit** as the passing tests.
-5. Commit: `feat(PBI-00X): <summary>`. Do not start the next PBI in the same session.
-6. If TCs fail, fix before moving on. Do not carry red tests forward.
+5. Fill `docs/kb/as-built/PBI-00X.md` from the template and update [docs/kb/INDEX.md](docs/kb/INDEX.md) in that same commit. Read as-built of dependency PBIs before coding. Do not rewrite docs 01–06.
+6. Commit: `feat(PBI-00X): <summary>`. Do not start the next PBI in the same session.
+7. If TCs fail, fix before moving on. Do not carry red tests forward.
 
 Traceability: `PBI-nnn` → `AC-nnn-xx` → `TC-nnn-xx`.
 
@@ -87,7 +88,8 @@ Traceability: `PBI-nnn` → `AC-nnn-xx` → `TC-nnn-xx`.
 | [docs/06-…](docs/06-Mock-Data-and-Seeding.md) | Generators, seed pipeline, expected counts |
 | [docs/07-…](docs/07-Agent-Build-Guide.md) | Session protocol, DoD, copilot system prompt |
 | [docs/08-…](docs/08-User-Guide.md) | End-user behavior (finalize after UI ships) |
+| [docs/kb/INDEX.md](docs/kb/INDEX.md) | As-built handbook, ADRs, generated API/schema catalogs |
 
 ## Definition of Done (per PBI)
 
-Code in · P0/P1 TCs for that PBI pass · `docs/04` boxes ticked · no lint/type errors · audit + entitlement on new mutating endpoints · no hard-coded policy (spot-check magic numbers).
+Code in · P0/P1 TCs for that PBI pass · `docs/04` boxes ticked · `docs/kb/as-built/PBI-00X.md` filled · no lint/type errors · audit + entitlement on new mutating endpoints · no hard-coded policy (spot-check magic numbers).

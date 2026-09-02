@@ -73,7 +73,7 @@ Every transition: (1) evaluated by rules-service (order-validation + risk decisi
 - **Copilot orchestrator** (edge function): system prompt + tool registry → InsForge AI Gateway → tool-call loop. Tools: `get_quote`, `get_bars`, `search_news` (RAG/pgvector), `get_fundamentals`, `screen_instruments`, `get_portfolio`, `analyze_portfolio`, `explain_rule_decision`, `create_watchlist_item`, `create_alert`, `propose_order`, `create_monitor`.
 - **Action safety:** read tools execute freely; write tools create `copilot_actions` rows. Orders are ALWAYS `proposed` → user approves in UI → order-service executes. Approval policy itself is a decision table (`DT-AI-01`) — e.g., auto-approve watchlist adds, require approval for orders, block orders > X% of equity.
 - **Monitors:** user- or copilot-created standing instructions (natural language + compiled rule condition), run by `monitor-runner` on cron, emit alerts with an LLM-written explanation.
-- **RAG:** news + filing chunks embedded into pgvector; copilot research briefs cite retrieved items.
+- **RAG:** news + filing chunks embedded into pgvector; copilot research briefs cite retrieved items. This corpus is **not** the engineering knowledge base (`docs/kb/`); `search_news` must not ingest specs, as-built pages, or ADRs.
 
 ## 7. Security & enterprise controls
 
