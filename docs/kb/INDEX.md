@@ -25,7 +25,8 @@ PBI-023 embeds **news** (and later filings) for the copilot. It must **not** ing
 | --- | --- | --- |
 | 001 | [PBI-001](as-built/PBI-001.md) | Monorepo & CI (backfilled from tree) |
 | 002 | [PBI-002](as-built/PBI-002.md) | InsForge baseline (backfilled from tree) |
-| 003–031 | _pending_ | Copy [`_template-as-built.md`](_template-as-built.md) when the PBI ships |
+| 003 | [PBI-003](as-built/PBI-003.md) | Terminal shell, dockview, theme tokens |
+| 004–031 | _pending_ | Copy [`_template-as-built.md`](_template-as-built.md) when the PBI ships |
 
 ## Architecture decision records
 

@@ -35,12 +35,12 @@ Seeded via `scripts/seed-all.ts` (see doc 06): 150 instruments, 5y daily + 5d 1m
 ### PBI-003 Terminal shell
 | ID | Criterion / Test | Pri | Status |
 |---|---|---|---|
-| AC-003-01 | Panels open/close/resize/drag-dock; layout survives reload | P0 | ☐ |
-| AC-003-02 | Status bar clock reflects NYSE session state | P1 | ☐ |
-| AC-003-03 | Reset layout restores defaults | P2 | ☐ |
-| TC-003-01 | Resize+move panel, reload → layout identical (AC-003-01) | P0 | ☐ |
-| TC-003-02 | Mock clock inside/outside session → OPEN/CLOSED shown (AC-003-02) | P1 | ☐ |
-| TC-003-03 | Reset → default layout (AC-003-03) | P2 | ☐ |
+| AC-003-01 | Panels open/close/resize/drag-dock; layout survives reload | P0 | ☑ |
+| AC-003-02 | Status bar clock reflects NYSE session state | P1 | ☑ |
+| AC-003-03 | Reset layout restores defaults | P2 | ☑ |
+| TC-003-01 | Resize+move panel, reload → layout identical (AC-003-01) | P0 | ☑ |
+| TC-003-02 | Mock clock inside/outside session → OPEN/CLOSED shown (AC-003-02) | P1 | ☑ |
+| TC-003-03 | Reset → default layout (AC-003-03) | P2 | ☑ |
 
 ### PBI-004 Auth & profiles
 | ID | Criterion / Test | Pri | Status |
