@@ -3,7 +3,9 @@
 **Version:** 1.0 (pre-release draft — finalize screenshots and any UI copy changes after the build ships)
 
 ## 1. Getting started
-Sign up with email or Google. Complete the profile wizard (your experience level tunes risk guardrails). You start with a **$100,000 paper account** — all trading is simulated; no real money moves.
+Open **`/signup`** (email + password) or **`/login`**. Google OAuth is available on both pages. After the first sign-in, complete the **profile wizard** (`/onboarding`): display name, experience level (novice / intermediate / advanced), and optional objectives. Experience is stored for later risk/suitability rules; the suitability tier is not set during this wizard.
+
+You receive a **paper cash account** on first login (amount comes from the opening-account seed policy — all trading is simulated; no real money moves). Open **`/workspace`** once the wizard is done. The command-bar **user menu** shows your email and paper cash; **Log out** returns you to `/login`. Reloading the workspace keeps you signed in. Visiting `/workspace` while signed out sends you to `/login`.
 
 ## 2. The workspace
 Meridian is a multi-panel terminal. Open **`/workspace`**. Drag panel edges to resize, drag tabs to rearrange, and your layout is saved automatically (**Reset layout** in the top command bar). The status bar shows the market clock (America/New_York, OPEN/CLOSED) and a connection indicator.

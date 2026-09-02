@@ -1,13 +1,21 @@
 "use client";
 
+import { UserMenu } from "@/components/auth/user-menu";
 import { Button } from "@/components/ui/button";
 
 type CommandBarProps = {
   onResetLayout: () => void;
   onOpenPalette: () => void;
+  email: string;
+  cashLabel: string | null;
 };
 
-export function CommandBar({ onResetLayout, onOpenPalette }: CommandBarProps): React.JSX.Element {
+export function CommandBar({
+  onResetLayout,
+  onOpenPalette,
+  email,
+  cashLabel,
+}: CommandBarProps): React.JSX.Element {
   return (
     <header
       className="flex h-8 shrink-0 items-center justify-between gap-2 border-b border-border bg-card px-2"
@@ -40,6 +48,7 @@ export function CommandBar({ onResetLayout, onOpenPalette }: CommandBarProps): R
         >
           Reset layout
         </Button>
+        <UserMenu email={email} cashLabel={cashLabel} />
       </div>
     </header>
   );

@@ -8,7 +8,17 @@ import { CommandPalette } from "./command-palette";
 import { DockWorkspace, resetDockLayout } from "./dock-workspace";
 import { StatusBar } from "./status-bar";
 
-export function WorkspaceShell(): React.JSX.Element {
+type WorkspaceShellProps = {
+  email: string;
+  cashLabel: string | null;
+  accountCount: number;
+};
+
+export function WorkspaceShell({
+  email,
+  cashLabel,
+  accountCount,
+}: WorkspaceShellProps): React.JSX.Element {
   const [api, setApi] = useState<DockviewApi | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
 
@@ -33,6 +43,8 @@ export function WorkspaceShell(): React.JSX.Element {
   return (
     <div className="flex h-screen flex-col bg-background text-foreground" data-testid="workspace">
       <CommandBar
+        email={email}
+        cashLabel={cashLabel}
         onOpenPalette={openPalette}
         onResetLayout={() => {
           if (api) {
@@ -40,6 +52,9 @@ export function WorkspaceShell(): React.JSX.Element {
           }
         }}
       />
+      <span className="sr-only" data-testid="account-count">
+        {accountCount}
+      </span>
       <div className="min-h-0 w-full flex-1" style={{ height: "calc(100vh - 3.5rem)" }}>
         <DockWorkspace onApiReady={setApi} />
       </div>

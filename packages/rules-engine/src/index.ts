@@ -7,3 +7,17 @@ export const packageName = "@meridian/rules-engine" as const;
 export function engineReady(): boolean {
   return true;
 }
+
+export { authorize } from "./authorize";
+export { paperAccountSeed } from "./paper-account-seed";
+export {
+  executeProvision,
+  planProvision,
+  ProvisionDeniedError,
+  type ExistingProvision,
+  type ProvisionAccountRow,
+  type ProvisionPlan,
+  type ProvisionPorts,
+  type ProvisionProfileRow,
+} from "./provision-plan";
+export { isProfileWizardComplete, profileWizardPatch } from "./profile-wizard";

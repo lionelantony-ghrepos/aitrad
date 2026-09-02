@@ -12,6 +12,7 @@ export default tseslint.config(
       "**/.turbo/**",
       "eslint.config.mjs",
       "**/next-env.d.ts",
+      "insforge/functions/**",
     ],
   },
   eslint.configs.recommended,

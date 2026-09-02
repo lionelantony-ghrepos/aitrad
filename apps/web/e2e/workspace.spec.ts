@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { LAYOUT_STORAGE_KEY } from "../lib/layout-storage";
+import { signUpThroughWizard } from "./helpers/onboard";
 
 function layoutGrid(raw: string | null): unknown {
   if (raw === null) {
@@ -10,6 +11,14 @@ function layoutGrid(raw: string | null): unknown {
 }
 
 test.describe("PBI-003 terminal shell", () => {
+  test.beforeEach(async ({ page, request }) => {
+    await request.post("/api/e2e/reset");
+    await signUpThroughWizard(
+      page,
+      `ws-${Date.now()}-${Math.random().toString(16).slice(2)}@example.com`,
+    );
+  });
+
   test("TC-003-01 resize then reload keeps layout @TC-003-01", async ({ page }) => {
     await page.goto("/workspace");
     await expect(page.getByTestId("workspace")).toBeVisible();
