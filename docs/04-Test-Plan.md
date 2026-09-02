@@ -64,12 +64,12 @@ Seeded via `scripts/seed-all.ts` (see doc 06): 150 instruments, 5y daily + 5d 1m
 ### PBI-006 Mock feed
 | ID | Criterion / Test | Pri | Status |
 |---|---|---|---|
-| AC-006-01 | quotes_latest updates while calendar OPEN; frozen when CLOSED or paused | P0 | ☐ |
-| AC-006-02 | Tick batches on realtime ≤ 4/sec; 1m bars roll correctly | P0 | ☐ |
-| AC-006-03 | Test mode: force-price flag moves a symbol to target within one batch | P0 | ☐ |
-| TC-006-01 | Pause flag on → no quote changes for 10s; off → resumes (AC-006-01) | P0 | ☐ |
-| TC-006-02 | Subscribe 30s → batch rate ≤4/s; bar boundaries correct (AC-006-02) | P1 | ☐ |
-| TC-006-03 | Force AAPL→200.00 → quotes_latest reflects it (AC-006-03) | P0 | ☐ |
+| AC-006-01 | quotes_latest updates while calendar OPEN; frozen when CLOSED or paused | P0 | ☑ |
+| AC-006-02 | Tick batches on realtime ≤ 4/sec; 1m bars roll correctly | P0 | ☑ |
+| AC-006-03 | Test mode: force-price flag moves a symbol to target within one batch | P0 | ☑ |
+| TC-006-01 | Pause flag on → no quote changes for 10s; off → resumes (AC-006-01) | P0 | ☑ |
+| TC-006-02 | Subscribe 30s → batch rate ≤4/s; bar boundaries correct (AC-006-02) | P1 | ☑ |
+| TC-006-03 | Force AAPL→200.00 → quotes_latest reflects it (AC-006-03) | P0 | ☑ |
 
 ### PBI-007 Watchlist & realtime client
 | ID | Criterion / Test | Pri | Status |

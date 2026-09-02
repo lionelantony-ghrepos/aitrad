@@ -6,11 +6,21 @@ export {
   HISTORY_SEED,
   INTRADAY_SESSION_COUNT,
   MINUTES_PER_SESSION,
+  NY_TZ,
   SESSION_END_DATE,
   dailyBarTs,
+  isNyseHalfDay,
   isNyseSession,
+  lookupSession,
   minuteBarTs,
+  nyClockParts,
+  nyseHalfDays,
+  nyseSessionState,
+  nyseTradingSessions,
   tradingDaysEndingOn,
+  type MarketCalendarRow,
+  type NyClockParts,
+  type NyseSessionState,
 } from "./calendar";
 export {
   EXPECTED_INSTRUMENTS,
@@ -22,6 +32,24 @@ export {
   type SeedCounts,
 } from "./expected-counts";
 export {
+  MAX_QUOTE_BATCHES_PER_SEC,
+  coalesceQuoteBatches,
+  minuteBucketTs,
+  parseFeedControls,
+  rollMinuteBar,
+  runFeedInvocation,
+  stepGbmPrice,
+  type FeedBarWrite,
+  type FeedControls,
+  type FeedInstrument,
+  type FeedInvocationInput,
+  type FeedInvocationResult,
+  type FeedMinuteBar,
+  type FeedQuote,
+  type GbmStepInput,
+  type GbmStepResult,
+} from "./feed";
+export {
   enforceOhlc,
   generateInstrumentHistory,
   quoteFromHistory,
@@ -31,5 +59,6 @@ export {
   type OhlcvBar,
 } from "./generator";
 export { parseInstrumentsJson } from "./instruments";
+export { marketCalendarInsertSql, marketCalendarSeedRows } from "./calendar-sql";
 export { gaussian, hashSymbolSeed, mulberry32 } from "./rng";
 export { annualSigma, simParamsForBeta, type SimParams } from "./sim-params";

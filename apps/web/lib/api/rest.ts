@@ -10,6 +10,7 @@ export const recordTables = {
   feature_flags: "feature_flags",
   market_bars: "market_bars",
   quotes_latest: "quotes_latest",
+  market_calendar: "market_calendar",
 } as const;
 
 export type RecordTable = (typeof recordTables)[keyof typeof recordTables];

@@ -14,9 +14,9 @@ const migrationSql = readFileSync(
 
 describe("PBI-005 migration 0002", () => {
   it("lists 0002 after 0001 and skips both when applied", () => {
-    expect(LOCAL_MIGRATION_IDS).toEqual(["0001", "0002"]);
-    expect(planMigrationApply(["0001"]).toApply).toEqual(["0002"]);
-    expect(planMigrationApply(["0001", "0002"]).toApply).toEqual([]);
+    expect(LOCAL_MIGRATION_IDS).toEqual(["0001", "0002", "0003"]);
+    expect(planMigrationApply(["0001"]).toApply).toEqual(["0002", "0003"]);
+    expect(planMigrationApply(["0001", "0002", "0003"]).toApply).toEqual([]);
   });
 
   it("defines market_bars composite PK, 1m|1d timeframe, and quotes_latest PK", () => {

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   credentialsSchema,
   marketBarSchema,
+  marketCalendarRowSchema,
   mockInstrumentSchema,
   packageName,
   profileWizardSchema,
@@ -97,6 +98,18 @@ describe("@meridian/schemas", () => {
         v: 10,
       }).timeframe,
     ).toBe("1d");
+  });
+
+  it("parses a market calendar session row", () => {
+    expect(
+      marketCalendarRowSchema.parse({
+        session_date: "2026-11-27T00:00:00.000Z",
+        venue: "NYSE",
+        session_kind: "half",
+        open_minute: "570",
+        close_minute: "780",
+      }).session_date,
+    ).toBe("2026-11-27");
   });
 
   it("re-exports workspaceLayoutV1Schema from the package barrel", () => {

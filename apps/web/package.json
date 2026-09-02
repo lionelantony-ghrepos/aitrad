@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@insforge/sdk": "^1.5.2",
+    "@meridian/mock-data": "workspace:*",
     "@meridian/rules-engine": "workspace:^",
     "@meridian/schemas": "workspace:*",
     "@radix-ui/react-slot": "^1.1.2",

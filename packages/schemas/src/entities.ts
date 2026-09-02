@@ -140,6 +140,50 @@ export const quotesLatestSchema = z.object({
 
 export type QuotesLatest = z.infer<typeof quotesLatestSchema>;
 
+export const sessionKindSchema = z.enum(["regular", "half"]);
+
+export const marketCalendarRowSchema = z.object({
+  session_date: z
+    .string()
+    .min(10)
+    .transform((value) => value.slice(0, 10))
+    .refine((value) => /^\d{4}-\d{2}-\d{2}$/.test(value), "session_date"),
+  venue: z.string().min(1),
+  session_kind: sessionKindSchema,
+  open_minute: z.coerce.number().int().nonnegative(),
+  close_minute: z.coerce.number().int().positive(),
+});
+
+export type MarketCalendarRowDto = z.infer<typeof marketCalendarRowSchema>;
+
+export const feedForcePriceSchema = z.object({
+  symbol: z.string().min(1),
+  price: numericSchema,
+});
+
+export const feedControlsValueSchema = z.object({
+  paused: z.boolean().optional(),
+  speed: numericSchema.optional(),
+});
+
+export const quoteTickSchema = z.object({
+  instrument_id: uuidSchema,
+  symbol: z.string().min(1).optional(),
+  bid: numericSchema,
+  ask: numericSchema,
+  last: numericSchema,
+  prev_close: numericSchema,
+  volume: numericSchema,
+  ts: timestamptzSchema,
+});
+
+export const quoteTickBatchSchema = z.object({
+  ts: timestamptzSchema,
+  ticks: z.array(quoteTickSchema),
+});
+
+export type QuoteTickBatch = z.infer<typeof quoteTickBatchSchema>;
+
 export const auditLogSchema = z.object({
   id: uuidSchema,
   user_id: uuidSchema.nullable(),
@@ -173,7 +217,7 @@ export const featureFlagSchema = z.object({
 export const featureFlagInsertSchema = z.object({
   key: z.string().min(1),
   value: z.unknown().optional(),
-  user_id: uuidSchema,
+  user_id: uuidSchema.nullable().optional(),
 });
 
 export type FeatureFlag = z.infer<typeof featureFlagSchema>;
