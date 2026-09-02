@@ -1,14 +1,10 @@
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 import { DEFAULT_ACCESS_TOKEN_COOKIE } from "@insforge/sdk/ssr";
 import { isProfileWizardComplete } from "@meridian/rules-engine";
 import type { Account, SessionUser } from "@meridian/schemas";
-import { E2E_STUB_HEADER, isAuthStub, STUB_USER_COOKIE } from "./mode";
-
-async function stubEnabled(): Promise<boolean> {
-  return isAuthStub((await headers()).get(E2E_STUB_HEADER));
-}
-import { stubGetUser, stubLoadProvision } from "./stub-store";
 import { createInsForgeServerClient } from "../insforge/server";
+import { isAuthStub, STUB_USER_COOKIE } from "./mode";
+import { stubGetUser, stubLoadProvision } from "./stub-store";
 
 export type AuthContext = {
   user: SessionUser;
@@ -19,14 +15,14 @@ export type AuthContext = {
 
 export async function getAccessToken(): Promise<string | null> {
   const jar = await cookies();
-  if (await stubEnabled()) {
+  if (isAuthStub()) {
     return jar.get(STUB_USER_COOKIE)?.value ?? null;
   }
   return jar.get(DEFAULT_ACCESS_TOKEN_COOKIE)?.value ?? null;
 }
 
 export async function getSessionUser(): Promise<SessionUser | null> {
-  if (await stubEnabled()) {
+  if (isAuthStub()) {
     const jar = await cookies();
     const userId = jar.get(STUB_USER_COOKIE)?.value;
     if (!userId) {
@@ -52,7 +48,7 @@ export async function loadAuthContext(): Promise<AuthContext | null> {
     return null;
   }
 
-  if (await stubEnabled()) {
+  if (isAuthStub()) {
     const loaded = stubLoadProvision(user.id);
     return {
       user,

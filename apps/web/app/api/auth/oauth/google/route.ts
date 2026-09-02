@@ -3,12 +3,12 @@ import { NextResponse, type NextRequest } from "next/server";
 import { isProfileWizardComplete } from "@meridian/rules-engine";
 import { provisionAccountForUser } from "@/lib/api/provision";
 import { writeProfileReady, writeStubSession } from "@/lib/auth/cookies";
-import { E2E_STUB_HEADER, isAuthStub } from "@/lib/auth/mode";
+import { isAuthStub } from "@/lib/auth/mode";
 import { stubOauthUser } from "@/lib/auth/stub-store";
 import { appOrigin, readPublicInsforgeEnv } from "@/lib/insforge/env";
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
-  if (isAuthStub(request.headers.get(E2E_STUB_HEADER))) {
+  if (isAuthStub()) {
     const user = stubOauthUser(`e2e-google-${crypto.randomUUID()}@example.com`);
     const provisioned = await provisionAccountForUser({ userId: user.id, accessToken: user.id });
     const dest = isProfileWizardComplete(provisioned.profile) ? "/workspace" : "/onboarding";

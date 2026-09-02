@@ -1,10 +1,9 @@
 import { authorize, executeProvision } from "@meridian/rules-engine";
 import { provisionResultSchema, type ProvisionResult } from "@meridian/schemas";
-import { E2E_STUB_HEADER, isAuthStub } from "../auth/mode";
-import { headers } from "next/headers";
+import { isAuthStub } from "../auth/mode";
 import { stubInsertAccount, stubInsertProfile, stubLoadProvision } from "../auth/stub-store";
-import { functionsUrl } from "./functions";
 import { readPublicInsforgeEnv } from "../insforge/env";
+import { functionsUrl } from "./functions";
 
 export async function provisionAccountForUser(input: {
   userId: string;
@@ -15,10 +14,7 @@ export async function provisionAccountForUser(input: {
     throw new Error(decision.reason ?? "DENIED");
   }
 
-  const header = await headers()
-    .then((h) => h.get(E2E_STUB_HEADER))
-    .catch(() => null);
-  if (isAuthStub(header)) {
+  if (isAuthStub()) {
     return executeProvision({
       userId: input.userId,
       authorize: (userId) => authorize({ userId, action: "provision-account" }),

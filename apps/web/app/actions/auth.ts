@@ -1,6 +1,6 @@
 "use server";
 
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { authorize, isProfileWizardComplete, profileWizardPatch } from "@meridian/rules-engine";
 import { credentialsSchema, profileWizardSchema } from "@meridian/schemas";
@@ -9,11 +9,7 @@ import { createRecordsClient } from "@/lib/api/client";
 import { createProfilesRepository } from "@/lib/api/profiles";
 import { provisionAccountForUser } from "@/lib/api/provision";
 import { clearAuthCookies, writeProfileReady, writeStubSession } from "@/lib/auth/cookies";
-import { E2E_STUB_HEADER, isAuthStub } from "@/lib/auth/mode";
-
-async function stubEnabled(): Promise<boolean> {
-  return isAuthStub((await headers()).get(E2E_STUB_HEADER));
-}
+import { isAuthStub } from "@/lib/auth/mode";
 import { safeInternalPath } from "@/lib/auth/safe-redirect";
 import { getAccessToken, getSessionUser } from "@/lib/auth/session";
 import { stubOauthUser, stubPatchProfile, stubSignIn, stubSignUp } from "@/lib/auth/stub-store";
@@ -50,7 +46,7 @@ export async function signUpAction(formData: FormData): Promise<AuthActionResult
     return { ok: false, message: "Enter a valid email and password." };
   }
 
-  if (await stubEnabled()) {
+  if (isAuthStub()) {
     let user;
     try {
       user = stubSignUp(parsed.data.email, parsed.data.password);
@@ -94,7 +90,7 @@ export async function signInAction(formData: FormData): Promise<AuthActionResult
 
   const nextHint = String(formData.get("next") ?? "");
 
-  if (await stubEnabled()) {
+  if (isAuthStub()) {
     let user;
     try {
       user = stubSignIn(parsed.data.email, parsed.data.password);
@@ -125,7 +121,7 @@ export async function signInAction(formData: FormData): Promise<AuthActionResult
 }
 
 export async function startGoogleOAuthAction(): Promise<void> {
-  if (await stubEnabled()) {
+  if (isAuthStub()) {
     const user = stubOauthUser(`e2e-google-${crypto.randomUUID()}@example.com`);
     writeStubSession(await cookies(), user.id);
     redirect(await afterAuthenticated(user.id, user.id));
@@ -135,7 +131,7 @@ export async function startGoogleOAuthAction(): Promise<void> {
 
 export async function signOutAction(): Promise<void> {
   const jar = await cookies();
-  if (!(await stubEnabled())) {
+  if (!isAuthStub()) {
     const auth = await createInsForgeAuthActions();
     await auth.signOut();
   }
@@ -162,7 +158,7 @@ export async function completeWizardAction(formData: FormData): Promise<AuthActi
 
   const patch = profileWizardPatch(parsed.data);
 
-  if (await stubEnabled()) {
+  if (isAuthStub()) {
     stubPatchProfile(user.id, patch);
     writeProfileReady(await cookies(), true);
     redirect("/workspace");

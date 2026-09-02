@@ -1,10 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import {
-  E2E_STUB_HEADER,
-  isAuthStub,
-  PROFILE_READY_COOKIE,
-  STUB_USER_COOKIE,
-} from "@/lib/auth/mode";
+import { isAuthStub, PROFILE_READY_COOKIE, STUB_USER_COOKIE } from "@/lib/auth/mode";
 
 export async function middleware(request: NextRequest): Promise<NextResponse> {
   const { pathname } = request.nextUrl;
@@ -13,7 +8,7 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   const response = NextResponse.next({ request });
 
   let signedIn = false;
-  if (isAuthStub(request.headers.get(E2E_STUB_HEADER))) {
+  if (isAuthStub()) {
     signedIn = Boolean(request.cookies.get(STUB_USER_COOKIE)?.value);
   } else {
     const { updateSession } = await import("@insforge/sdk/ssr/middleware");

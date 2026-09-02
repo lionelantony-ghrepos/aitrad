@@ -8,7 +8,6 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   use: {
     baseURL: "http://127.0.0.1:3100",
-    extraHTTPHeaders: { "x-meridian-e2e": "1" },
     trace: "on-first-retry",
   },
   webServer: {
@@ -19,7 +18,6 @@ export default defineConfig({
     env: {
       ...process.env,
       E2E_AUTH_STUB: "1",
-      NEXT_PUBLIC_E2E_AUTH_STUB: "1",
     },
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],

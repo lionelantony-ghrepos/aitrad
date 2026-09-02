@@ -3,11 +3,11 @@ import { NextResponse, type NextRequest } from "next/server";
 import { isProfileWizardComplete } from "@meridian/rules-engine";
 import { provisionAccountForUser } from "@/lib/api/provision";
 import { writeProfileReady } from "@/lib/auth/cookies";
-import { E2E_STUB_HEADER, isAuthStub } from "@/lib/auth/mode";
+import { isAuthStub } from "@/lib/auth/mode";
 import { readPublicInsforgeEnv } from "@/lib/insforge/env";
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
-  if (isAuthStub(request.headers.get(E2E_STUB_HEADER))) {
+  if (isAuthStub()) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 

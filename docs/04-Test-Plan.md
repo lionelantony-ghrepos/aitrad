@@ -45,12 +45,12 @@ Seeded via `scripts/seed-all.ts` (see doc 06): 150 instruments, 5y daily + 5d 1m
 ### PBI-004 Auth & profiles
 | ID | Criterion / Test | Pri | Status |
 |---|---|---|---|
-| AC-004-01 | Signup → wizard → workspace; paper account created with $100,000 exactly once | P0 | ☑ |
-| AC-004-02 | /workspace unauthenticated → redirect to /login; session survives reload | P0 | ☑ |
-| AC-004-03 | OAuth (Google) login works in dev | P1 | ☑ |
-| TC-004-01 | E2E signup flow; DB has 1 account @ $100k; re-login doesn't duplicate (AC-004-01) | P0 | ☑ |
-| TC-004-02 | Direct nav to /workspace logged out → /login; login → reload stays in (AC-004-02) | P0 | ☑ |
-| TC-004-03 | OAuth stub flow completes (AC-004-03) | P1 | ☑ |
+| AC-004-01 | Signup → wizard → workspace; paper account created with $100,000 exactly once | P0 | ☐ |
+| AC-004-02 | /workspace unauthenticated → redirect to /login; session survives reload | P0 | ☐ |
+| AC-004-03 | OAuth (Google) login works in dev | P1 | ☐ |
+| TC-004-01 | E2E signup flow; DB has 1 account @ $100k; re-login doesn't duplicate (AC-004-01) | P0 | ☐ |
+| TC-004-02 | Direct nav to /workspace logged out → /login; login → reload stays in (AC-004-02) | P0 | ☐ |
+| TC-004-03 | OAuth stub flow completes (AC-004-03) | P1 | ☐ |
 
 ### PBI-005 Instruments & seed
 | ID | Criterion / Test | Pri | Status |
