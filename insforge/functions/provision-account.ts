@@ -78,6 +78,7 @@ export default async function (req: Request): Promise<Response> {
     if (error) {
       return json(500, { error: error.message });
     }
+    // InsForge insert does not return representation; load the row we just wrote.
     const { data: reloaded, error: reloadErr } = await client.database
       .from("profiles")
       .select("*")
@@ -87,7 +88,7 @@ export default async function (req: Request): Promise<Response> {
     }
     profile = Array.isArray(reloaded) ? (reloaded[0] ?? null) : null;
     if (!profile) {
-      return json(500, { error: "PROFILE_INSERT_UNREADABLE" });
+      return json(500, { error: "PROFILE_UNAVAILABLE" });
     }
     created.profile = true;
   }
@@ -100,6 +101,7 @@ export default async function (req: Request): Promise<Response> {
     if (error) {
       return json(500, { error: error.message });
     }
+    // InsForge insert does not return representation; load the row we just wrote.
     const { data: reloaded, error: reloadErr } = await client.database
       .from("accounts")
       .select("*")
@@ -109,7 +111,7 @@ export default async function (req: Request): Promise<Response> {
     }
     account = Array.isArray(reloaded) ? (reloaded[0] ?? null) : null;
     if (!account) {
-      return json(500, { error: "ACCOUNT_INSERT_UNREADABLE" });
+      return json(500, { error: "ACCOUNT_UNAVAILABLE" });
     }
     created.account = true;
   }
