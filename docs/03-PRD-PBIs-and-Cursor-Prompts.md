@@ -7,7 +7,7 @@ Each PBI has a unique ID, dependencies, and a ready-to-paste Cursor prompt. Buil
 **Before PBI-001:** install the InsForge MCP server in Cursor and connect the project, so the agent can run migrations/deploy functions directly. Add `.cursor/rules/` from `07-Agent-Build-Guide.md`.
 
 **Prompt preamble (prepend to EVERY prompt):**
-> You are building Meridian, an AI-native trading terminal (paper trading, US equities). Obey `.cursor/rules/`. Read `docs/02-Technical-Architecture-Blueprint.md` and `docs/05-Business-Rules-and-Decision-Tables.md` before coding. TypeScript strict, Zod-validate all boundaries, no business logic hard-coded in components — logic lives in decision tables or packages. Write Vitest unit tests for every module and update the traceability table in `docs/04-Test-Plan.md` status column when tests pass.
+> You are building Meridian, an AI-native trading terminal (paper trading, US equities). Obey `.cursor/rules/`. Read `docs/02-Technical-Architecture-Blueprint.md`, `docs/05-Business-Rules-and-Decision-Tables.md`, `docs/kb/INDEX.md`, and as-built pages for this PBI’s dependencies before coding. TypeScript strict, Zod-validate all boundaries, no business logic hard-coded in components — logic lives in decision tables or packages. Write Vitest unit tests for every module and update the traceability table in `docs/04-Test-Plan.md` status column when tests pass. Fill `docs/kb/as-built/PBI-00X.md` from `docs/kb/_template-as-built.md` in the same commit (do not rewrite docs 01–06). Patch `docs/08` only if user-visible UI shipped.
 
 ---
 
@@ -22,7 +22,7 @@ TypeScript strict, Tailwind, shadcn/ui initialized with a dark theme), and empty
 @meridian/schemas, @meridian/rules-engine, @meridian/paper-engine, @meridian/mock-data — each with
 tsconfig, vitest config, and a passing placeholder test. Add ESLint (typescript-eslint strict),
 Prettier, Husky + lint-staged, and a GitHub Actions workflow running typecheck, lint, and test on PR.
-Add turbo.json pipelines for build/test/lint. Verify: pnpm build && pnpm test pass from repo root.
+Add turbo.json pipelines for build/test/lint. Wire GitHub Actions to also run `pnpm docs:kb-check` and `pnpm docs:generate` (fail if generated snapshots are stale). Verify: pnpm build && pnpm test pass from repo root.
 ```
 
 ### PBI-002 · InsForge backend baseline & migrations framework
@@ -334,14 +334,16 @@ feed past it in test mode, toast + unread badge appear once (dedup verified).
 ```
 
 ### PBI-023 · Vector search / RAG foundation
-**Deps:** 019. **Description:** pgvector embeddings for news (and future filings) via InsForge AI gateway embedding model; `embed-worker` on new items; `search_news` semantic API (hybrid: vector + symbol/date filters) used by the copilot and a search box in the News panel.
+**Deps:** 019. **Description:** pgvector embeddings for news (and future filings) via InsForge AI gateway embedding model; `embed-worker` on new items; `search_news` semantic API (hybrid: vector + symbol/date filters) used by the copilot and a search box in the News panel. Do not embed `docs/` or `docs/kb/` (engineering knowledge base is a separate corpus).
 **Cursor prompt:**
 ```
 Migration 0010: news_embeddings (news_id PK, embedding vector(1536)) + ivfflat index. Function
 embed-worker: on news insert (realtime trigger or queue poll), call the InsForge AI gateway embeddings
 endpoint, store vector; backfill script for seeded news. Function search-news: POST {query, symbols?,
 since?, limit} → embed query → hybrid search (vector cosine + metadata filters) → ranked items with
-scores. Add semantic search box to the News panel ("earnings beats in semis this week") rendering
+scores. Embed **news (and later filings) only** — never `docs/`, `docs/kb/`, ADRs, or generated API
+catalogs (engineering knowledge base is a separate corpus; optional `docs_embeddings` is out of this
+PBI). Add semantic search box to the News panel ("earnings beats in semis this week") rendering
 ranked results. Handle gateway failures gracefully (retry + dead-letter table). Integration test:
 seeded corpus returns the obviously-relevant fixture item first for 5 canned queries.
 ```

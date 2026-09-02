@@ -16,7 +16,8 @@ Purpose: everything a coding agent needs to build Meridian with zero manual codi
 description: Meridian build rules
 alwaysApply: true
 ---
-- Read docs/02 (architecture), docs/05 (rules), docs/06 (mock data) before implementing any PBI.
+- Read docs/02 (architecture), docs/05 (rules), docs/06 (mock data), and docs/kb/INDEX.md
+  (plus as-built files for dependency PBIs) before implementing any PBI.
 - TypeScript strict everywhere; no `any` without a justifying comment.
 - All API/DTO boundaries validated with Zod schemas from @meridian/schemas — define there first.
 - NO business thresholds, fees, limits, or policy branches in application code. Policy = decision
@@ -28,7 +29,10 @@ alwaysApply: true
   no I/O and full unit tests. Edge functions orchestrate; they do not compute business math inline.
 - Every mutating endpoint: authorize() (DT-ENT-01) + audit_log write. No exceptions.
 - Every PBI: write the tests named in docs/04 for its TC ids, tag Playwright specs @TC-nnn-xx,
-  and tick the Status boxes in docs/04-Test-Plan.md in the same commit.
+  tick the Status boxes in docs/04-Test-Plan.md, fill docs/kb/as-built/PBI-00X.md from
+  docs/kb/_template-as-built.md, update docs/kb/INDEX.md, and add an ADR only if the design
+  is not already in docs/02. Same commit. Do not auto-rewrite docs 01–06. Patch docs/08 only
+  for newly shipped user-visible UI. Engineering kb must not be indexed into PBI-023 news RAG.
 - Use the InsForge MCP for migrations/functions/buckets; never fabricate SDK APIs — check
   docs.insforge.dev when unsure.
 - UI: terminal design tokens only (no ad-hoc colors); every panel handles loading/empty/error;
@@ -38,10 +42,10 @@ alwaysApply: true
 ```
 
 ## 3. Build order & session protocol
-Follow `docs/03` PBI-001 → PBI-031 strictly. Per session: (1) paste preamble+prompt, (2) agent implements + tests, (3) run `pnpm test` and targeted Playwright, (4) agent updates docs/04 status boxes, (5) commit. If a PBI fails its TCs, fix within the session before moving on — never carry red tests forward.
+Follow `docs/03` PBI-001 → PBI-031 strictly. Per session: (1) paste preamble+prompt, (2) read `docs/kb/INDEX.md` and as-built of dependency PBIs, (3) agent implements + tests, (4) run `pnpm test` and targeted Playwright, (5) agent updates docs/04 status boxes and `docs/kb/as-built/PBI-00X.md` (+ INDEX; ADR only if needed; doc 08 delta only if user-visible UI shipped), (6) `pnpm docs:generate` if schemas/packages changed, (7) commit. If a PBI fails its TCs, fix within the session before moving on — never carry red tests forward.
 
 ## 4. Definition of Done (per PBI)
-Code merged · P0/P1 TCs for the PBI pass in CI · docs/04 boxes ticked · no lint/type errors · audit + entitlement coverage for any new mutating endpoint · no hard-coded policy (spot-check: grep for magic numbers).
+Code merged · P0/P1 TCs for the PBI pass in CI · docs/04 boxes ticked · `docs/kb/as-built/PBI-00X.md` filled (required headings, no TBD) · INDEX updated · no lint/type errors · audit + entitlement coverage for any new mutating endpoint · no hard-coded policy (spot-check: grep for magic numbers).
 
 ## 5. Copilot system-prompt template (used by PBI-025)
 ```

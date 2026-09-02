@@ -12,11 +12,13 @@ AI-native agentic trading terminal (US equities/ETFs, paper trading v1). Fronten
 | [06 Mock Data & Seeding](06-Mock-Data-and-Seeding.md) | Generator specs, seed pipeline, expected counts; source files in `../mock-data/` |
 | [07 Agent Build Guide](07-Agent-Build-Guide.md) | Cursor setup, `.cursor/rules`, session protocol, Definition of Done, copilot system prompt |
 | [08 User Guide](08-User-Guide.md) | End-user manual (finalize after build) |
+| [kb/INDEX.md](kb/INDEX.md) | As-built PBI handbook, ADRs, generated schema/package catalogs |
 
 **Human README:** [../README.md](../README.md) (product overview, stack, build-order summary).  
 **Agent profile:** [../AGENTS.md](../AGENTS.md) and `.cursor/rules/aitrad.mdc`.
 
 **Start here:** doc 07 §1 (setup), then execute doc 03 PBI-001 → PBI-031.
 Traceability: PBI-nnn → AC-nnn-xx → TC-nnn-xx (doc 04 is the single source of truth; agents tick status boxes as tests pass).
+As-built knowledge base: [kb/INDEX.md](kb/INDEX.md) (do not mix with PBI-023 news RAG).
 
 Seed JSON in this clone lives in `../mock_data/` (doc 06 also refers to `mock-data/` for the `@meridian/mock-data` package).

@@ -13,6 +13,9 @@
     "typecheck": "turbo run typecheck",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "docs:kb-check": "node scripts/check-kb.mjs",
+    "docs:generate": "node scripts/generate-kb-reference.mjs",
+    "docs:kb-test": "node --test scripts/check-kb.test.mjs",
     "prepare": "husky"
   },
   "devDependencies": {
