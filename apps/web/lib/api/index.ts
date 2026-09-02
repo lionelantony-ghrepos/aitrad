@@ -6,3 +6,5 @@ export { createAuditLogRepository } from "./audit-log";
 export { createFeatureFlagsRepository } from "./feature-flags";
 export { eqFilter, recordsUrl, recordTables, InsForgeApiError, RECORDS_PATH } from "./rest";
 export { planMigrationApply, LOCAL_MIGRATION_IDS } from "./migrations";
+export { functionsUrl } from "./functions";
+export { provisionAccountForUser } from "./provision";

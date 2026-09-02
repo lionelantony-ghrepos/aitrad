@@ -8,13 +8,16 @@ export default function Home(): React.JSX.Element {
       <p className="font-mono text-xs tracking-[0.2em] text-primary uppercase">Meridian</p>
       <h1 className="text-3xl font-semibold tracking-tight">Paper trading terminal</h1>
       <p className="max-w-xl text-sm text-muted-foreground">
-        US equities and ETFs. Simulated fills only. Open the workspace to dock placeholder panels.
+        US equities and ETFs. Simulated fills only. Sign in to open the workspace.
       </p>
       <div className="flex items-center gap-2">
         <Button asChild variant="default">
-          <Link href="/workspace">Open workspace</Link>
+          <Link href="/login">Sign in</Link>
         </Button>
-        <Button type="button" variant="outline">
+        <Button asChild variant="outline">
+          <Link href="/signup">Create account</Link>
+        </Button>
+        <Button type="button" variant="ghost">
           {scaffoldStatus()}
         </Button>
       </div>

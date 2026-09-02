@@ -2,6 +2,11 @@
 
 Exported `*Schema` bindings discovered by static scan. Full OpenAPI from Zod is deferred until DTO coverage is broader (add `zod-to-openapi` then). Typedoc for packages is deferred until public APIs stabilize.
 
+- auth.ts: credentialsSchema
+- auth.ts: profileWizardSchema
+- auth.ts: provisionCreatedSchema
+- auth.ts: provisionResultSchema
+- auth.ts: sessionUserSchema
 - entities.ts: accountInsertSchema
 - entities.ts: accountPatchSchema
 - entities.ts: accountSchema
