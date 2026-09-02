@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { packageName, publicInsforgeEnvSchema } from "./index";
+import { packageName, publicInsforgeEnvSchema, workspaceLayoutV1Schema } from "./index";
 
 describe("@meridian/schemas", () => {
   it("exports the package name", () => {
@@ -19,5 +19,13 @@ describe("@meridian/schemas", () => {
       NEXT_PUBLIC_INSFORGE_URL: "https://example.insforge.app",
     });
     expect(result.success).toBe(false);
+  });
+
+  it("re-exports workspaceLayoutV1Schema from the package barrel", () => {
+    const parsed = workspaceLayoutV1Schema.parse({
+      version: 1,
+      dockview: { grid: {} },
+    });
+    expect(parsed.version).toBe(1);
   });
 });
