@@ -58,6 +58,39 @@ export type AccountPatch = z.infer<typeof accountPatchSchema>;
 
 export const instrumentStatusSchema = z.enum(["active", "halted", "delisted"]);
 
+export const marketCapBandSchema = z.enum(["mega", "large", "mid", "small", "micro"]);
+
+export const betaClassSchema = z.enum(["low", "medium", "high"]);
+
+export const avgVolumeBandSchema = z.enum(["low", "medium", "high"]);
+
+export const barTimeframeSchema = z.enum(["1m", "1d"]);
+
+export type MarketCapBand = z.infer<typeof marketCapBandSchema>;
+export type BetaClass = z.infer<typeof betaClassSchema>;
+export type AvgVolumeBand = z.infer<typeof avgVolumeBandSchema>;
+export type BarTimeframe = z.infer<typeof barTimeframeSchema>;
+
+/** Static universe row from `mock_data/instruments.json` (doc 06). */
+export const mockInstrumentSchema = z.object({
+  symbol: z.string().min(1),
+  name: z.string().min(1),
+  exchange: z.string().min(1),
+  sector: z.string().min(1),
+  industry: z.string().min(1),
+  status: instrumentStatusSchema,
+  currency: z.string().min(1),
+  tick_size: numericSchema,
+  lot_size: z.coerce.number().int().positive(),
+  base_price: numericSchema,
+  market_cap_band: marketCapBandSchema,
+  beta_class: betaClassSchema,
+  avg_volume: z.coerce.number().positive(),
+  avg_volume_band: avgVolumeBandSchema,
+});
+
+export type MockInstrument = z.infer<typeof mockInstrumentSchema>;
+
 export const instrumentSchema = z.object({
   id: uuidSchema,
   symbol: z.string().min(1),
@@ -69,11 +102,43 @@ export const instrumentSchema = z.object({
   currency: z.string().min(1),
   tick_size: numericSchema,
   lot_size: z.coerce.number().int(),
+  market_cap_band: marketCapBandSchema.nullable().optional(),
+  beta_class: betaClassSchema.nullable().optional(),
+  avg_volume: numericSchema.nullable().optional(),
+  avg_volume_band: avgVolumeBandSchema.nullable().optional(),
+  base_price: numericSchema.nullable().optional(),
   created_at: timestamptzSchema,
   updated_at: timestamptzSchema,
 });
 
 export type Instrument = z.infer<typeof instrumentSchema>;
+
+export const instrumentUpsertSchema = mockInstrumentSchema;
+
+export const marketBarSchema = z.object({
+  instrument_id: uuidSchema,
+  timeframe: barTimeframeSchema,
+  ts: timestamptzSchema,
+  o: numericSchema,
+  h: numericSchema,
+  l: numericSchema,
+  c: numericSchema,
+  v: numericSchema,
+});
+
+export type MarketBar = z.infer<typeof marketBarSchema>;
+
+export const quotesLatestSchema = z.object({
+  instrument_id: uuidSchema,
+  bid: numericSchema,
+  ask: numericSchema,
+  last: numericSchema,
+  prev_close: numericSchema,
+  volume: numericSchema,
+  ts: timestamptzSchema,
+});
+
+export type QuotesLatest = z.infer<typeof quotesLatestSchema>;
 
 export const auditLogSchema = z.object({
   id: uuidSchema,

@@ -19,8 +19,11 @@ describe("TC-002-01 migration apply is a no-op the second time", () => {
     expect(first.skipped).toEqual([]);
 
     const second = planMigrationApply(["0001"]);
-    expect(second.toApply).toEqual([]);
+    expect(second.toApply).toEqual(["0002"]);
     expect(second.skipped).toEqual(["0001"]);
+    const third = planMigrationApply(["0001", "0002"]);
+    expect(third.toApply).toEqual([]);
+    expect(third.skipped).toEqual(["0001", "0002"]);
   });
 
   it("uses IF NOT EXISTS / DROP IF EXISTS so a raw re-run of 0001 does not fail", () => {

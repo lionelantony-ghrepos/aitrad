@@ -16,15 +16,23 @@
     "docs:kb-check": "node scripts/check-kb.mjs",
     "docs:generate": "node scripts/generate-kb-reference.mjs",
     "docs:kb-test": "node --test scripts/check-kb.test.mjs",
+    "seed": "tsx scripts/seed.ts",
     "prepare": "husky"
+  },
+  "dependencies": {
+    "@insforge/sdk": "^1.5.2",
+    "@meridian/mock-data": "workspace:*",
+    "@meridian/schemas": "workspace:*"
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",
+    "@types/node": "^20",
     "eslint": "^9.21.0",
     "eslint-config-prettier": "^10.0.2",
     "husky": "^9.1.7",
     "lint-staged": "^15.4.3",
     "prettier": "^3.5.2",
+    "tsx": "^4.19.3",
     "turbo": "^2.4.4",
     "typescript": "^5.8.2",
     "typescript-eslint": "^8.26.0",
