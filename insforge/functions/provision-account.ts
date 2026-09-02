@@ -72,25 +72,47 @@ export default async function (req: Request): Promise<Response> {
 
   let profile = existingProfile;
   if (!profile) {
-    const { data: inserted, error } = await client.database
+    const { error } = await client.database
       .from("profiles")
       .insert([{ user_id: userId, suitability_tier: null }]);
     if (error) {
       return json(500, { error: error.message });
     }
-    profile = Array.isArray(inserted) ? inserted[0] : inserted;
+    // InsForge insert does not return representation; load the row we just wrote.
+    const { data: selected, error: selectErr } = await client.database
+      .from("profiles")
+      .select("*")
+      .eq("user_id", userId);
+    if (selectErr) {
+      return json(500, { error: selectErr.message });
+    }
+    profile = Array.isArray(selected) ? selected[0] : null;
+    if (!profile) {
+      return json(500, { error: "PROFILE_UNAVAILABLE" });
+    }
     created.profile = true;
   }
 
   let account = existingAccount;
   if (!account) {
-    const { data: inserted, error } = await client.database
+    const { error } = await client.database
       .from("accounts")
       .insert([{ user_id: userId, cash_balance: cashBalance, currency: seedCurrency }]);
     if (error) {
       return json(500, { error: error.message });
     }
-    account = Array.isArray(inserted) ? inserted[0] : inserted;
+    // InsForge insert does not return representation; load the row we just wrote.
+    const { data: selected, error: selectErr } = await client.database
+      .from("accounts")
+      .select("*")
+      .eq("user_id", userId);
+    if (selectErr) {
+      return json(500, { error: selectErr.message });
+    }
+    account = Array.isArray(selected) ? selected[0] : null;
+    if (!account) {
+      return json(500, { error: "ACCOUNT_UNAVAILABLE" });
+    }
     created.account = true;
   }
 
