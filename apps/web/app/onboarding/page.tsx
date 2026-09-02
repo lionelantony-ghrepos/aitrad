@@ -4,6 +4,8 @@ import { AuthFrame } from "@/components/auth/auth-frame";
 import { WizardForm } from "@/components/auth/wizard-form";
 import { loadAuthContext } from "@/lib/auth/session";
 
+export const dynamic = "force-dynamic";
+
 export default async function OnboardingPage(): Promise<React.JSX.Element> {
   const ctx = await loadAuthContext();
   if (!ctx) {

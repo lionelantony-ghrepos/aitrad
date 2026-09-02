@@ -4,6 +4,8 @@ import { AuthFrame } from "@/components/auth/auth-frame";
 import { CredentialsForm } from "@/components/auth/credentials-form";
 import { loadAuthContext } from "@/lib/auth/session";
 
+export const dynamic = "force-dynamic";
+
 type LoginPageProps = {
   searchParams: Promise<{ next?: string; error?: string }>;
 };

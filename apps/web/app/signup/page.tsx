@@ -4,6 +4,8 @@ import { AuthFrame } from "@/components/auth/auth-frame";
 import { CredentialsForm } from "@/components/auth/credentials-form";
 import { loadAuthContext } from "@/lib/auth/session";
 
+export const dynamic = "force-dynamic";
+
 export default async function SignupPage(): Promise<React.JSX.Element> {
   const ctx = await loadAuthContext();
   if (ctx) {

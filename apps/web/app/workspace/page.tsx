@@ -3,6 +3,8 @@ import { WorkspaceShell } from "@/components/workspace/workspace-shell";
 import { formatPaperCash } from "@/lib/format-cash";
 import { loadAuthContext } from "@/lib/auth/session";
 
+export const dynamic = "force-dynamic";
+
 export default async function WorkspacePage(): Promise<React.JSX.Element> {
   const ctx = await loadAuthContext();
   if (!ctx) {

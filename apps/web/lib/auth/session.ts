@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { DEFAULT_ACCESS_TOKEN_COOKIE } from "@insforge/sdk/ssr";
 import { isProfileWizardComplete } from "@meridian/rules-engine";
 import type { Account, SessionUser } from "@meridian/schemas";
+import { tryReadPublicInsforgeEnv } from "../insforge/env";
 import { createInsForgeServerClient } from "../insforge/server";
 import { isAuthStub, STUB_USER_COOKIE } from "./mode";
 import { stubGetUser, stubLoadProvision } from "./stub-store";
@@ -32,6 +33,12 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     return user ? { id: user.id, email: user.email } : null;
   }
 
+  const env = tryReadPublicInsforgeEnv();
+  const accessToken = await getAccessToken();
+  if (!env || !accessToken) {
+    return null;
+  }
+
   const client = await createInsForgeServerClient();
   const { data } = await client.auth.getCurrentUser();
   const raw = data?.user as { id?: string; email?: string } | undefined;
@@ -42,13 +49,12 @@ export async function getSessionUser(): Promise<SessionUser | null> {
 }
 
 export async function loadAuthContext(): Promise<AuthContext | null> {
-  const user = await getSessionUser();
-  const accessToken = await getAccessToken();
-  if (!user || !accessToken) {
-    return null;
-  }
-
   if (isAuthStub()) {
+    const user = await getSessionUser();
+    const accessToken = await getAccessToken();
+    if (!user || !accessToken) {
+      return null;
+    }
     const loaded = stubLoadProvision(user.id);
     return {
       user,
@@ -56,6 +62,17 @@ export async function loadAuthContext(): Promise<AuthContext | null> {
       account: loaded.account,
       wizardComplete: isProfileWizardComplete(loaded.profile),
     };
+  }
+
+  const env = tryReadPublicInsforgeEnv();
+  const accessToken = await getAccessToken();
+  if (!env || !accessToken) {
+    return null;
+  }
+
+  const user = await getSessionUser();
+  if (!user) {
+    return null;
   }
 
   const client = await createInsForgeServerClient();
