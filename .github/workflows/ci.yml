@@ -30,12 +30,6 @@ jobs:
         run: pnpm lint
       - name: Test
         run: pnpm test
-      - name: Install Playwright Chromium
-        run: pnpm --filter @meridian/web exec playwright install chromium --with-deps
-      - name: Build web app
-        run: pnpm --filter @meridian/web build
-      - name: Playwright smoke
-        run: pnpm --filter @meridian/web test:e2e
       - name: Collect commit subjects for kb gate
         run: |
           set -e

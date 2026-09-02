@@ -20,4 +20,3 @@ Exported `*Schema` bindings discovered by static scan. Full OpenAPI from Zod is 
 - primitives.ts: numericSchema
 - primitives.ts: timestamptzSchema
 - primitives.ts: uuidSchema
-- workspace-layout.ts: workspaceLayoutV1Schema
