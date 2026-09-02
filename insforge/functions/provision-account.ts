@@ -72,25 +72,45 @@ export default async function (req: Request): Promise<Response> {
 
   let profile = existingProfile;
   if (!profile) {
-    const { data: inserted, error } = await client.database
+    const { error } = await client.database
       .from("profiles")
       .insert([{ user_id: userId, suitability_tier: null }]);
     if (error) {
       return json(500, { error: error.message });
     }
-    profile = Array.isArray(inserted) ? inserted[0] : inserted;
+    const { data: reloaded, error: reloadErr } = await client.database
+      .from("profiles")
+      .select("*")
+      .eq("user_id", userId);
+    if (reloadErr) {
+      return json(500, { error: reloadErr.message });
+    }
+    profile = Array.isArray(reloaded) ? (reloaded[0] ?? null) : null;
+    if (!profile) {
+      return json(500, { error: "PROFILE_INSERT_UNREADABLE" });
+    }
     created.profile = true;
   }
 
   let account = existingAccount;
   if (!account) {
-    const { data: inserted, error } = await client.database
+    const { error } = await client.database
       .from("accounts")
       .insert([{ user_id: userId, cash_balance: cashBalance, currency: seedCurrency }]);
     if (error) {
       return json(500, { error: error.message });
     }
-    account = Array.isArray(inserted) ? inserted[0] : inserted;
+    const { data: reloaded, error: reloadErr } = await client.database
+      .from("accounts")
+      .select("*")
+      .eq("user_id", userId);
+    if (reloadErr) {
+      return json(500, { error: reloadErr.message });
+    }
+    account = Array.isArray(reloaded) ? (reloaded[0] ?? null) : null;
+    if (!account) {
+      return json(500, { error: "ACCOUNT_INSERT_UNREADABLE" });
+    }
     created.account = true;
   }
 
@@ -100,7 +120,7 @@ export default async function (req: Request): Promise<Response> {
         user_id: userId,
         action: "provision-account",
         entity_type: "account",
-        entity_id: account?.id ?? null,
+        entity_id: account.id,
         payload: { created },
       },
     ]);
