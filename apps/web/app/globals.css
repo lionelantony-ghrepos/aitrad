@@ -1,0 +1,94 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --background: #0a0e14;
+  --foreground: #e8edf2;
+  --card: #121821;
+  --card-foreground: #e8edf2;
+  --popover: #121821;
+  --popover-foreground: #e8edf2;
+  --primary: #ffb000;
+  --primary-foreground: #0a0e14;
+  --secondary: #1a2330;
+  --secondary-foreground: #e8edf2;
+  --muted: #1a2330;
+  --muted-foreground: #8b9bb4;
+  --accent: #00d4ff;
+  --accent-foreground: #0a0e14;
+  --destructive: #f44747;
+  --destructive-foreground: #e8edf2;
+  --up: #3dd68c;
+  --down: #f44747;
+  --border: #243044;
+  --input: #243044;
+  --ring: #ffb000;
+  --radius: 0.125rem;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-up: var(--up);
+  --color-down: var(--down);
+  --spacing: 4px;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --font-sans: ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Code", "Segoe UI Mono", monospace;
+}
+
+* {
+  border-color: var(--border);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+.dv-dockview {
+  --dv-paneview-header-background-color: #121821;
+  --dv-tabs-container-background-color: #121821;
+  --dv-group-view-background-color: #0a0e14;
+  --dv-tabs-and-actions-container-background-color: #121821;
+  --dv-activegroup-visiblepanel-tab-background-color: #1a2330;
+  --dv-inactivegroup-visiblepanel-tab-background-color: #121821;
+  --dv-tab-divider-color: #243044;
+  --dv-activegroup-hiddenpanel-tab-background-color: #121821;
+  --dv-inactivegroup-hiddenpanel-tab-background-color: #0a0e14;
+  --dv-tab-font-size: 11px;
+  --dv-active-sash-color: #ffb000;
+}
