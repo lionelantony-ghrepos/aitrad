@@ -6,6 +6,8 @@ const nextConfig: NextConfig = {
     "@meridian/rules-engine",
     "@meridian/paper-engine",
     "@meridian/mock-data",
+    "dockview",
+    "dockview-react",
   ],
 };
 

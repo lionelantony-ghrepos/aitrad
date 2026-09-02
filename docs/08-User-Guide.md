@@ -6,9 +6,11 @@
 Sign up with email or Google. Complete the profile wizard (your experience level tunes risk guardrails). You start with a **$100,000 paper account** — all trading is simulated; no real money moves.
 
 ## 2. The workspace
-Meridian is a multi-panel terminal. Drag panel edges to resize, drag tabs to rearrange, and your layout is saved automatically (Reset layout from the workspace menu). The status bar shows the market clock (NYSE hours) and your live-data connection.
+Meridian is a multi-panel terminal. Open **`/workspace`**. Drag panel edges to resize, drag tabs to rearrange, and your layout is saved automatically (**Reset layout** in the top command bar). The status bar shows the market clock (America/New_York, OPEN/CLOSED) and a connection indicator.
 
-**Command palette — the fastest way to do anything.** Press **Ctrl+K** and type:
+Placeholder panels in this build: Chart, Watchlist, Order ticket, Blotter, News, Screener, Portfolio, Copilot. Their live content ships in later PBIs.
+
+**Command palette.** Press **Ctrl+K** (or the command-bar **Ctrl+K** control). The palette shell is available now; function parsing is not. When it ships, type:
 | Command | Action |
 |---|---|
 | `AAPL` | Fuzzy symbol search |
