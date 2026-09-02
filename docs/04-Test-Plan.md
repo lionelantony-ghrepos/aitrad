@@ -55,11 +55,11 @@ Seeded via `scripts/seed-all.ts` (see doc 06): 150 instruments, 5y daily + 5d 1m
 ### PBI-005 Instruments & seed
 | ID | Criterion / Test | Pri | Status |
 |---|---|---|---|
-| AC-005-01 | 150 instruments seeded; symbols unique; all fields populated | P0 | ☐ |
-| AC-005-02 | Each instrument: ≥1250 daily bars, 1950 1m bars (5 days × 390) | P0 | ☐ |
-| AC-005-03 | Generator deterministic: same seed → identical bars | P0 | ☐ |
-| TC-005-01 | SQL count checks post-seed (AC-005-01/02) | P0 | ☐ |
-| TC-005-02 | Run generator twice with seed 42 → deep-equal output (AC-005-03) | P0 | ☐ |
+| AC-005-01 | 150 instruments seeded; symbols unique; all fields populated | P0 | ☑ |
+| AC-005-02 | Each instrument: ≥1250 daily bars, 1950 1m bars (5 days × 390) | P0 | ☑ |
+| AC-005-03 | Generator deterministic: same seed → identical bars | P0 | ☑ |
+| TC-005-01 | SQL count checks post-seed (AC-005-01/02) | P0 | ☑ |
+| TC-005-02 | Run generator twice with seed 42 → deep-equal output (AC-005-03) | P0 | ☑ |
 
 ### PBI-006 Mock feed
 | ID | Criterion / Test | Pri | Status |

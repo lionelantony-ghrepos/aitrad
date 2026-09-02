@@ -8,6 +8,8 @@ export const recordTables = {
   instruments: "instruments",
   audit_log: "audit_log",
   feature_flags: "feature_flags",
+  market_bars: "market_bars",
+  quotes_latest: "quotes_latest",
 } as const;
 
 export type RecordTable = (typeof recordTables)[keyof typeof recordTables];

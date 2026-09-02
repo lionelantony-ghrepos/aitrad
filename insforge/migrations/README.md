@@ -36,4 +36,11 @@ npx -y @insforge/cli db migrations up --all
 | `audit_log`            | append-only: insert/select own rows; `UPDATE`/`DELETE` revoked + trigger |
 | `feature_flags`        | global rows (`user_id` null) readable; user-scoped rows owner-only       |
 
+## 0002 contents
+
+| Table                          | Access                                                                         |
+| ------------------------------ | ------------------------------------------------------------------------------ |
+| `market_bars`, `quotes_latest` | public `SELECT`; no client writes (seed uses admin)                            |
+| `instruments` extra columns    | `market_cap_band`, `beta_class`, `avg_volume`, `avg_volume_band`, `base_price` |
+
 UUID primary keys, `created_at` / `updated_at` (except `audit_log`, which is insert-only), and `updated_at` triggers on mutable tables.

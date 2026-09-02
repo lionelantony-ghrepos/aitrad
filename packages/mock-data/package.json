@@ -18,7 +18,11 @@
     "test": "vitest run",
     "lint": "eslint ."
   },
+  "dependencies": {
+    "@meridian/schemas": "workspace:*"
+  },
   "devDependencies": {
+    "@types/node": "^20",
     "eslint": "^9.21.0",
     "typescript": "^5.8.2",
     "vitest": "^3.0.7"

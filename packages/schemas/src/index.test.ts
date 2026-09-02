@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   credentialsSchema,
+  marketBarSchema,
+  mockInstrumentSchema,
   packageName,
   profileWizardSchema,
   provisionResultSchema,
@@ -63,6 +65,38 @@ describe("@meridian/schemas", () => {
       created: { profile: true, account: true },
     });
     expect(parsed.account.cash_balance).toBe(2500);
+  });
+
+  it("parses mock instrument, bar, and quote DTOs", () => {
+    const mock = mockInstrumentSchema.parse({
+      symbol: "AAPL",
+      name: "Apple Inc.",
+      exchange: "NASDAQ",
+      sector: "Technology",
+      industry: "Consumer Electronics",
+      status: "active",
+      currency: "USD",
+      tick_size: 0.01,
+      lot_size: 1,
+      base_price: 212,
+      market_cap_band: "mega",
+      beta_class: "medium",
+      avg_volume: 1_000,
+      avg_volume_band: "high",
+    });
+    expect(mock.symbol).toBe("AAPL");
+    expect(
+      marketBarSchema.parse({
+        instrument_id: "11111111-1111-4111-8111-111111111111",
+        timeframe: "1d",
+        ts: "2026-07-02T00:00:00.000Z",
+        o: 1,
+        h: 2,
+        l: 1,
+        c: 1.5,
+        v: 10,
+      }).timeframe,
+    ).toBe("1d");
   });
 
   it("re-exports workspaceLayoutV1Schema from the package barrel", () => {
