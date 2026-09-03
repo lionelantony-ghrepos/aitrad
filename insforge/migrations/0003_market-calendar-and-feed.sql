@@ -48,23 +48,22 @@ ON CONFLICT (pattern) DO UPDATE
 SET description = EXCLUDED.description,
     enabled = EXCLUDED.enabled;
 
-ALTER TABLE realtime.channels ENABLE ROW LEVEL SECURITY;
-
 DROP POLICY IF EXISTS quotes_channel_select ON realtime.channels;
-CREATE POLICY quotes_channel_select ON realtime.channels
-  FOR SELECT TO anon, authenticated
-  USING (pattern = 'quotes');
 
 CREATE OR REPLACE FUNCTION public.publish_quotes_batch(payload jsonb)
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, realtime
+SET search_path = pg_catalog, public, realtime, pg_temp
 AS $$
 BEGIN
   PERFORM realtime.publish('quotes', 'tick_batch', payload);
 END;
 $$;
+
+REVOKE ALL ON FUNCTION public.publish_quotes_batch(jsonb) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.publish_quotes_batch(jsonb) FROM anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.publish_quotes_batch(jsonb) TO project_admin;
 
 
 INSERT INTO public.market_calendar (session_date, venue, session_kind, open_minute, close_minute)

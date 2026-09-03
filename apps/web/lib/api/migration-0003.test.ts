@@ -23,8 +23,15 @@ describe("PBI-006 migration 0003", () => {
     expect(migrationSql).toContain("'feed.paused'");
     expect(migrationSql).toContain("'feed.speed'");
     expect(migrationSql).toContain("VALUES ('quotes'");
-    expect(migrationSql).toContain("quotes_channel_select");
     expect(migrationSql).toContain("publish_quotes_batch");
+    expect(migrationSql).toContain("SET search_path = pg_catalog, public, realtime, pg_temp");
+    expect(migrationSql).toContain(
+      "REVOKE EXECUTE ON FUNCTION public.publish_quotes_batch(jsonb) FROM anon, authenticated",
+    );
+    expect(migrationSql).toContain(
+      "GRANT EXECUTE ON FUNCTION public.publish_quotes_batch(jsonb) TO project_admin",
+    );
+    expect(migrationSql).not.toContain("quotes_channel_select");
     expect(migrationSql).toContain("('2026-11-27'::date, 'NYSE', 'half'");
     expect(migrationSql).toContain("('2026-12-24'::date, 'NYSE', 'half'");
   });

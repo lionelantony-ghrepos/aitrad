@@ -561,15 +561,10 @@ function runFeedInvocation(input) {
 }
 
 // insforge/functions/market-tick-src.ts
-var corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-};
 function json(status, body) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json" },
   });
 }
 function asRows(data) {
@@ -582,10 +577,7 @@ function flagValue(row) {
   return { key: row.key, value: row.value };
 }
 async function market_tick_src_default(req) {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
-  }
-  if (req.method !== "POST" && req.method !== "GET") {
+  if (req.method !== "POST") {
     return json(405, { error: "METHOD_NOT_ALLOWED" });
   }
   const expected = Deno.env.get("API_KEY") ?? Deno.env.get("INSFORGE_API_KEY");

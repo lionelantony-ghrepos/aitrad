@@ -14,16 +14,10 @@ import {
   type FeedQuote,
 } from "../../packages/mock-data/src/feed.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-};
-
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json" },
   });
 }
 
@@ -42,10 +36,7 @@ function flagValue(row: {
 }
 
 export default async function (req: Request): Promise<Response> {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
-  }
-  if (req.method !== "POST" && req.method !== "GET") {
+  if (req.method !== "POST") {
     return json(405, { error: "METHOD_NOT_ALLOWED" });
   }
 
