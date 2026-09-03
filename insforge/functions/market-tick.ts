@@ -430,6 +430,36 @@ function parseFeedControls(rows) {
   }
   return { paused, speed, forcePrice };
 }
+function barWriteKey(bar) {
+  return `${bar.instrument_id}${bar.timeframe}${bar.ts}`;
+}
+function mergeBarWrites(first, next) {
+  return {
+    instrument_id: first.instrument_id,
+    timeframe: first.timeframe,
+    ts: first.ts,
+    o: first.o,
+    h: Math.max(first.h, next.h),
+    l: Math.min(first.l, next.l),
+    c: next.c,
+    v: first.v + next.v,
+  };
+}
+function normalizeBarsToUpsert(bars) {
+  const order = [];
+  const byKey = /* @__PURE__ */ new Map();
+  for (const bar of bars) {
+    const key = barWriteKey(bar);
+    const prior = byKey.get(key);
+    if (prior === void 0) {
+      order.push(key);
+      byKey.set(key, { ...bar });
+    } else {
+      byKey.set(key, mergeBarWrites(prior, bar));
+    }
+  }
+  return order.map((key) => byKey.get(key));
+}
 function spreadQuote(last, tickSize, volume, ts, prevClose) {
   const rounded = roundToTick(Math.max(tickSize, last), tickSize);
   const bid = roundToTick(Math.max(tickSize, rounded - tickSize), tickSize);
@@ -554,7 +584,7 @@ function runFeedInvocation(input) {
     session,
     ticksApplied: ticks,
     quotes: quotesOut,
-    barsToUpsert,
+    barsToUpsert: normalizeBarsToUpsert(barsToUpsert),
     publishes,
     consumeForcePrice,
   };
