@@ -43,4 +43,12 @@ npx -y @insforge/cli db migrations up --all
 | `market_bars`, `quotes_latest` | public `SELECT`; no client writes (seed uses admin)                            |
 | `instruments` extra columns    | `market_cap_band`, `beta_class`, `avg_volume`, `avg_volume_band`, `base_price` |
 
+## 0003 contents
+
+| Table / object                               | Access                                |
+| -------------------------------------------- | ------------------------------------- |
+| `market_calendar`                            | public `SELECT`; admin/seed writes    |
+| `feature_flags` `feed.paused` / `feed.speed` | global rows for mock feed control     |
+| realtime channel `quotes`                    | `publish_quotes_batch(payload jsonb)` |
+
 UUID primary keys, `created_at` / `updated_at` (except `audit_log`, which is insert-only), and `updated_at` triggers on mutable tables.

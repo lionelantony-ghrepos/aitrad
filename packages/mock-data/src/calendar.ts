@@ -135,6 +135,122 @@ function nyseHolidays(year: number): Set<string> {
   return set;
 }
 
+export const NY_TZ = "America/New_York";
+
+export type NyseSessionState = "OPEN" | "CLOSED";
+
+export type MarketCalendarRow = {
+  session_date: string;
+  venue: "NYSE";
+  session_kind: "regular" | "half";
+  open_minute: number;
+  close_minute: number;
+};
+
+const REGULAR_OPEN_MINUTE = 9 * 60 + 30;
+const REGULAR_CLOSE_MINUTE = 16 * 60;
+const HALF_CLOSE_MINUTE = 13 * 60;
+
+export type NyClockParts = {
+  weekday: string;
+  dateKey: string;
+  hour: number;
+  minute: number;
+  second: number;
+};
+
+export function nyClockParts(now: Date): NyClockParts {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: NY_TZ,
+    weekday: "short",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(now);
+  const get = (type: Intl.DateTimeFormatPartTypes): string =>
+    parts.find((p) => p.type === type)?.value ?? "";
+  return {
+    weekday: get("weekday"),
+    dateKey: `${get("year")}-${get("month")}-${get("day")}`,
+    hour: Number(get("hour")),
+    minute: Number(get("minute")),
+    second: Number(get("second")),
+  };
+}
+
+export function nyseHalfDays(year: number): Set<string> {
+  const thanksgiving = nthWeekday(year, 11, 4, 4);
+  const friday = addUtcDays(thanksgiving.year, thanksgiving.month, thanksgiving.day, 1);
+  const fridayIso = formatYmd(friday.year, friday.month, friday.day);
+  const eve = formatYmd(year, 12, 24);
+  const set = new Set<string>();
+  if (isNyseSession(fridayIso)) {
+    set.add(fridayIso);
+  }
+  if (isNyseSession(eve)) {
+    set.add(eve);
+  }
+  return set;
+}
+
+export function isNyseHalfDay(isoDate: string): boolean {
+  const { year } = parseYmd(isoDate);
+  return nyseHalfDays(year).has(isoDate);
+}
+
+export function nyseTradingSessions(year: number): MarketCalendarRow[] {
+  const half = nyseHalfDays(year);
+  const rows: MarketCalendarRow[] = [];
+  const cursor = { year, month: 1, day: 1 };
+  const end = new Date(Date.UTC(year + 1, 0, 1)).getTime();
+  while (Date.UTC(cursor.year, cursor.month - 1, cursor.day) < end) {
+    const iso = formatYmd(cursor.year, cursor.month, cursor.day);
+    if (isNyseSession(iso)) {
+      const kind = half.has(iso) ? "half" : "regular";
+      rows.push({
+        session_date: iso,
+        venue: "NYSE",
+        session_kind: kind,
+        open_minute: REGULAR_OPEN_MINUTE,
+        close_minute: kind === "half" ? HALF_CLOSE_MINUTE : REGULAR_CLOSE_MINUTE,
+      });
+    }
+    const next = addUtcDays(cursor.year, cursor.month, cursor.day, 1);
+    cursor.year = next.year;
+    cursor.month = next.month;
+    cursor.day = next.day;
+  }
+  return rows;
+}
+
+export function lookupSession(
+  isoDate: string,
+  sessions: readonly MarketCalendarRow[],
+): MarketCalendarRow | undefined {
+  return sessions.find((row) => row.session_date === isoDate);
+}
+
+export function nyseSessionState(
+  now: Date,
+  sessions?: readonly MarketCalendarRow[],
+): NyseSessionState {
+  const p = nyClockParts(now);
+  const rows = sessions ?? nyseTradingSessions(Number.parseInt(p.dateKey.slice(0, 4), 10));
+  const row = lookupSession(p.dateKey, rows);
+  if (!row) {
+    return "CLOSED";
+  }
+  const minutes = p.hour * 60 + p.minute;
+  if (minutes >= row.open_minute && minutes < row.close_minute) {
+    return "OPEN";
+  }
+  return "CLOSED";
+}
+
 export function isNyseSession(isoDate: string): boolean {
   const { year, month, day } = parseYmd(isoDate);
   const wd = utcWeekday(year, month, day);

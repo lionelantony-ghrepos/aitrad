@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { createAdminClient } from "@insforge/sdk";
 import {
   generateInstrumentHistory,
+  marketCalendarSeedRows,
   parseInstrumentsJson,
   quoteFromHistory,
   SEED_COUNT_SQL,
@@ -89,6 +90,21 @@ export async function runUniverseSeed(): Promise<void> {
   });
   const universe = loadInstruments();
   process.stdout.write(`Seeding ${universe.length} instruments…\n`);
+
+  const calendarRows = marketCalendarSeedRows(2026);
+  process.stdout.write(`Upserting ${calendarRows.length} NYSE 2026 sessions…\n`);
+  await upsertBatch(
+    admin.database,
+    "market_calendar",
+    calendarRows.map((row) => ({
+      session_date: row.session_date,
+      venue: row.venue,
+      session_kind: row.session_kind,
+      open_minute: row.open_minute,
+      close_minute: row.close_minute,
+    })),
+    "venue,session_date",
+  );
 
   await upsertBatch(
     admin.database,

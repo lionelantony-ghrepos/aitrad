@@ -60,6 +60,9 @@ importers:
       '@insforge/sdk':
         specifier: ^1.5.2
         version: 1.5.2
+      '@meridian/mock-data':
+        specifier: workspace:*
+        version: link:../../packages/mock-data
       '@meridian/rules-engine':
         specifier: workspace:^
         version: link:../../packages/rules-engine

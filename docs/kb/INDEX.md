@@ -28,7 +28,8 @@ PBI-023 embeds **news** (and later filings) for the copilot. It must **not** ing
 | 003 | [PBI-003](as-built/PBI-003.md) | Terminal shell, dockview, theme tokens |
 | 004 | [PBI-004](as-built/PBI-004.md) | Auth, profile wizard, paper-account provision |
 | 005 | [PBI-005](as-built/PBI-005.md) | Instrument master, GBM bars, quotes_latest seed |
-| 006–031 | _pending_ | Copy [`_template-as-built.md`](_template-as-built.md) when the PBI ships |
+| 006 | [PBI-006](as-built/PBI-006.md) | Mock market-tick, NYSE calendar, quotes channel |
+| 007–031 | _pending_ | Copy [`_template-as-built.md`](_template-as-built.md) when the PBI ships |
 
 ## Architecture decision records
 
