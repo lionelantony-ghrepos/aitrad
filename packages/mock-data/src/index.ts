@@ -35,6 +35,7 @@ export {
   MAX_QUOTE_BATCHES_PER_SEC,
   coalesceQuoteBatches,
   minuteBucketTs,
+  normalizeBarsToUpsert,
   parseFeedControls,
   rollMinuteBar,
   runFeedInvocation,

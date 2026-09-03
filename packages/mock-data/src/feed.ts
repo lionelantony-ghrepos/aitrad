@@ -243,6 +243,40 @@ export type FeedInvocationInput = {
 
 export type FeedBarWrite = OhlcvBar & { instrument_id: string };
 
+function barWriteKey(bar: FeedBarWrite): string {
+  return `${bar.instrument_id}\x1f${bar.timeframe}\x1f${bar.ts}`;
+}
+
+export function mergeBarWrites(first: FeedBarWrite, next: FeedBarWrite): FeedBarWrite {
+  return {
+    instrument_id: first.instrument_id,
+    timeframe: first.timeframe,
+    ts: first.ts,
+    o: first.o,
+    h: Math.max(first.h, next.h),
+    l: Math.min(first.l, next.l),
+    c: next.c,
+    v: first.v + next.v,
+  };
+}
+
+/** One row per (instrument_id, timeframe, ts): first o, max h, min l, last c, summed v. */
+export function normalizeBarsToUpsert(bars: readonly FeedBarWrite[]): FeedBarWrite[] {
+  const order: string[] = [];
+  const byKey = new Map<string, FeedBarWrite>();
+  for (const bar of bars) {
+    const key = barWriteKey(bar);
+    const prior = byKey.get(key);
+    if (prior === undefined) {
+      order.push(key);
+      byKey.set(key, { ...bar });
+    } else {
+      byKey.set(key, mergeBarWrites(prior, bar));
+    }
+  }
+  return order.map((key) => byKey.get(key) as FeedBarWrite);
+}
+
 export type FeedInvocationResult = {
   session: "OPEN" | "CLOSED";
   ticksApplied: number;
@@ -393,7 +427,7 @@ export function runFeedInvocation(input: FeedInvocationInput): FeedInvocationRes
     session,
     ticksApplied: ticks,
     quotes: quotesOut,
-    barsToUpsert,
+    barsToUpsert: normalizeBarsToUpsert(barsToUpsert),
     publishes,
     consumeForcePrice,
   };
