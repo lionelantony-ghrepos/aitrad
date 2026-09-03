@@ -31,7 +31,8 @@ describe("PBI-006 migration 0003", () => {
     expect(migrationSql).toContain(
       "GRANT EXECUTE ON FUNCTION public.publish_quotes_batch(jsonb) TO project_admin",
     );
-    expect(migrationSql).not.toContain("quotes_channel_select");
+    expect(migrationSql).not.toContain("CREATE POLICY quotes_channel_select");
+    expect(migrationSql).not.toContain("ALTER TABLE realtime.channels ENABLE ROW LEVEL SECURITY");
     expect(migrationSql).toContain("('2026-11-27'::date, 'NYSE', 'half'");
     expect(migrationSql).toContain("('2026-12-24'::date, 'NYSE', 'half'");
   });
