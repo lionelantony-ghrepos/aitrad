@@ -244,14 +244,15 @@ export type FeedInvocationInput = {
 export type FeedBarWrite = OhlcvBar & { instrument_id: string };
 
 function barWriteKey(bar: FeedBarWrite): string {
-  return `${bar.instrument_id}\x1f${bar.timeframe}\x1f${bar.ts}`;
+  return `${bar.instrument_id}\x1f${bar.timeframe}\x1f${minuteBucketTs(bar.ts)}`;
 }
 
 export function mergeBarWrites(first: FeedBarWrite, next: FeedBarWrite): FeedBarWrite {
+  const ts = minuteBucketTs(first.ts);
   return {
     instrument_id: first.instrument_id,
     timeframe: first.timeframe,
-    ts: first.ts,
+    ts,
     o: first.o,
     h: Math.max(first.h, next.h),
     l: Math.min(first.l, next.l),
@@ -260,18 +261,19 @@ export function mergeBarWrites(first: FeedBarWrite, next: FeedBarWrite): FeedBar
   };
 }
 
-/** One row per (instrument_id, timeframe, ts): first o, max h, min l, last c, summed v. */
+/** One row per (instrument_id, timeframe, minute bucket): first o, max h, min l, last c, summed v. */
 export function normalizeBarsToUpsert(bars: readonly FeedBarWrite[]): FeedBarWrite[] {
   const order: string[] = [];
   const byKey = new Map<string, FeedBarWrite>();
   for (const bar of bars) {
-    const key = barWriteKey(bar);
+    const canonical: FeedBarWrite = { ...bar, ts: minuteBucketTs(bar.ts) };
+    const key = barWriteKey(canonical);
     const prior = byKey.get(key);
     if (prior === undefined) {
       order.push(key);
-      byKey.set(key, { ...bar });
+      byKey.set(key, canonical);
     } else {
-      byKey.set(key, mergeBarWrites(prior, bar));
+      byKey.set(key, mergeBarWrites(prior, canonical));
     }
   }
   return order.map((key) => byKey.get(key) as FeedBarWrite);
@@ -319,7 +321,9 @@ export function runFeedInvocation(input: FeedInvocationInput): FeedInvocationRes
   const byId = new Map(input.quotes.map((q) => [q.instrument_id, { ...q }]));
 
   const currentBar = new Map<string, OhlcvBar>();
-  for (const bar of input.minuteBars) {
+  for (const bar of normalizeBarsToUpsert(
+    input.minuteBars.map((row) => ({ ...row, ts: minuteBucketTs(row.ts) })),
+  )) {
     currentBar.set(bar.instrument_id, {
       timeframe: bar.timeframe,
       ts: bar.ts,

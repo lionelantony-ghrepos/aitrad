@@ -431,13 +431,14 @@ function parseFeedControls(rows) {
   return { paused, speed, forcePrice };
 }
 function barWriteKey(bar) {
-  return `${bar.instrument_id}${bar.timeframe}${bar.ts}`;
+  return `${bar.instrument_id}${bar.timeframe}${minuteBucketTs(bar.ts)}`;
 }
 function mergeBarWrites(first, next) {
+  const ts = minuteBucketTs(first.ts);
   return {
     instrument_id: first.instrument_id,
     timeframe: first.timeframe,
-    ts: first.ts,
+    ts,
     o: first.o,
     h: Math.max(first.h, next.h),
     l: Math.min(first.l, next.l),
@@ -449,13 +450,14 @@ function normalizeBarsToUpsert(bars) {
   const order = [];
   const byKey = /* @__PURE__ */ new Map();
   for (const bar of bars) {
-    const key = barWriteKey(bar);
+    const canonical = { ...bar, ts: minuteBucketTs(bar.ts) };
+    const key = barWriteKey(canonical);
     const prior = byKey.get(key);
     if (prior === void 0) {
       order.push(key);
-      byKey.set(key, { ...bar });
+      byKey.set(key, canonical);
     } else {
-      byKey.set(key, mergeBarWrites(prior, bar));
+      byKey.set(key, mergeBarWrites(prior, canonical));
     }
   }
   return order.map((key) => byKey.get(key));
@@ -484,7 +486,9 @@ function runFeedInvocation(input) {
   const session = nyseSessionState(now, input.calendar);
   const byId = new Map(input.quotes.map((q) => [q.instrument_id, { ...q }]));
   const currentBar = /* @__PURE__ */ new Map();
-  for (const bar of input.minuteBars) {
+  for (const bar of normalizeBarsToUpsert(
+    input.minuteBars.map((row) => ({ ...row, ts: minuteBucketTs(row.ts) })),
+  )) {
     currentBar.set(bar.instrument_id, {
       timeframe: bar.timeframe,
       ts: bar.ts,

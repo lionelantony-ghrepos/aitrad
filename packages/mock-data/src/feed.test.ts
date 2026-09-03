@@ -135,7 +135,45 @@ describe("AC-006-02 bar roll and coalesce", () => {
 
 describe("barsToUpsert normalization", () => {
   const instrumentId = "11111111-1111-4111-8111-111111111111";
-  const barWriteKey = (bar: FeedBarWrite) => `${bar.instrument_id}|${bar.timeframe}|${bar.ts}`;
+  const barWriteKey = (bar: FeedBarWrite) =>
+    `${bar.instrument_id}|${bar.timeframe}|${minuteBucketTs(bar.ts)}`;
+
+  it("merges duplicate ISO timestamps for the same minute bucket", () => {
+    const ts = minuteBucketTs("2026-09-02T14:00:10.000Z");
+    const merged = normalizeBarsToUpsert([
+      {
+        instrument_id: instrumentId,
+        timeframe: "1m",
+        ts: "2026-09-02T14:00:00.000Z",
+        o: 10,
+        h: 12,
+        l: 9,
+        c: 11,
+        v: 5,
+      },
+      {
+        instrument_id: instrumentId,
+        timeframe: "1m",
+        ts: "2026-09-02T14:00:00Z",
+        o: 99,
+        h: 13,
+        l: 8,
+        c: 12,
+        v: 3,
+      },
+    ]);
+    expect(merged).toHaveLength(1);
+    expect(merged[0]).toEqual({
+      instrument_id: instrumentId,
+      timeframe: "1m",
+      ts,
+      o: 10,
+      h: 13,
+      l: 8,
+      c: 12,
+      v: 8,
+    });
+  });
 
   it("merges duplicate bucket input with first o, max h, min l, last c, summed v", () => {
     const ts = minuteBucketTs("2026-09-02T14:00:10.000Z");
@@ -269,6 +307,68 @@ describe("barsToUpsert normalization", () => {
       (bar) => bar.ts === minuteBucketTs("2026-09-02T14:01:10.000Z"),
     );
     expect(inProgress).toBeDefined();
+  });
+
+  it("canonicalizes incoming minuteBars and merges alternate ISO forms in barsToUpsert", () => {
+    const calendar = nyseTradingSessions(2026);
+    const flags = parseFeedControls([
+      { key: "feed.paused", value: true },
+      { key: "feed.speed", value: 1 },
+    ]);
+    const instrument = {
+      id: instrumentId,
+      symbol: "AAPL",
+      tick_size: 0.01,
+      beta_class: "medium" as const,
+      avg_volume: 1_000_000,
+    };
+    const bucket = minuteBucketTs("2026-09-02T14:00:00.000Z");
+    const result = runFeedInvocation({
+      nowIso: "2026-09-02T14:00:00.000Z",
+      intervalSeconds: 10,
+      calendar,
+      flags,
+      instruments: [instrument],
+      quotes: [
+        {
+          instrument_id: instrument.id,
+          bid: 211.99,
+          ask: 212.01,
+          last: 212,
+          prev_close: 210,
+          volume: 100,
+          ts: "2026-09-02T14:00:00.000Z",
+        },
+      ],
+      minuteBars: [
+        {
+          instrument_id: instrument.id,
+          timeframe: "1m",
+          ts: "2026-09-02T14:00:00.000Z",
+          o: 10,
+          h: 11,
+          l: 9,
+          c: 10.5,
+          v: 100,
+        },
+        {
+          instrument_id: instrument.id,
+          timeframe: "1m",
+          ts: "2026-09-02T14:00:00Z",
+          o: 99,
+          h: 12,
+          l: 8,
+          c: 11,
+          v: 50,
+        },
+      ],
+    });
+    expect(result.barsToUpsert).toHaveLength(1);
+    expect(result.barsToUpsert[0]?.ts).toBe(bucket);
+    expect(result.barsToUpsert[0]?.o).toBe(10);
+    expect(result.barsToUpsert[0]?.v).toBe(150);
+    const keys = result.barsToUpsert.map(barWriteKey);
+    expect(new Set(keys).size).toBe(keys.length);
   });
 });
 
