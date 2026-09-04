@@ -74,12 +74,12 @@ Seeded via `scripts/seed-all.ts` (see doc 06): 150 instruments, 5y daily + 5d 1m
 ### PBI-007 Watchlist & realtime client
 | ID | Criterion / Test | Pri | Status |
 |---|---|---|---|
-| AC-007-01 | CRUD watchlists/items; unique constraint prevents dupes | P0 | ☑ |
-| AC-007-02 | Rows tick live with flash; ≤4 renders/sec under load | P0 | ☑ |
-| AC-007-03 | Row click sets symbolContext consumed by other panels | P0 | ☑ |
-| TC-007-01 | Create list, add AAPL twice → one row + friendly error (AC-007-01) | P0 | ☑ |
-| TC-007-02 | Force price change → row value + flash update (AC-007-02) | P0 | ☑ |
-| TC-007-03 | Click MSFT row → context readout = MSFT (AC-007-03) | P0 | ☑ |
+| AC-007-01 | CRUD watchlists/items; unique constraint prevents dupes | P0 | ☐ |
+| AC-007-02 | Rows tick live with flash; ≤4 renders/sec under load | P0 | ☐ |
+| AC-007-03 | Row click sets symbolContext consumed by other panels | P0 | ☐ |
+| TC-007-01 | Create list, add AAPL twice → one row + friendly error (AC-007-01) | P0 | ☐ |
+| TC-007-02 | Force price change → row value + flash update (AC-007-02) | P0 | ☐ |
+| TC-007-03 | Click MSFT row → context readout = MSFT (AC-007-03) | P0 | ☐ |
 
 ### PBI-008 Chart
 | ID | Criterion / Test | Pri | Status |
