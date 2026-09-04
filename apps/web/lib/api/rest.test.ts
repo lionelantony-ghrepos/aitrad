@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { eqFilter, recordsUrl, recordTables, RECORDS_PATH } from "./rest";
+import { eqFilter, inFilter, recordsUrl, recordTables, RECORDS_PATH } from "./rest";
 
 describe("InsForge records URL construction", () => {
   it("builds the documented records path", () => {
@@ -21,5 +21,15 @@ describe("InsForge records URL construction", () => {
     const parsed = new URL(url);
     expect(parsed.searchParams.get("id")).toBe(`eq.${userB}`);
     expect(parsed.searchParams.get("limit")).toBe("1");
+  });
+
+  it("builds in-list and ilike filters", () => {
+    expect(inFilter(["a", "b"])).toBe("in.(a,b)");
+    const url = recordsUrl({
+      baseUrl: "https://example.insforge.app",
+      table: recordTables.quotes_latest,
+      query: { instrument_id: inFilter(["11111111-1111-4111-8111-111111111111"]) },
+    });
+    expect(url).toContain("instrument_id=");
   });
 });

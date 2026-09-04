@@ -11,6 +11,16 @@ describe("workspaceLayoutV1Schema", () => {
     expect(parsed.dockview["grid"]).toEqual({ root: { type: "branch" } });
   });
 
+  it("accepts an optional selectedWatchlistId", () => {
+    expect(
+      workspaceLayoutV1Schema.parse({
+        version: 1,
+        dockview: {},
+        selectedWatchlistId: "11111111-1111-4111-8111-111111111111",
+      }).selectedWatchlistId,
+    ).toBe("11111111-1111-4111-8111-111111111111");
+  });
+
   it("rejects an unversioned or wrong-version payload", () => {
     expect(workspaceLayoutV1Schema.safeParse({ dockview: {} }).success).toBe(false);
     expect(workspaceLayoutV1Schema.safeParse({ version: 2, dockview: {} }).success).toBe(false);

@@ -10,7 +10,9 @@ You receive a **paper cash account** on first login (amount comes from the openi
 ## 2. The workspace
 Meridian is a multi-panel terminal. Open **`/workspace`**. Drag panel edges to resize, drag tabs to rearrange, and your layout is saved automatically (**Reset layout** in the top command bar). The status bar shows the market clock (America/New_York, OPEN/CLOSED) and a connection indicator.
 
-Placeholder panels in this build: Chart, Watchlist, Order ticket, Blotter, News, Screener, Portfolio, Copilot. Their live content ships in later PBIs.
+Placeholder panels in this build: Chart, Order ticket, Blotter, News, Screener, Portfolio, Copilot. Watchlist is live (PBI-007). Chart and other panels still ship as placeholders until their PBIs.
+
+**Linked symbol.** The workspace exposes a shared symbol context. Clicking a watchlist row sets it (debug readout for tests: `symbol-context-readout`). Chart/news/ticket will consume the same store in later PBIs.
 
 **Command palette.** Press **Ctrl+K** (or the command-bar **Ctrl+K** control). The palette shell is available now; function parsing is not. When it ships, type:
 | Command | Action |
@@ -26,7 +28,9 @@ Placeholder panels in this build: Chart, Watchlist, Order ticket, Blotter, News,
 Panels are linked: clicking a symbol anywhere retargets the chart, news, DES, and order ticket.
 
 ## 3. Watchlists & charts
-Create named watchlists; add symbols via typeahead. Rows show live price, change, bid/ask and a sparkline, flashing green/red on ticks. The chart offers 1D–5Y ranges, volume, and SMA/EMA/VWAP/RSI indicators; the crosshair shows OHLCV.
+Open the **Watchlist** panel. **Create** a named list (tabs along the top). Type a ticker in **Add symbol** and pick a match. Rows show last, net change, % change, volume, bid/ask, and a 30-point sparkline. Last ticks flash green on up / red on down. Click a column header to sort. Click a row to set the linked symbol for other panels. Right-click a row → **Remove**. The selected list is stored with your workspace layout.
+
+The chart (later PBI) offers 1D–5Y ranges, volume, and SMA/EMA/VWAP/RSI indicators; the crosshair shows OHLCV.
 
 ## 4. Trading (paper)
 Open the order ticket (`ORD <symbol>` or Shift+B / Shift+S). Choose side, quantity (shares or dollars), order type (market, limit, stop, stop-limit), and time-in-force. The ticket previews estimated cost, simulated fees, and **pre-trade checks in real time** — if a rule blocks your order (e.g., size limit, concentration limit, market closed), you'll see exactly why. Advanced: **bracket orders** (entry + take-profit + stop-loss), **OCO pairs**, and **trailing stops**.

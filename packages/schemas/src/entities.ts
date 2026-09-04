@@ -182,6 +182,7 @@ export const quoteTickBatchSchema = z.object({
   ticks: z.array(quoteTickSchema),
 });
 
+export type QuoteTick = z.infer<typeof quoteTickSchema>;
 export type QuoteTickBatch = z.infer<typeof quoteTickBatchSchema>;
 
 export const auditLogSchema = z.object({
@@ -222,3 +223,52 @@ export const featureFlagInsertSchema = z.object({
 
 export type FeatureFlag = z.infer<typeof featureFlagSchema>;
 export type FeatureFlagInsert = z.infer<typeof featureFlagInsertSchema>;
+
+export const watchlistSchema = z.object({
+  id: uuidSchema,
+  user_id: uuidSchema,
+  name: z.string().min(1),
+  created_at: timestamptzSchema,
+  updated_at: timestamptzSchema,
+});
+
+export const watchlistInsertSchema = z.object({
+  user_id: uuidSchema,
+  name: z.string().min(1),
+});
+
+export const watchlistPatchSchema = z.object({
+  name: z.string().min(1).optional(),
+});
+
+export type Watchlist = z.infer<typeof watchlistSchema>;
+export type WatchlistInsert = z.infer<typeof watchlistInsertSchema>;
+export type WatchlistPatch = z.infer<typeof watchlistPatchSchema>;
+
+export const watchlistItemSchema = z.object({
+  id: uuidSchema,
+  watchlist_id: uuidSchema,
+  instrument_id: uuidSchema,
+  sort_order: z.coerce.number().int(),
+  created_at: timestamptzSchema,
+});
+
+export const watchlistItemInsertSchema = z.object({
+  watchlist_id: uuidSchema,
+  instrument_id: uuidSchema,
+  sort_order: z.coerce.number().int().optional(),
+});
+
+export type WatchlistItem = z.infer<typeof watchlistItemSchema>;
+export type WatchlistItemInsert = z.infer<typeof watchlistItemInsertSchema>;
+
+export const duplicateWatchlistItemErrorSchema = z.object({
+  code: z.literal("DUPLICATE_WATCHLIST_ITEM"),
+  message: z.string().min(1),
+});
+
+export type DuplicateWatchlistItemError = z.infer<typeof duplicateWatchlistItemErrorSchema>;
+
+export function duplicateWatchlistItemMessage(symbol: string): string {
+  return `${symbol} is already on this list`;
+}
