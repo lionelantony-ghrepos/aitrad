@@ -10,6 +10,7 @@ Exported `*Schema` bindings discovered by static scan. Full OpenAPI from Zod is 
 - chart.ts: chartBarsQuerySchema
 - chart.ts: chartBarsResponseSchema
 - chart.ts: chartRangeSchema
+- command-recents.ts: commandRecentsV1Schema
 - entities.ts: accountInsertSchema
 - entities.ts: accountPatchSchema
 - entities.ts: accountSchema

@@ -12,18 +12,20 @@ import { applyDefaultLayout } from "@/lib/apply-default-layout";
 import { clearStoredLayout, loadStoredLayout, saveStoredLayout } from "@/lib/layout-storage";
 import { PANEL_IDS } from "@/lib/panel-registry";
 import { ChartPanel } from "./chart-panel";
+import { CopilotPanel } from "./copilot-panel";
 import { PlaceholderPanel } from "./placeholder-panel";
 import { WatchlistPanel } from "./watchlist-panel";
 
 const components = {
   ...Object.fromEntries(
-    PANEL_IDS.filter((id) => id !== "watchlist" && id !== "chart").map((id) => [
+    PANEL_IDS.filter((id) => id !== "watchlist" && id !== "chart" && id !== "copilot").map((id) => [
       id,
       PlaceholderPanel,
     ]),
   ),
   watchlist: WatchlistPanel,
   chart: ChartPanel,
+  copilot: CopilotPanel,
 };
 
 function snapshot(api: DockviewApi): Record<string, unknown> {

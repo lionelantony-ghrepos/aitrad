@@ -10,11 +10,11 @@ You receive a **paper cash account** on first login (amount comes from the openi
 ## 2. The workspace
 Meridian is a multi-panel terminal. Open **`/workspace`**. Drag panel edges to resize, drag tabs to rearrange, and your layout is saved automatically (**Reset layout** in the top command bar). The status bar shows the market clock (America/New_York, OPEN/CLOSED) and a connection indicator.
 
-Placeholder panels in this build: Order ticket, Blotter, News, Screener, Portfolio, Copilot. **Watchlist** (PBI-007) and **Chart** (PBI-008) are live.
+Placeholder panels in this build: Order ticket, Blotter, News, Screener, Portfolio, Copilot (input only), Description (`DES`). **Watchlist** (PBI-007) and **Chart** (PBI-008) are live. `DES <symbol>` opens the Description placeholder until fundamentals ship.
 
 **Linked symbol.** The workspace exposes a shared symbol context. Clicking a watchlist row sets it (debug readout for tests: `symbol-context-readout`) and retargets the Chart panel.
 
-**Command palette.** Press **Ctrl+K** (or the command-bar **Ctrl+K** control). The palette shell is available now; function parsing is not. When it ships, type:
+**Command palette.** Press **Ctrl+K** (or the command-bar **Ctrl+K** control). Type a function or ticker, then Enter. Recent commands appear when the box is empty. Arrow keys move the highlight. Examples:
 | Command | Action |
 |---|---|
 | `AAPL` | Fuzzy symbol search |

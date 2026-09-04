@@ -25,6 +25,7 @@ export function WorkspaceShell({
 }: WorkspaceShellProps): React.JSX.Element {
   const [api, setApi] = useState<DockviewApi | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [focusedPanel, setFocusedPanel] = useState("");
   const activeSymbol = useSymbolContext((s) => s.activeSymbol);
 
   const openPalette = useCallback(() => {
@@ -46,7 +47,7 @@ export function WorkspaceShell({
   }, []);
 
   return (
-    <WorkspaceRuntimeContext.Provider value={{ e2eFeed }}>
+    <WorkspaceRuntimeContext.Provider value={{ e2eFeed, dockApi: api }}>
       <div
         className="flex h-screen flex-col bg-background text-foreground"
         data-testid="workspace"
@@ -68,11 +69,18 @@ export function WorkspaceShell({
         <span className="sr-only" data-testid="symbol-context-readout">
           {activeSymbol ?? ""}
         </span>
+        <span className="sr-only" data-testid="focused-panel">
+          {focusedPanel}
+        </span>
         <div className="min-h-0 w-full flex-1" style={{ height: "calc(100vh - 3.5rem)" }}>
           <DockWorkspace onApiReady={setApi} />
         </div>
         <StatusBar connection="live" />
-        <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
+        <CommandPalette
+          open={paletteOpen}
+          onClose={() => setPaletteOpen(false)}
+          onRouted={setFocusedPanel}
+        />
       </div>
     </WorkspaceRuntimeContext.Provider>
   );
