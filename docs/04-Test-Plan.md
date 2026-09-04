@@ -96,10 +96,10 @@ Seeded via `scripts/seed-all.ts` (see doc 06): 150 instruments, 5y daily + 5d 1m
 ### PBI-009 Command palette
 | ID | Criterion / Test | Pri | Status |
 |---|---|---|---|
-| AC-009-01 | All function codes route to correct panel with context set | P0 | ☑ |
-| AC-009-02 | Parser handles bad input gracefully (no crash, hint shown) | P1 | ☑ |
-| TC-009-01 | Unit: parser table of 20 inputs (AC-009-01/02) | P0 | ☑ |
-| TC-009-02 | E2E: "DES NVDA", "NEWS TSLA", "AI hello" route correctly (AC-009-01) | P0 | ☑ |
+| AC-009-01 | All function codes route to correct panel with context set | P0 | ☐ |
+| AC-009-02 | Parser handles bad input gracefully (no crash, hint shown) | P1 | ☐ |
+| TC-009-01 | Unit: parser table of 20 inputs (AC-009-01/02) | P0 | ☐ |
+| TC-009-02 | E2E: "DES NVDA", "NEWS TSLA", "AI hello" route correctly (AC-009-01) | P0 | ☐ |
 
 ### PBI-010 Rules engine package
 | ID | Criterion / Test | Pri | Status |
