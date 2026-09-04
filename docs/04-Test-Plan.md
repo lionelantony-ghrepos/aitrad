@@ -84,14 +84,14 @@ Seeded via `scripts/seed-all.ts` (see doc 06): 150 instruments, 5y daily + 5d 1m
 ### PBI-008 Chart
 | ID | Criterion / Test | Pri | Status |
 |---|---|---|---|
-| AC-008-01 | Candles render for all ranges; 1D uses 1m data | P0 | ☑ |
-| AC-008-02 | Live tick updates current candle | P1 | ☑ |
-| AC-008-03 | Indicator values match fixture math (SMA/EMA/VWAP/RSI) | P0 | ☑ |
-| AC-008-04 | Rapid symbol switching never renders stale symbol's data | P1 | ☑ |
-| TC-008-01 | E2E: GIP MSFT, cycle ranges, no errors (AC-008-01) | P0 | ☑ |
-| TC-008-02 | Unit: indicators vs known vectors (AC-008-03) | P0 | ☑ |
-| TC-008-03 | Force tick → last candle close updates (AC-008-02) | P1 | ☑ |
-| TC-008-04 | Switch symbols 5× fast → final chart = final symbol (AC-008-04) | P1 | ☑ |
+| AC-008-01 | Candles render for all ranges; 1D uses 1m data | P0 | ☐ |
+| AC-008-02 | Live tick updates current candle | P1 | ☐ |
+| AC-008-03 | Indicator values match fixture math (SMA/EMA/VWAP/RSI) | P0 | ☐ |
+| AC-008-04 | Rapid symbol switching never renders stale symbol's data | P1 | ☐ |
+| TC-008-01 | E2E: GIP MSFT, cycle ranges, no errors (AC-008-01) | P0 | ☐ |
+| TC-008-02 | Unit: indicators vs known vectors (AC-008-03) | P0 | ☐ |
+| TC-008-03 | Force tick → last candle close updates (AC-008-02) | P1 | ☐ |
+| TC-008-04 | Switch symbols 5× fast → final chart = final symbol (AC-008-04) | P1 | ☐ |
 
 ### PBI-009 Command palette
 | ID | Criterion / Test | Pri | Status |
