@@ -92,3 +92,29 @@ body {
   --dv-tab-font-size: 11px;
   --dv-active-sash-color: #ffb000;
 }
+
+@keyframes meridian-flash-up {
+  from {
+    background-color: color-mix(in srgb, var(--up) 40%, transparent);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+
+@keyframes meridian-flash-down {
+  from {
+    background-color: color-mix(in srgb, var(--down) 40%, transparent);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+
+.flash-up {
+  animation: meridian-flash-up 400ms ease-out;
+}
+
+.flash-down {
+  animation: meridian-flash-down 400ms ease-out;
+}

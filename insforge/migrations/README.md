@@ -51,4 +51,11 @@ npx -y @insforge/cli db migrations up --all
 | `feature_flags` `feed.paused` / `feed.speed` | global rows for mock feed control     |
 | realtime channel `quotes`                    | `publish_quotes_batch(payload jsonb)` |
 
+## 0004 contents
+
+| Table             | Access                                                                 |
+| ----------------- | ---------------------------------------------------------------------- |
+| `watchlists`      | RLS owner-only (`user_id = auth.uid()`); authenticated CRUD            |
+| `watchlist_items` | RLS via parent watchlist owner; `UNIQUE (watchlist_id, instrument_id)` |
+
 UUID primary keys, `created_at` / `updated_at` (except `audit_log`, which is insert-only), and `updated_at` triggers on mutable tables.

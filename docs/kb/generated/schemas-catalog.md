@@ -15,6 +15,7 @@ Exported `*Schema` bindings discovered by static scan. Full OpenAPI from Zod is 
 - entities.ts: avgVolumeBandSchema
 - entities.ts: barTimeframeSchema
 - entities.ts: betaClassSchema
+- entities.ts: duplicateWatchlistItemErrorSchema
 - entities.ts: experienceLevelSchema
 - entities.ts: featureFlagInsertSchema
 - entities.ts: featureFlagSchema
@@ -35,6 +36,11 @@ Exported `*Schema` bindings discovered by static scan. Full OpenAPI from Zod is 
 - entities.ts: quotesLatestSchema
 - entities.ts: sessionKindSchema
 - entities.ts: suitabilityTierSchema
+- entities.ts: watchlistInsertSchema
+- entities.ts: watchlistItemInsertSchema
+- entities.ts: watchlistItemSchema
+- entities.ts: watchlistPatchSchema
+- entities.ts: watchlistSchema
 - index.ts: publicInsforgeEnvSchema
 - index.ts: seedEnvSchema
 - primitives.ts: numericSchema
