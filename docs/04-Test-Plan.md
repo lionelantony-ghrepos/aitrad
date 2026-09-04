@@ -17,20 +17,20 @@ Seeded via `scripts/seed-all.ts` (see doc 06): 150 instruments, 5y daily + 5d 1m
 ### PBI-001 Monorepo scaffold & CI
 | ID | Criterion / Test | Pri | Status |
 |---|---|---|---|
-| AC-001-01 | `pnpm build`, `pnpm test`, `pnpm lint` pass from clean clone | P0 | ☐ |
-| AC-001-02 | CI runs typecheck+lint+test on PR and fails on introduced type error | P1 | ☐ |
-| TC-001-01 | Clean clone → install → build/test/lint all green (AC-001-01) | P0 | ☐ |
-| TC-001-02 | PR with deliberate type error → CI red (AC-001-02) | P1 | ☐ |
+| AC-001-01 | `pnpm build`, `pnpm test`, `pnpm lint` pass from clean clone | P0 | ☑ |
+| AC-001-02 | CI runs typecheck+lint+test on PR and fails on introduced type error | P1 | ☑ |
+| TC-001-01 | Clean clone → install → build/test/lint all green (AC-001-01) | P0 | ☑ |
+| TC-001-02 | PR with deliberate type error → CI red (AC-001-02) | P1 | ☑ |
 
 ### PBI-002 InsForge baseline
 | ID | Criterion / Test | Pri | Status |
 |---|---|---|---|
-| AC-002-01 | Migrations apply idempotently; re-run is a no-op | P0 | ☐ |
-| AC-002-02 | RLS: user A cannot read user B's account/profile rows | P0 | ☐ |
-| AC-002-03 | audit_log rejects UPDATE/DELETE | P0 | ☐ |
-| TC-002-01 | Apply 0001 twice → second run no-op (AC-002-01) | P0 | ☐ |
-| TC-002-02 | Query accounts with user-A JWT → only A's rows; B's id → 0 rows (AC-002-02) | P0 | ☐ |
-| TC-002-03 | UPDATE audit_log → error raised (AC-002-03) | P0 | ☐ |
+| AC-002-01 | Migrations apply idempotently; re-run is a no-op | P0 | ☑ |
+| AC-002-02 | RLS: user A cannot read user B's account/profile rows | P0 | ☑ |
+| AC-002-03 | audit_log rejects UPDATE/DELETE | P0 | ☑ |
+| TC-002-01 | Apply 0001 twice → second run no-op (AC-002-01) | P0 | ☑ |
+| TC-002-02 | Query accounts with user-A JWT → only A's rows; B's id → 0 rows (AC-002-02) | P0 | ☑ |
+| TC-002-03 | UPDATE audit_log → error raised (AC-002-03) | P0 | ☑ |
 
 ### PBI-003 Terminal shell
 | ID | Criterion / Test | Pri | Status |
@@ -45,61 +45,61 @@ Seeded via `scripts/seed-all.ts` (see doc 06): 150 instruments, 5y daily + 5d 1m
 ### PBI-004 Auth & profiles
 | ID | Criterion / Test | Pri | Status |
 |---|---|---|---|
-| AC-004-01 | Signup → wizard → workspace; paper account created with $100,000 exactly once | P0 | ☐ |
+| AC-004-01 | Signup → wizard → workspace; paper account created with $100,000 exactly once | P0 | ☑ |
 | AC-004-02 | /workspace unauthenticated → redirect to /login; session survives reload | P0 | ☐ |
 | AC-004-03 | OAuth (Google) login works in dev | P1 | ☐ |
-| TC-004-01 | E2E signup flow; DB has 1 account @ $100k; re-login doesn't duplicate (AC-004-01) | P0 | ☐ |
+| TC-004-01 | E2E signup flow; DB has 1 account @ $100k; re-login doesn't duplicate (AC-004-01) | P0 | ☑ |
 | TC-004-02 | Direct nav to /workspace logged out → /login; login → reload stays in (AC-004-02) | P0 | ☐ |
 | TC-004-03 | OAuth stub flow completes (AC-004-03) | P1 | ☐ |
 
 ### PBI-005 Instruments & seed
 | ID | Criterion / Test | Pri | Status |
 |---|---|---|---|
-| AC-005-01 | 150 instruments seeded; symbols unique; all fields populated | P0 | ☐ |
-| AC-005-02 | Each instrument: ≥1250 daily bars, 1950 1m bars (5 days × 390) | P0 | ☐ |
-| AC-005-03 | Generator deterministic: same seed → identical bars | P0 | ☐ |
-| TC-005-01 | SQL count checks post-seed (AC-005-01/02) | P0 | ☐ |
-| TC-005-02 | Run generator twice with seed 42 → deep-equal output (AC-005-03) | P0 | ☐ |
+| AC-005-01 | 150 instruments seeded; symbols unique; all fields populated | P0 | ☑ |
+| AC-005-02 | Each instrument: ≥1250 daily bars, 1950 1m bars (5 days × 390) | P0 | ☑ |
+| AC-005-03 | Generator deterministic: same seed → identical bars | P0 | ☑ |
+| TC-005-01 | SQL count checks post-seed (AC-005-01/02) | P0 | ☑ |
+| TC-005-02 | Run generator twice with seed 42 → deep-equal output (AC-005-03) | P0 | ☑ |
 
 ### PBI-006 Mock feed
 | ID | Criterion / Test | Pri | Status |
 |---|---|---|---|
-| AC-006-01 | quotes_latest updates while calendar OPEN; frozen when CLOSED or paused | P0 | ☐ |
-| AC-006-02 | Tick batches on realtime ≤ 4/sec; 1m bars roll correctly | P0 | ☐ |
-| AC-006-03 | Test mode: force-price flag moves a symbol to target within one batch | P0 | ☐ |
-| TC-006-01 | Pause flag on → no quote changes for 10s; off → resumes (AC-006-01) | P0 | ☐ |
-| TC-006-02 | Subscribe 30s → batch rate ≤4/s; bar boundaries correct (AC-006-02) | P1 | ☐ |
-| TC-006-03 | Force AAPL→200.00 → quotes_latest reflects it (AC-006-03) | P0 | ☐ |
+| AC-006-01 | quotes_latest updates while calendar OPEN; frozen when CLOSED or paused | P0 | ☑ |
+| AC-006-02 | Tick batches on realtime ≤ 4/sec; 1m bars roll correctly | P0 | ☑ |
+| AC-006-03 | Test mode: force-price flag moves a symbol to target within one batch | P0 | ☑ |
+| TC-006-01 | Pause flag on → no quote changes for 10s; off → resumes (AC-006-01) | P0 | ☑ |
+| TC-006-02 | Subscribe 30s → batch rate ≤4/s; bar boundaries correct (AC-006-02) | P1 | ☑ |
+| TC-006-03 | Force AAPL→200.00 → quotes_latest reflects it (AC-006-03) | P0 | ☑ |
 
 ### PBI-007 Watchlist & realtime client
 | ID | Criterion / Test | Pri | Status |
 |---|---|---|---|
-| AC-007-01 | CRUD watchlists/items; unique constraint prevents dupes | P0 | ☐ |
-| AC-007-02 | Rows tick live with flash; ≤4 renders/sec under load | P0 | ☐ |
-| AC-007-03 | Row click sets symbolContext consumed by other panels | P0 | ☐ |
-| TC-007-01 | Create list, add AAPL twice → one row + friendly error (AC-007-01) | P0 | ☐ |
-| TC-007-02 | Force price change → row value + flash update (AC-007-02) | P0 | ☐ |
-| TC-007-03 | Click MSFT row → context readout = MSFT (AC-007-03) | P0 | ☐ |
+| AC-007-01 | CRUD watchlists/items; unique constraint prevents dupes | P0 | ☑ |
+| AC-007-02 | Rows tick live with flash; ≤4 renders/sec under load | P0 | ☑ |
+| AC-007-03 | Row click sets symbolContext consumed by other panels | P0 | ☑ |
+| TC-007-01 | Create list, add AAPL twice → one row + friendly error (AC-007-01) | P0 | ☑ |
+| TC-007-02 | Force price change → row value + flash update (AC-007-02) | P0 | ☑ |
+| TC-007-03 | Click MSFT row → context readout = MSFT (AC-007-03) | P0 | ☑ |
 
 ### PBI-008 Chart
 | ID | Criterion / Test | Pri | Status |
 |---|---|---|---|
-| AC-008-01 | Candles render for all ranges; 1D uses 1m data | P0 | ☐ |
-| AC-008-02 | Live tick updates current candle | P1 | ☐ |
-| AC-008-03 | Indicator values match fixture math (SMA/EMA/VWAP/RSI) | P0 | ☐ |
-| AC-008-04 | Rapid symbol switching never renders stale symbol's data | P1 | ☐ |
-| TC-008-01 | E2E: GIP MSFT, cycle ranges, no errors (AC-008-01) | P0 | ☐ |
-| TC-008-02 | Unit: indicators vs known vectors (AC-008-03) | P0 | ☐ |
-| TC-008-03 | Force tick → last candle close updates (AC-008-02) | P1 | ☐ |
-| TC-008-04 | Switch symbols 5× fast → final chart = final symbol (AC-008-04) | P1 | ☐ |
+| AC-008-01 | Candles render for all ranges; 1D uses 1m data | P0 | ☑ |
+| AC-008-02 | Live tick updates current candle | P1 | ☑ |
+| AC-008-03 | Indicator values match fixture math (SMA/EMA/VWAP/RSI) | P0 | ☑ |
+| AC-008-04 | Rapid symbol switching never renders stale symbol's data | P1 | ☑ |
+| TC-008-01 | E2E: GIP MSFT, cycle ranges, no errors (AC-008-01) | P0 | ☑ |
+| TC-008-02 | Unit: indicators vs known vectors (AC-008-03) | P0 | ☑ |
+| TC-008-03 | Force tick → last candle close updates (AC-008-02) | P1 | ☑ |
+| TC-008-04 | Switch symbols 5× fast → final chart = final symbol (AC-008-04) | P1 | ☑ |
 
 ### PBI-009 Command palette
 | ID | Criterion / Test | Pri | Status |
 |---|---|---|---|
-| AC-009-01 | All function codes route to correct panel with context set | P0 | ☐ |
-| AC-009-02 | Parser handles bad input gracefully (no crash, hint shown) | P1 | ☐ |
-| TC-009-01 | Unit: parser table of 20 inputs (AC-009-01/02) | P0 | ☐ |
-| TC-009-02 | E2E: "DES NVDA", "NEWS TSLA", "AI hello" route correctly (AC-009-01) | P0 | ☐ |
+| AC-009-01 | All function codes route to correct panel with context set | P0 | ☑ |
+| AC-009-02 | Parser handles bad input gracefully (no crash, hint shown) | P1 | ☑ |
+| TC-009-01 | Unit: parser table of 20 inputs (AC-009-01/02) | P0 | ☑ |
+| TC-009-02 | E2E: "DES NVDA", "NEWS TSLA", "AI hello" route correctly (AC-009-01) | P0 | ☑ |
 
 ### PBI-010 Rules engine package
 | ID | Criterion / Test | Pri | Status |
