@@ -7,6 +7,9 @@ Exported `*Schema` bindings discovered by static scan. Full OpenAPI from Zod is 
 - auth.ts: provisionCreatedSchema
 - auth.ts: provisionResultSchema
 - auth.ts: sessionUserSchema
+- chart.ts: chartBarsQuerySchema
+- chart.ts: chartBarsResponseSchema
+- chart.ts: chartRangeSchema
 - entities.ts: accountInsertSchema
 - entities.ts: accountPatchSchema
 - entities.ts: accountSchema

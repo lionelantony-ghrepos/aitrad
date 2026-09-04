@@ -21,4 +21,5 @@ export type SeedEnv = z.infer<typeof seedEnvSchema>;
 export * from "./primitives";
 export * from "./entities";
 export * from "./workspace-layout";
+export * from "./chart";
 export * from "./auth";

@@ -11,14 +11,19 @@ import "dockview-react/dist/styles/dockview.css";
 import { applyDefaultLayout } from "@/lib/apply-default-layout";
 import { clearStoredLayout, loadStoredLayout, saveStoredLayout } from "@/lib/layout-storage";
 import { PANEL_IDS } from "@/lib/panel-registry";
+import { ChartPanel } from "./chart-panel";
 import { PlaceholderPanel } from "./placeholder-panel";
 import { WatchlistPanel } from "./watchlist-panel";
 
 const components = {
   ...Object.fromEntries(
-    PANEL_IDS.filter((id) => id !== "watchlist").map((id) => [id, PlaceholderPanel]),
+    PANEL_IDS.filter((id) => id !== "watchlist" && id !== "chart").map((id) => [
+      id,
+      PlaceholderPanel,
+    ]),
   ),
   watchlist: WatchlistPanel,
+  chart: ChartPanel,
 };
 
 function snapshot(api: DockviewApi): Record<string, unknown> {

@@ -23,6 +23,10 @@ export function eqFilter(value: string): string {
   return `eq.${value}`;
 }
 
+export function gteFilter(value: string): string {
+  return `gte.${value}`;
+}
+
 export function inFilter(values: readonly string[]): string {
   return `in.(${values.join(",")})`;
 }

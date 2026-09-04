@@ -2,6 +2,7 @@ import { paperAccountSeed } from "@meridian/rules-engine";
 import type {
   Account,
   Instrument,
+  MarketBar,
   Profile,
   QuotesLatest,
   Watchlist,
@@ -305,4 +306,62 @@ export function stubRemoveWatchlistItem(userId: string, itemId: string): boolean
 
 export function stubQuotesFor(instrumentIds: readonly string[]): QuotesLatest[] {
   return STUB_QUOTES.filter((row) => instrumentIds.includes(row.instrument_id));
+}
+
+export function stubInstrumentBySymbol(symbol: string): Instrument | null {
+  const key = symbol.trim().toUpperCase();
+  return STUB_INSTRUMENTS.find((row) => row.symbol === key) ?? null;
+}
+
+export function stubMarketBars(
+  instrumentId: string,
+  timeframe: "1m" | "1d",
+  tsGte: string,
+): MarketBar[] {
+  const instrument = STUB_INSTRUMENTS.find((row) => row.id === instrumentId);
+  if (!instrument) {
+    return [];
+  }
+  const quote = STUB_QUOTES.find((row) => row.instrument_id === instrumentId);
+  const last = quote?.last ?? 100;
+  const cutoff = Date.parse(tsGte);
+  const bars: MarketBar[] = [];
+  if (timeframe === "1d") {
+    for (let i = 40; i >= 0; i -= 1) {
+      const ts = new Date(Date.parse(STUB_TS) - i * 24 * 60 * 60 * 1000).toISOString();
+      if (Date.parse(ts) < cutoff) {
+        continue;
+      }
+      const c = last - i * 0.25;
+      bars.push({
+        instrument_id: instrumentId,
+        timeframe: "1d",
+        ts,
+        o: c - 0.4,
+        h: c + 0.6,
+        l: c - 0.8,
+        c,
+        v: 1_000_000 + i,
+      });
+    }
+    return bars;
+  }
+  for (let i = 80; i >= 0; i -= 1) {
+    const ts = new Date(Date.parse(STUB_TS) - i * 60 * 1000).toISOString();
+    if (Date.parse(ts) < cutoff) {
+      continue;
+    }
+    const c = last - i * 0.02;
+    bars.push({
+      instrument_id: instrumentId,
+      timeframe: "1m",
+      ts,
+      o: c - 0.05,
+      h: c + 0.08,
+      l: c - 0.1,
+      c,
+      v: 1_000 + i,
+    });
+  }
+  return bars;
 }
