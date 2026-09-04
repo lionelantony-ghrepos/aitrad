@@ -7,6 +7,7 @@ export const PANEL_IDS = [
   "screener",
   "portfolio",
   "copilot",
+  "des",
 ] as const;
 
 export type PanelId = (typeof PANEL_IDS)[number];
@@ -75,6 +76,13 @@ const REGISTRY: Record<PanelId, PanelDefinition> = {
     icon: "sparkles",
     component: "copilot",
     defaultSize: { width: 360, height: 360 },
+  },
+  des: {
+    id: "des",
+    title: "Description",
+    icon: "file-text",
+    component: "des",
+    defaultSize: { width: 400, height: 360 },
   },
 };
 

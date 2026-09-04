@@ -13,6 +13,7 @@ import {
   watchlistItemSchema,
   watchlistSchema,
   workspaceLayoutV1Schema,
+  commandRecentsV1Schema,
 } from "./index";
 
 describe("@meridian/schemas", () => {
@@ -138,6 +139,12 @@ describe("@meridian/schemas", () => {
     });
     expect(payload.timeframe).toBe("1d");
     expect(payload.bars).toHaveLength(1);
+  });
+
+  it("parses command recents payloads", () => {
+    expect(commandRecentsV1Schema.parse({ version: 1, items: ["GIP MSFT"] }).items).toEqual([
+      "GIP MSFT",
+    ]);
   });
 
   it("re-exports workspaceLayoutV1Schema from the package barrel", () => {

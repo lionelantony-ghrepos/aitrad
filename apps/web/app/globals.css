@@ -118,3 +118,12 @@ body {
 .flash-down {
   animation: meridian-flash-down 400ms ease-out;
 }
+
+[cmdk-root] {
+  font-family: var(--font-mono);
+}
+
+[cmdk-item][data-selected="true"] {
+  background: var(--secondary);
+  color: var(--primary);
+}

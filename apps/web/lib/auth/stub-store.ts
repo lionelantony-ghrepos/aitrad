@@ -155,6 +155,8 @@ export function stubAccountCount(userId: string): number {
 
 export const STUB_AAPL_INSTRUMENT_ID = "11111111-1111-4111-8111-111111111111";
 export const STUB_MSFT_INSTRUMENT_ID = "22222222-2222-4222-8222-222222222222";
+export const STUB_NVDA_INSTRUMENT_ID = "33333333-3333-4333-8333-333333333333";
+export const STUB_TSLA_INSTRUMENT_ID = "44444444-4444-4444-8444-444444444444";
 
 const STUB_TS = "2026-09-04T13:30:00.000Z";
 
@@ -178,6 +180,8 @@ function marketInstrument(id: string, symbol: string, name: string): Instrument 
 export const STUB_INSTRUMENTS: Instrument[] = [
   marketInstrument(STUB_AAPL_INSTRUMENT_ID, "AAPL", "Apple Inc."),
   marketInstrument(STUB_MSFT_INSTRUMENT_ID, "MSFT", "Microsoft Corporation"),
+  marketInstrument(STUB_NVDA_INSTRUMENT_ID, "NVDA", "NVIDIA Corporation"),
+  marketInstrument(STUB_TSLA_INSTRUMENT_ID, "TSLA", "Tesla, Inc."),
 ];
 
 export const STUB_QUOTES: QuotesLatest[] = [
@@ -197,6 +201,24 @@ export const STUB_QUOTES: QuotesLatest[] = [
     last: 420,
     prev_close: 415,
     volume: 800_000,
+    ts: STUB_TS,
+  },
+  {
+    instrument_id: STUB_NVDA_INSTRUMENT_ID,
+    bid: 119.8,
+    ask: 120.1,
+    last: 120,
+    prev_close: 118,
+    volume: 900_000,
+    ts: STUB_TS,
+  },
+  {
+    instrument_id: STUB_TSLA_INSTRUMENT_ID,
+    bid: 249.5,
+    ask: 249.8,
+    last: 249.6,
+    prev_close: 245,
+    volume: 700_000,
     ts: STUB_TS,
   },
 ];
