@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  chartBarsResponseSchema,
+  chartRangeSchema,
   credentialsSchema,
   marketBarSchema,
   marketCalendarRowSchema,
@@ -112,6 +114,30 @@ describe("@meridian/schemas", () => {
         close_minute: "780",
       }).session_date,
     ).toBe("2026-11-27");
+  });
+
+  it("parses chart range and bars response", () => {
+    expect(chartRangeSchema.parse("1D")).toBe("1D");
+    const payload = chartBarsResponseSchema.parse({
+      symbol: "MSFT",
+      instrument_id: "22222222-2222-4222-8222-222222222222",
+      range: "1W",
+      timeframe: "1d",
+      bars: [
+        {
+          instrument_id: "22222222-2222-4222-8222-222222222222",
+          timeframe: "1d",
+          ts: "2026-09-04T13:30:00.000Z",
+          o: 1,
+          h: 2,
+          l: 1,
+          c: 1.5,
+          v: 10,
+        },
+      ],
+    });
+    expect(payload.timeframe).toBe("1d");
+    expect(payload.bars).toHaveLength(1);
   });
 
   it("re-exports workspaceLayoutV1Schema from the package barrel", () => {

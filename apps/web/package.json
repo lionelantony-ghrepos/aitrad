@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@insforge/sdk": "^1.5.2",
+    "@meridian/indicators": "workspace:*",
     "@meridian/mock-data": "workspace:*",
     "@meridian/rules-engine": "workspace:^",
     "@meridian/schemas": "workspace:*",
@@ -21,6 +22,7 @@
     "clsx": "^2.1.1",
     "dockview": "^8.2.0",
     "dockview-react": "^8.2.0",
+    "lightweight-charts": "^5.0.8",
     "lucide-react": "^0.479.0",
     "next": "15.5.25",
     "react": "19.1.0",
