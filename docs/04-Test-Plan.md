@@ -104,12 +104,12 @@ Seeded via `scripts/seed-all.ts` (see doc 06): 150 instruments, 5y daily + 5d 1m
 ### PBI-010 Rules engine package
 | ID | Criterion / Test | Pri | Status |
 |---|---|---|---|
-| AC-010-01 | All operators & hit policies behave per doc 05 §3 | P0 | ☑ |
-| AC-010-02 | Effective dating filters rows by injected clock | P0 | ☑ |
-| AC-010-03 | Trace contains per-row condition results for every evaluation | P0 | ☑ |
-| TC-010-01 | Fixture tables doc 05 §7: all vectors pass (AC-010-01) | P0 | ☑ |
-| TC-010-02 | Row expiring yesterday not matched today (AC-010-02) | P0 | ☑ |
-| TC-010-03 | Trace snapshot test (AC-010-03) | P1 | ☑ |
+| AC-010-01 | All operators & hit policies behave per doc 05 §3 | P0 | ☐ |
+| AC-010-02 | Effective dating filters rows by injected clock | P0 | ☐ |
+| AC-010-03 | Trace contains per-row condition results for every evaluation | P0 | ☐ |
+| TC-010-01 | Fixture tables doc 05 §7: all vectors pass (AC-010-01) | P0 | ☐ |
+| TC-010-02 | Row expiring yesterday not matched today (AC-010-02) | P0 | ☐ |
+| TC-010-03 | Trace snapshot test (AC-010-03) | P1 | ☐ |
 
 ### PBI-011 Rules service
 | ID | Criterion / Test | Pri | Status |
