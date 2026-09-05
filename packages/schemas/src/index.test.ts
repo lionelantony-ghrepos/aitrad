@@ -14,6 +14,7 @@ import {
   watchlistSchema,
   workspaceLayoutV1Schema,
   commandRecentsV1Schema,
+  decisionTableSchema,
 } from "./index";
 
 describe("@meridian/schemas", () => {
@@ -173,5 +174,24 @@ describe("@meridian/schemas", () => {
         created_at: "2026-09-04T00:00:00.000Z",
       }).sort_order,
     ).toBe(0);
+  });
+
+  it("parses decision tables and rejects incomplete payloads", () => {
+    expect(
+      decisionTableSchema.parse({
+        id: "DT-TEST",
+        hit_policy: "FIRST",
+        default_outputs: { decision: "deny" },
+        rows: [
+          {
+            id: "1",
+            priority: 1,
+            conditions: [{ input: "role", op: "eq", value: "admin" }],
+            outputs: { decision: "allow" },
+          },
+        ],
+      }).id,
+    ).toBe("DT-TEST");
+    expect(decisionTableSchema.safeParse({ id: "DT-TEST" }).success).toBe(false);
   });
 });

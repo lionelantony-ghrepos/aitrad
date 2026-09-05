@@ -32,13 +32,15 @@ PBI-023 embeds **news** (and later filings) for the copilot. It must **not** ing
 | 007 | [PBI-007](as-built/PBI-007.md) | Watchlist panel, useQuotes coalesce, symbolContext |
 | 008 | [PBI-008](as-built/PBI-008.md) | Chart panel, lightweight-charts, @meridian/indicators |
 | 009 | [PBI-009](as-built/PBI-009.md) | Command palette, function codes, FunctionRouter |
-| 010–031 | _pending_ | Copy [`_template-as-built.md`](_template-as-built.md) when the PBI ships |
+| 010 | [PBI-010](as-built/PBI-010.md) | `@meridian/rules-engine` evaluate/compile; Zod in schemas |
+| 011–031 | _pending_ | Copy [`_template-as-built.md`](_template-as-built.md) when the PBI ships |
 
 ## Architecture decision records
 
 | ADR | Title |
 | --- | --- |
 | [0001](adr/0001-docs-as-code-knowledge-layer.md) | Docs-as-code knowledge layer beside the spec |
+| [0002](adr/0002-decision-condition-negate.md) | Optional `negate` on decision-table condition cells |
 
 Add further ADRs from [`_template-adr.md`](_template-adr.md) only for durable choices not already in doc 02.
 
