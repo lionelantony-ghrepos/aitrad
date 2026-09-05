@@ -10,18 +10,20 @@ describe("rules-admin DTOs", () => {
   it("parses catalog, draft, publish, simulate, and audit ops", () => {
     expect(rulesAdminRoleSchema.parse("trader")).toBe("trader");
     expect(rulesAdminRequestSchema.parse({ op: "listCatalog" }).op).toBe("listCatalog");
-    expect(
-      rulesAdminRequestSchema.parse({
-        op: "saveDraft",
-        tableKey: "DT-RISK-01",
-        table: {
-          id: "DT-RISK-01",
-          hit_policy: "FIRST",
-          default_outputs: { decision: "allow" },
-          rows: [],
-        },
-      }).tableKey,
-    ).toBe("DT-RISK-01");
+    const saved = rulesAdminRequestSchema.parse({
+      op: "saveDraft",
+      tableKey: "DT-RISK-01",
+      table: {
+        id: "DT-RISK-01",
+        hit_policy: "FIRST",
+        default_outputs: { decision: "allow" },
+        rows: [],
+      },
+    });
+    expect(saved.op).toBe("saveDraft");
+    if (saved.op === "saveDraft") {
+      expect(saved.tableKey).toBe("DT-RISK-01");
+    }
     expect(rulesAdminRequestSchema.safeParse({ op: "publish", tableKey: "" }).success).toBe(false);
   });
 
