@@ -7,6 +7,8 @@ import {
   marketCalendarRowSchema,
   mockInstrumentSchema,
   packageName,
+  profilePatchSchema,
+  profileInsertSchema,
   profileWizardSchema,
   provisionResultSchema,
   publicInsforgeEnvSchema,
@@ -46,6 +48,17 @@ describe("@meridian/schemas", () => {
       }).experience_level,
     ).toBe("novice");
     expect(credentialsSchema.safeParse({ email: "bad", password: "x" }).success).toBe(false);
+  });
+
+  it("rejects client profile writes that include persona", () => {
+    expect(profilePatchSchema.safeParse({ persona: "admin" }).success).toBe(false);
+    expect(
+      profileInsertSchema.safeParse({
+        user_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        persona: "admin",
+      }).success,
+    ).toBe(false);
+    expect(profilePatchSchema.parse({ display_name: "Ada" }).display_name).toBe("Ada");
   });
 
   it("parses a provision result envelope", () => {

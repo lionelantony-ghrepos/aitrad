@@ -14,7 +14,7 @@ const migrationSql = readFileSync(
 
 describe("PBI-011 migration 0005", () => {
   it("lists 0005 after 0004", () => {
-    expect(LOCAL_MIGRATION_IDS).toEqual(["0001", "0002", "0003", "0004", "0005"]);
+    expect(LOCAL_MIGRATION_IDS).toEqual(["0001", "0002", "0003", "0004", "0005", "0006"]);
   });
 
   it("creates rules tables, append-only rule_audit, and rules:published channel", () => {

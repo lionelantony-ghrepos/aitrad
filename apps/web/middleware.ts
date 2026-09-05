@@ -3,7 +3,10 @@ import { isAuthStub, PROFILE_READY_COOKIE, STUB_USER_COOKIE } from "@/lib/auth/m
 
 export async function middleware(request: NextRequest): Promise<NextResponse> {
   const { pathname } = request.nextUrl;
-  const isProtected = pathname.startsWith("/workspace") || pathname.startsWith("/onboarding");
+  const isProtected =
+    pathname.startsWith("/workspace") ||
+    pathname.startsWith("/onboarding") ||
+    pathname.startsWith("/admin");
   const isAuthPage = pathname === "/login" || pathname === "/signup";
   const response = NextResponse.next({ request });
 
@@ -34,7 +37,7 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     return NextResponse.redirect(new URL(ready ? "/workspace" : "/onboarding", request.url));
   }
 
-  if (pathname.startsWith("/workspace") && signedIn && !ready) {
+  if ((pathname.startsWith("/workspace") || pathname.startsWith("/admin")) && signedIn && !ready) {
     return NextResponse.redirect(new URL("/onboarding", request.url));
   }
 
@@ -46,5 +49,5 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
 }
 
 export const config = {
-  matcher: ["/workspace/:path*", "/onboarding", "/login", "/signup"],
+  matcher: ["/workspace/:path*", "/admin/:path*", "/onboarding", "/login", "/signup"],
 };
