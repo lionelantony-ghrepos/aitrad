@@ -38,6 +38,8 @@ Exported `*Schema` bindings discovered by static scan. Full OpenAPI from Zod is 
 - entities.ts: marketCalendarRowSchema
 - entities.ts: marketCapBandSchema
 - entities.ts: mockInstrumentSchema
+- entities.ts: profileAdminInsertSchema
+- entities.ts: profileAdminPatchSchema
 - entities.ts: profileInsertSchema
 - entities.ts: profilePatchSchema
 - entities.ts: profileSchema

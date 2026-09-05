@@ -124,11 +124,11 @@ Seeded via `scripts/seed-all.ts` (see doc 06): 150 instruments, 5y daily + 5d 1m
 ### PBI-012 Rules admin console
 | ID | Criterion / Test | Pri | Status |
 |---|---|---|---|
-| AC-012-01 | Draft edit → diff → publish bumps version; history rollback works | P0 | ☑ |
-| AC-012-02 | Simulation replays audits and reports deltas | P1 | ☑ |
-| AC-012-03 | Non-admin gets 403 / no UI | P0 | ☑ |
-| TC-012-01 | E2E: edit DT-RISK-01 max_order_notional, simulate, publish, verify effect (AC-012-01/02) | P0 | ☑ |
-| TC-012-02 | Trader role hits /admin/rules → denied (AC-012-03) | P0 | ☑ |
+| AC-012-01 | Draft edit → diff → publish bumps version; history rollback works | P0 | ☐ |
+| AC-012-02 | Simulation replays audits and reports deltas | P1 | ☐ |
+| AC-012-03 | Non-admin gets 403 / no UI | P0 | ☐ |
+| TC-012-01 | E2E: edit DT-RISK-01 max_order_notional, simulate, publish, verify effect (AC-012-01/02) | P0 | ☐ |
+| TC-012-02 | Trader role hits /admin/rules → denied (AC-012-03) | P0 | ☐ |
 
 ### PBI-013 Order ticket
 | ID | Criterion / Test | Pri | Status |

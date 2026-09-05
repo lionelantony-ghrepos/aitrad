@@ -1,4 +1,4 @@
-export const LOCAL_MIGRATION_IDS = ["0001", "0002", "0003", "0004", "0005"] as const;
+export const LOCAL_MIGRATION_IDS = ["0001", "0002", "0003", "0004", "0005", "0006"] as const;
 
 export function planMigrationApply(
   applied: readonly string[],
