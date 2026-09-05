@@ -36,3 +36,19 @@ export {
   type ProvisionProfileRow,
 } from "./provision-plan";
 export { isProfileWizardComplete, profileWizardPatch } from "./profile-wizard";
+export {
+  BASELINE_TABLE_KEYS,
+  DOMAIN_BINDINGS,
+  baselineCatalog,
+  baselineTable,
+} from "./baseline-tables";
+export { PublishedRulesCache, RULES_PUBLISHED_EVENT } from "./rules-cache";
+export {
+  assembleDecisionTable,
+  evaluateDomain,
+  handleRulesServiceRequest,
+  type EvaluateDomainPorts,
+  type EvaluateDomainResult,
+  type PublishedDomainTable,
+  type RuleAuditWrite,
+} from "./evaluate-domain";

@@ -33,7 +33,8 @@ PBI-023 embeds **news** (and later filings) for the copilot. It must **not** ing
 | 008 | [PBI-008](as-built/PBI-008.md) | Chart panel, lightweight-charts, @meridian/indicators |
 | 009 | [PBI-009](as-built/PBI-009.md) | Command palette, function codes, FunctionRouter |
 | 010 | [PBI-010](as-built/PBI-010.md) | `@meridian/rules-engine` evaluate/compile; Zod in schemas |
-| 011–031 | _pending_ | Copy [`_template-as-built.md`](_template-as-built.md) when the PBI ships |
+| 011 | [PBI-011](as-built/PBI-011.md) | Rules storage 0005, `rules-service`, seed-rules, publish cache |
+| 012–031 | _pending_ | Copy [`_template-as-built.md`](_template-as-built.md) when the PBI ships |
 
 ## Architecture decision records
 

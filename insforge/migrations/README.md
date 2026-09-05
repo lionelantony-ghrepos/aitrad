@@ -58,4 +58,13 @@ npx -y @insforge/cli db migrations up --all
 | `watchlists`      | RLS owner-only (`user_id = auth.uid()`); authenticated CRUD            |
 | `watchlist_items` | RLS via parent watchlist owner; `UNIQUE (watchlist_id, instrument_id)` |
 
+## 0005 contents
+
+| Table / object                                                   | Access                                                           |
+| ---------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `rule_sets`, `decision_tables`, `decision_rows`, `rule_bindings` | authenticated `SELECT`; writes via admin / `rules-service`       |
+| `rule_audit`                                                     | append-only; authenticated `SELECT` own or null `user_id`        |
+| realtime channel `rules`                                         | `publish_rules_published(payload jsonb)` event `rules:published` |
+| `feature_flags` `rules.publish_generation`                       | cache epoch for warm isolates                                    |
+
 UUID primary keys, `created_at` / `updated_at` (except `audit_log`, which is insert-only), and `updated_at` triggers on mutable tables.
