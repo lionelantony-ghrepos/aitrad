@@ -4762,12 +4762,22 @@ function mergeDomainResults(domain, evaluations) {
     trace,
   };
 }
+function resolveRulesServiceApiKey(env) {
+  const key = env.API_KEY ?? env.INSFORGE_API_KEY;
+  if (typeof key !== "string" || key.length === 0) {
+    return null;
+  }
+  return key;
+}
 async function handleRulesServiceRequest(input) {
   if (input.method !== "POST") {
     return { status: 405, body: { error: "METHOD_NOT_ALLOWED" } };
   }
   const raw = input.body && typeof input.body === "object" ? input.body : {};
   const op = typeof raw.op === "string" ? raw.op : "evaluateDomain";
+  if ((op === "publish" || op === "invalidate") && !input.isService) {
+    return { status: 403, body: { error: "SERVICE_ONLY" } };
+  }
   const actorId = input.isService ? (input.userId ?? "service") : input.userId;
   const action =
     op === "publish"
@@ -4819,7 +4829,10 @@ async function handleRulesServiceRequest(input) {
   if (!parsed.success) {
     return { status: 400, body: { error: "INVALID_EVALUATE_REQUEST" } };
   }
-  const clock = parsed.data.clock ? new Date(parsed.data.clock) : input.clock;
+  const clock =
+    input.isService && parsed.data.clock
+      ? new Date(parsed.data.clock)
+      : (input.clock ?? /* @__PURE__ */ new Date());
   const result = await evaluateDomain(parsed.data.domain, parsed.data.context, input.ports, {
     clock,
     cache: input.cache,
@@ -4918,14 +4931,20 @@ async function rules_service_src_default(req) {
   }
   const authHeader = req.headers.get("Authorization");
   const userToken = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
-  const apiKey = Deno.env.get("API_KEY") ?? Deno.env.get("INSFORGE_API_KEY") ?? "";
-  const isService = Boolean(userToken && apiKey && userToken === apiKey);
+  const apiKey = resolveRulesServiceApiKey({
+    API_KEY: Deno.env.get("API_KEY"),
+    INSFORGE_API_KEY: Deno.env.get("INSFORGE_API_KEY"),
+  });
+  if (!apiKey) {
+    return json(500, { error: "SERVICE_KEY_UNAVAILABLE" });
+  }
   if (!userToken) {
     return json(401, { error: "UNAUTHENTICATED" });
   }
+  const isService = userToken === apiKey;
   const admin = createAdminClient({
     baseUrl: Deno.env.get("INSFORGE_INTERNAL_URL") ?? Deno.env.get("INSFORGE_BASE_URL"),
-    apiKey: apiKey || userToken,
+    apiKey,
   });
   let userId = null;
   if (!isService) {

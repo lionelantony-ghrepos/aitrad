@@ -114,12 +114,12 @@ Seeded via `scripts/seed-all.ts` (see doc 06): 150 instruments, 5y daily + 5d 1m
 ### PBI-011 Rules service
 | ID | Criterion / Test | Pri | Status |
 |---|---|---|---|
-| AC-011-01 | evaluateDomain returns outcome + writes rule_audit with table version | P0 | ☑ |
-| AC-011-02 | Publish invalidates cache without redeploy (< 5 s) | P0 | ☑ |
-| AC-011-03 | Baseline tables seeded and published | P0 | ☑ |
-| TC-011-01 | Evaluate order_validation → audit row matches outcome (AC-011-01) | P0 | ☑ |
-| TC-011-02 | Edit+publish threshold → next eval uses new value (AC-011-02) | P0 | ☑ |
-| TC-011-03 | Seed script → all doc 05 §6 tables present/published (AC-011-03) | P0 | ☑ |
+| AC-011-01 | evaluateDomain returns outcome + writes rule_audit with table version | P0 | ☐ |
+| AC-011-02 | Publish invalidates cache without redeploy (< 5 s) | P0 | ☐ |
+| AC-011-03 | Baseline tables seeded and published | P0 | ☐ |
+| TC-011-01 | Evaluate order_validation → audit row matches outcome (AC-011-01) | P0 | ☐ |
+| TC-011-02 | Edit+publish threshold → next eval uses new value (AC-011-02) | P0 | ☐ |
+| TC-011-03 | Seed script → all doc 05 §6 tables present/published (AC-011-03) | P0 | ☐ |
 
 ### PBI-012 Rules admin console
 | ID | Criterion / Test | Pri | Status |

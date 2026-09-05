@@ -11,6 +11,7 @@ import {
   assembleDecisionTable,
   handleRulesServiceRequest,
   PublishedRulesCache,
+  resolveRulesServiceApiKey,
   RULES_PUBLISHED_EVENT,
   type PublishedDomainTable,
   type RuleAuditWrite,
@@ -117,15 +118,21 @@ export default async function (req: Request): Promise<Response> {
 
   const authHeader = req.headers.get("Authorization");
   const userToken = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
-  const apiKey = Deno.env.get("API_KEY") ?? Deno.env.get("INSFORGE_API_KEY") ?? "";
-  const isService = Boolean(userToken && apiKey && userToken === apiKey);
+  const apiKey = resolveRulesServiceApiKey({
+    API_KEY: Deno.env.get("API_KEY"),
+    INSFORGE_API_KEY: Deno.env.get("INSFORGE_API_KEY"),
+  });
+  if (!apiKey) {
+    return json(500, { error: "SERVICE_KEY_UNAVAILABLE" });
+  }
   if (!userToken) {
     return json(401, { error: "UNAUTHENTICATED" });
   }
+  const isService = userToken === apiKey;
 
   const admin = createAdminClient({
     baseUrl: Deno.env.get("INSFORGE_INTERNAL_URL") ?? Deno.env.get("INSFORGE_BASE_URL"),
-    apiKey: apiKey || userToken,
+    apiKey,
   });
 
   let userId: string | null = null;

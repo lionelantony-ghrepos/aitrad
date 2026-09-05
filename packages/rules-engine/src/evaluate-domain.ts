@@ -180,6 +180,17 @@ export type RulesServicePorts = EvaluateDomainPorts & {
   readPublishGeneration?: () => Promise<string>;
 };
 
+export function resolveRulesServiceApiKey(env: {
+  API_KEY?: string;
+  INSFORGE_API_KEY?: string;
+}): string | null {
+  const key = env.API_KEY ?? env.INSFORGE_API_KEY;
+  if (typeof key !== "string" || key.length === 0) {
+    return null;
+  }
+  return key;
+}
+
 export async function handleRulesServiceRequest(input: {
   method: string;
   body: unknown;
@@ -196,6 +207,9 @@ export async function handleRulesServiceRequest(input: {
   const raw =
     input.body && typeof input.body === "object" ? (input.body as Record<string, unknown>) : {};
   const op = typeof raw.op === "string" ? raw.op : "evaluateDomain";
+  if ((op === "publish" || op === "invalidate") && !input.isService) {
+    return { status: 403, body: { error: "SERVICE_ONLY" } };
+  }
   const actorId = input.isService ? (input.userId ?? "service") : input.userId;
   const action =
     op === "publish"
@@ -252,7 +266,10 @@ export async function handleRulesServiceRequest(input: {
     return { status: 400, body: { error: "INVALID_EVALUATE_REQUEST" } };
   }
 
-  const clock = parsed.data.clock ? new Date(parsed.data.clock) : input.clock;
+  const clock =
+    input.isService && parsed.data.clock
+      ? new Date(parsed.data.clock)
+      : (input.clock ?? new Date());
   const result = await evaluateDomain(parsed.data.domain, parsed.data.context, input.ports, {
     clock,
     cache: input.cache,

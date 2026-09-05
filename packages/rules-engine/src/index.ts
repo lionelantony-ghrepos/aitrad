@@ -47,6 +47,7 @@ export {
   assembleDecisionTable,
   evaluateDomain,
   handleRulesServiceRequest,
+  resolveRulesServiceApiKey,
   type EvaluateDomainPorts,
   type EvaluateDomainResult,
   type PublishedDomainTable,

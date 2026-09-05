@@ -2,8 +2,11 @@ import { describe, expect, it } from "vitest";
 import { RULES_PUBLISHED_EVENT } from "./rules-cache";
 import {
   evaluateDomain,
+  handleRulesServiceRequest,
+  resolveRulesServiceApiKey,
   type EvaluateDomainPorts,
   type PublishedDomainTable,
+  type RulesServicePorts,
 } from "./evaluate-domain";
 import { PublishedRulesCache } from "./rules-cache";
 import { baselineTable } from "./baseline-tables";
@@ -180,5 +183,84 @@ describe("TC-011-02 publish invalidates cache (AC-011-02)", () => {
     });
     expect(loadCount.n).toBe(2);
     expect(after.tableVersions).toEqual([{ table_key: "DT-RISK-01", version: 2 }]);
+  });
+});
+
+function handlerPorts(initial: PublishedDomainTable[]): RulesServicePorts {
+  const { ports } = memoryPorts(initial);
+  return {
+    ...ports,
+    async writeAuditLog() {
+      return;
+    },
+  };
+}
+
+describe("rules-service request gates", () => {
+  it("rejects publish and invalidate from a user JWT", async () => {
+    const cache = new PublishedRulesCache();
+    const ports = handlerPorts([]);
+    const publish = await handleRulesServiceRequest({
+      method: "POST",
+      body: { op: "publish", tableKey: "DT-RISK-01" },
+      userId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      isService: false,
+      cache,
+      ports,
+    });
+    expect(publish).toEqual({ status: 403, body: { error: "SERVICE_ONLY" } });
+    const invalidate = await handleRulesServiceRequest({
+      method: "POST",
+      body: { op: "invalidate" },
+      userId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      isService: false,
+      cache,
+      ports,
+    });
+    expect(invalidate).toEqual({ status: 403, body: { error: "SERVICE_ONLY" } });
+  });
+
+  it("ignores client clock on non-service evaluate", async () => {
+    const dated = {
+      id: "DT-HRS-01",
+      hit_policy: "FIRST" as const,
+      default_outputs: { decision: "allow" },
+      rows: [
+        {
+          id: "1",
+          priority: 1,
+          effective_from: "2019-01-01T00:00:00.000Z",
+          effective_to: "2020-01-01T00:00:00.000Z",
+          conditions: [{ input: "session", op: "eq" as const, value: "open" }],
+          outputs: { decision: "reject", reason_code: "HRS_MARKET_CLOSED" },
+        },
+      ],
+    };
+    const cache = new PublishedRulesCache();
+    const ports = handlerPorts([
+      { domain: "market_hours", tableKey: "DT-HRS-01", version: 1, table: dated },
+    ]);
+    const result = await handleRulesServiceRequest({
+      method: "POST",
+      body: {
+        domain: "market_hours",
+        context: { session: "open" },
+        clock: "2019-06-01T00:00:00.000Z",
+      },
+      userId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      isService: false,
+      cache,
+      ports,
+      clock: new Date("2026-09-05T16:00:00.000Z"),
+    });
+    expect(result.status).toBe(200);
+    const body = result.body as { outcome: { decision: string } };
+    expect(body.outcome).toEqual({ decision: "allow" });
+  });
+
+  it("fails closed when the function API key is unset", () => {
+    expect(resolveRulesServiceApiKey({})).toBeNull();
+    expect(resolveRulesServiceApiKey({ API_KEY: "", INSFORGE_API_KEY: "" })).toBeNull();
+    expect(resolveRulesServiceApiKey({ API_KEY: "k" })).toBe("k");
   });
 });
