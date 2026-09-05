@@ -24,3 +24,4 @@ export * from "./workspace-layout";
 export * from "./command-recents";
 export * from "./chart";
 export * from "./auth";
+export * from "./decision-table";

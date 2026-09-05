@@ -199,6 +199,10 @@ importers:
         version: 3.2.7(@types/node@20.19.43)(jiti@2.7.0)(lightningcss@1.32.0)(msw@2.15.0(@types/node@20.19.43)(typescript@5.9.3))(tsx@4.23.13)(yaml@2.9.0)
 
   packages/rules-engine:
+    dependencies:
+      '@meridian/schemas':
+        specifier: workspace:*
+        version: link:../schemas
     devDependencies:
       eslint:
         specifier: ^9.21.0

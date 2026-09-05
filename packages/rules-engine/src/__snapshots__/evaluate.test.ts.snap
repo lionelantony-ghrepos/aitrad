@@ -1,0 +1,145 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`TC-010-03 trace snapshot (AC-010-03) > FIRST evaluation exposes per-row condition booleans for all rows 1`] = `
+[
+  {
+    "cells": [
+      {
+        "input": "exceeds_buying_power",
+        "op": "eq",
+        "passed": false,
+      },
+    ],
+    "effective": true,
+    "matched": false,
+    "outputs": {
+      "decision": "reject",
+      "reason_code": "RISK_BUYING_POWER",
+    },
+    "priority": 1,
+    "rowId": "1",
+  },
+  {
+    "cells": [
+      {
+        "input": "order_notional",
+        "op": "gt",
+        "passed": true,
+      },
+    ],
+    "effective": true,
+    "matched": true,
+    "outputs": {
+      "decision": "reject",
+      "reason_code": "RISK_MAX_NOTIONAL",
+    },
+    "priority": 2,
+    "rowId": "2",
+  },
+  {
+    "cells": [
+      {
+        "input": "position_pct_post",
+        "op": "gt",
+        "passed": true,
+      },
+      {
+        "input": "experience_level",
+        "op": "eq",
+        "passed": false,
+      },
+    ],
+    "effective": true,
+    "matched": false,
+    "outputs": {
+      "decision": "reject",
+      "reason_code": "RISK_CONCENTRATION_NOVICE",
+    },
+    "priority": 3,
+    "rowId": "3",
+  },
+  {
+    "cells": [
+      {
+        "input": "position_pct_post",
+        "op": "gt",
+        "passed": true,
+      },
+    ],
+    "effective": true,
+    "matched": true,
+    "outputs": {
+      "decision": "reject",
+      "reason_code": "RISK_CONCENTRATION",
+    },
+    "priority": 4,
+    "rowId": "4",
+  },
+  {
+    "cells": [
+      {
+        "input": "orders_today",
+        "op": "gte",
+        "passed": false,
+      },
+    ],
+    "effective": true,
+    "matched": false,
+    "outputs": {
+      "decision": "reject",
+      "reason_code": "RISK_DAILY_ORDER_CAP",
+    },
+    "priority": 5,
+    "rowId": "5",
+  },
+  {
+    "cells": [
+      {
+        "input": "instrument_beta_class",
+        "op": "eq",
+        "passed": false,
+      },
+      {
+        "input": "experience_level",
+        "op": "eq",
+        "passed": false,
+      },
+      {
+        "input": "order_notional",
+        "op": "gt",
+        "passed": true,
+      },
+    ],
+    "effective": true,
+    "matched": false,
+    "outputs": {
+      "decision": "require_ack",
+      "reason_code": "RISK_HIGH_BETA_ACK",
+    },
+    "priority": 6,
+    "rowId": "6",
+  },
+  {
+    "cells": [
+      {
+        "input": "side",
+        "op": "eq",
+        "passed": false,
+      },
+      {
+        "input": "exceeds_position_qty",
+        "op": "eq",
+        "passed": false,
+      },
+    ],
+    "effective": true,
+    "matched": false,
+    "outputs": {
+      "decision": "reject",
+      "reason_code": "RISK_NO_SHORTING",
+    },
+    "priority": 7,
+    "rowId": "7",
+  },
+]
+`;
