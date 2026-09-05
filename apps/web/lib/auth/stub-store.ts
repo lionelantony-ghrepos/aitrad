@@ -1,4 +1,8 @@
-import { paperAccountSeed } from "@meridian/rules-engine";
+import {
+  createRulesAdminMemory,
+  paperAccountSeed,
+  type RulesAdminMemory,
+} from "@meridian/rules-engine";
 import type {
   Account,
   Instrument,
@@ -22,6 +26,7 @@ type StubState = {
   accounts: Map<string, Account>;
   watchlists: Watchlist[];
   watchlistItems: WatchlistItem[];
+  rules: RulesAdminMemory;
 };
 
 function createState(): StubState {
@@ -32,7 +37,12 @@ function createState(): StubState {
     accounts: new Map(),
     watchlists: [],
     watchlistItems: [],
+    rules: createRulesAdminMemory(),
   };
+}
+
+export function stubRulesMemory(): RulesAdminMemory {
+  return getStubState().rules;
 }
 
 const globalForStub = globalThis as typeof globalThis & { __meridianAuthStub?: StubState };

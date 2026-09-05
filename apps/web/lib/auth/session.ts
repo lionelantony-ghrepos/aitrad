@@ -12,6 +12,7 @@ export type AuthContext = {
   accessToken: string;
   account: Account | null;
   wizardComplete: boolean;
+  role: string;
 };
 
 export async function getAccessToken(): Promise<string | null> {
@@ -61,6 +62,7 @@ export async function loadAuthContext(): Promise<AuthContext | null> {
       accessToken,
       account: loaded.account,
       wizardComplete: isProfileWizardComplete(loaded.profile),
+      role: loaded.profile?.persona ?? "trader",
     };
   }
 
@@ -93,5 +95,9 @@ export async function loadAuthContext(): Promise<AuthContext | null> {
     wizardComplete: isProfileWizardComplete(
       profile as { display_name: string | null; experience_level: string | null } | null,
     ),
+    role:
+      profile && typeof profile === "object" && "persona" in profile
+        ? String((profile as { persona?: string | null }).persona ?? "trader")
+        : "trader",
   };
 }
