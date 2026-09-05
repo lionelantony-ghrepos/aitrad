@@ -14,7 +14,7 @@ const migrationSql = readFileSync(
 
 describe("PBI-007 migration 0004", () => {
   it("lists 0004 after 0003", () => {
-    expect(LOCAL_MIGRATION_IDS).toEqual(["0001", "0002", "0003", "0004"]);
+    expect(LOCAL_MIGRATION_IDS).toEqual(["0001", "0002", "0003", "0004", "0005"]);
   });
 
   it("creates owner-only watchlists with unique items", () => {

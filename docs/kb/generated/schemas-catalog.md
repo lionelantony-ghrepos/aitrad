@@ -56,4 +56,12 @@ Exported `*Schema` bindings discovered by static scan. Full OpenAPI from Zod is 
 - primitives.ts: numericSchema
 - primitives.ts: timestamptzSchema
 - primitives.ts: uuidSchema
+- rules-service.ts: evaluateDomainRequestSchema
+- rules-service.ts: evaluateDomainResponseSchema
+- rules-service.ts: invalidateRulesRequestSchema
+- rules-service.ts: publishRulesRequestSchema
+- rules-service.ts: ruleAuditInsertSchema
+- rules-service.ts: ruleDomainSchema
+- rules-service.ts: tableStatusSchema
+- rules-service.ts: tableVersionRefSchema
 - workspace-layout.ts: workspaceLayoutV1Schema

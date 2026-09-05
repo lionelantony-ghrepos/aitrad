@@ -17,6 +17,8 @@
     "docs:generate": "node scripts/generate-kb-reference.mjs",
     "docs:kb-test": "node --test scripts/check-kb.test.mjs",
     "seed": "tsx scripts/seed.ts",
+    "seed:rules": "tsx scripts/seed-rules.ts",
+    "functions:bundle:rules-service": "node scripts/bundle-rules-service.mjs",
     "prepare": "husky"
   },
   "dependencies": {

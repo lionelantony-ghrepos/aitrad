@@ -13,6 +13,11 @@ export const recordTables = {
   market_calendar: "market_calendar",
   watchlists: "watchlists",
   watchlist_items: "watchlist_items",
+  rule_sets: "rule_sets",
+  decision_tables: "decision_tables",
+  decision_rows: "decision_rows",
+  rule_bindings: "rule_bindings",
+  rule_audit: "rule_audit",
 } as const;
 
 export type RecordTable = (typeof recordTables)[keyof typeof recordTables];

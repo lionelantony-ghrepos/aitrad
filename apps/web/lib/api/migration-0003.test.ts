@@ -14,7 +14,7 @@ const migrationSql = readFileSync(
 
 describe("PBI-006 migration 0003", () => {
   it("lists 0003 after 0002", () => {
-    expect(LOCAL_MIGRATION_IDS).toEqual(["0001", "0002", "0003", "0004"]);
+    expect(LOCAL_MIGRATION_IDS).toEqual(["0001", "0002", "0003", "0004", "0005"]);
   });
 
   it("creates market_calendar, feed flags, quotes channel, and NYSE 2026 half-days", () => {
