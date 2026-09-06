@@ -4440,6 +4440,116 @@ var invalidateRulesRequestSchema = external_exports.object({
   event: external_exports.literal("rules:published").optional(),
 });
 
+// packages/schemas/src/rules-admin.ts
+var rulesAdminRoleSchema = external_exports.enum(["trader", "admin", "compliance"]);
+var rulesAdminOpSchema = external_exports.enum([
+  "listCatalog",
+  "getTable",
+  "saveDraft",
+  "publish",
+  "rollback",
+  "simulate",
+  "listHistory",
+  "listAudits",
+]);
+var catalogTableItemSchema = external_exports.object({
+  tableKey: external_exports.string().min(1),
+  domain: external_exports.string().min(1),
+  publishedVersion: external_exports.number().int().positive().nullable(),
+  draftVersion: external_exports.number().int().positive().nullable().optional(),
+});
+var tableDiffSchema = external_exports.object({
+  tableKey: external_exports.string().min(1),
+  publishedVersion: external_exports.number().int().nonnegative().nullable(),
+  draftVersion: external_exports.number().int().nonnegative().nullable(),
+  addedRowIds: external_exports.array(external_exports.string()),
+  removedRowIds: external_exports.array(external_exports.string()),
+  changedRowIds: external_exports.array(external_exports.string()),
+});
+var simulateDeltaSchema = external_exports.object({
+  auditId: external_exports.string().min(1),
+  publishedOutcome: external_exports.unknown(),
+  draftOutcome: external_exports.unknown(),
+  publishedRowIds: external_exports.array(external_exports.string()),
+  draftRowIds: external_exports.array(external_exports.string()),
+});
+var simulateResultSchema = external_exports.object({
+  sampleSize: external_exports.number().int().nonnegative(),
+  agreementPct: external_exports.number().min(0).max(100),
+  deltas: external_exports.array(simulateDeltaSchema),
+});
+var ruleAuditViewSchema = external_exports.object({
+  id: external_exports.string().min(1),
+  domain: external_exports.string().min(1),
+  table_versions: external_exports.unknown().optional(),
+  context: external_exports.record(external_exports.unknown()),
+  matched_rows: external_exports.unknown().optional(),
+  outcome: external_exports.unknown(),
+  latency_ms: external_exports.number().int().nonnegative().optional(),
+  created_at: external_exports.string().optional(),
+  user_id: external_exports.string().nullable().optional(),
+});
+var tableHistoryItemSchema = external_exports.object({
+  version: external_exports.number().int().positive(),
+  status: external_exports.enum(["draft", "published", "retired"]),
+  table: decisionTableSchema,
+});
+var rulesAdminGetTableResponseSchema = external_exports.object({
+  tableKey: external_exports.string().min(1),
+  domain: external_exports.string().min(1),
+  published: decisionTableSchema.nullable(),
+  publishedVersion: external_exports.number().int().positive().nullable(),
+  draft: decisionTableSchema.nullable(),
+  draftVersion: external_exports.number().int().positive().nullable(),
+  diff: tableDiffSchema,
+});
+var tableKeyField = external_exports.object({ tableKey: external_exports.string().min(1) });
+var rulesAdminRequestSchema = external_exports.discriminatedUnion("op", [
+  external_exports.object({ op: external_exports.literal("listCatalog") }),
+  external_exports.object({
+    op: external_exports.literal("getTable"),
+    tableKey: external_exports.string().min(1),
+  }),
+  external_exports.object({
+    op: external_exports.literal("saveDraft"),
+    tableKey: external_exports.string().min(1),
+    table: decisionTableSchema,
+  }),
+  external_exports.object({
+    op: external_exports.literal("publish"),
+    tableKey: external_exports.string().min(1),
+  }),
+  external_exports.object({
+    op: external_exports.literal("rollback"),
+    tableKey: external_exports.string().min(1),
+    version: external_exports.number().int().positive(),
+  }),
+  external_exports.object({
+    op: external_exports.literal("simulate"),
+    tableKey: external_exports.string().min(1),
+    limit: external_exports.number().int().positive().max(500).optional(),
+  }),
+  external_exports.object({
+    op: external_exports.literal("listHistory"),
+    tableKey: external_exports.string().min(1),
+  }),
+  external_exports.object({
+    op: external_exports.literal("listAudits"),
+    query: external_exports.string().optional(),
+    domain: external_exports.string().optional(),
+    limit: external_exports.number().int().positive().max(200).optional(),
+  }),
+]);
+var rulesAdminListCatalogResponseSchema = external_exports.object({
+  tables: external_exports.array(catalogTableItemSchema),
+});
+var rulesAdminPublishResponseSchema = external_exports.object({
+  ok: external_exports.literal(true),
+  tableKey: external_exports.string().min(1),
+  version: external_exports.number().int().positive(),
+  event: external_exports.literal("rules:published"),
+});
+
 // packages/schemas/src/index.ts
 var publicInsforgeEnvSchema = external_exports.object({
   NEXT_PUBLIC_INSFORGE_URL: external_exports.string().url(),
@@ -4622,6 +4732,164 @@ function authorize(input) {
   return { allowed: true };
 }
 
+// packages/rules-engine/src/doc05-fixtures.ts
+var dtRisk01 = {
+  id: "DT-RISK-01",
+  hit_policy: "FIRST",
+  default_outputs: { decision: "allow" },
+  rows: [
+    {
+      id: "1",
+      priority: 1,
+      conditions: [{ input: "exceeds_buying_power", op: "eq", value: true }],
+      outputs: { decision: "reject", reason_code: "RISK_BUYING_POWER" },
+    },
+    {
+      id: "2",
+      priority: 2,
+      conditions: [{ input: "order_notional", op: "gt", value: 5e4 }],
+      outputs: { decision: "reject", reason_code: "RISK_MAX_NOTIONAL" },
+    },
+    {
+      id: "3",
+      priority: 3,
+      conditions: [
+        { input: "position_pct_post", op: "gt", value: 25 },
+        { input: "experience_level", op: "eq", value: "novice" },
+      ],
+      outputs: { decision: "reject", reason_code: "RISK_CONCENTRATION_NOVICE" },
+    },
+    {
+      id: "4",
+      priority: 4,
+      conditions: [{ input: "position_pct_post", op: "gt", value: 40 }],
+      outputs: { decision: "reject", reason_code: "RISK_CONCENTRATION" },
+    },
+    {
+      id: "5",
+      priority: 5,
+      conditions: [{ input: "orders_today", op: "gte", value: 100 }],
+      outputs: { decision: "reject", reason_code: "RISK_DAILY_ORDER_CAP" },
+    },
+    {
+      id: "6",
+      priority: 6,
+      conditions: [
+        { input: "instrument_beta_class", op: "eq", value: "high" },
+        { input: "experience_level", op: "eq", value: "novice" },
+        { input: "order_notional", op: "gt", value: 5e3 },
+      ],
+      outputs: { decision: "require_ack", reason_code: "RISK_HIGH_BETA_ACK" },
+    },
+    {
+      id: "7",
+      priority: 7,
+      conditions: [
+        { input: "side", op: "eq", value: "sell" },
+        { input: "exceeds_position_qty", op: "eq", value: true },
+      ],
+      outputs: { decision: "reject", reason_code: "RISK_NO_SHORTING" },
+    },
+  ],
+};
+var dtVal01 = {
+  id: "DT-VAL-01",
+  hit_policy: "COLLECT",
+  default_outputs: { decision: "valid" },
+  rows: [
+    {
+      id: "1",
+      priority: 1,
+      conditions: [{ input: "qty", op: "lte", value: 0 }],
+      outputs: {
+        decision: "reject",
+        reason_code: "VAL_QTY_POSITIVE",
+        message: "Quantity must be positive.",
+      },
+    },
+    {
+      id: "2",
+      priority: 2,
+      conditions: [{ input: "qty", op: "gt", value: 1e4 }],
+      outputs: { decision: "reject", reason_code: "VAL_QTY_MAX" },
+    },
+    {
+      id: "3",
+      priority: 3,
+      conditions: [
+        { input: "order_type", op: "in", value: ["limit", "stop_limit"] },
+        { input: "limit_price", op: "is_null" },
+      ],
+      outputs: { decision: "reject", reason_code: "VAL_LIMIT_REQUIRED" },
+    },
+    {
+      id: "4",
+      priority: 4,
+      conditions: [
+        { input: "order_type", op: "in", value: ["stop", "stop_limit"] },
+        { input: "stop_price", op: "is_null" },
+      ],
+      outputs: { decision: "reject", reason_code: "VAL_STOP_REQUIRED" },
+    },
+    {
+      id: "5",
+      priority: 5,
+      conditions: [
+        { input: "order_type", op: "eq", value: "limit" },
+        { input: "side", op: "eq", value: "buy" },
+        { input: "limit_far_above_last", op: "eq", value: true },
+      ],
+      outputs: { decision: "warn", reason_code: "VAL_LIMIT_FAR" },
+    },
+    {
+      id: "6",
+      priority: 6,
+      conditions: [{ input: "instrument_status", op: "neq", value: "active" }],
+      outputs: { decision: "reject", reason_code: "VAL_HALTED" },
+    },
+    {
+      id: "7",
+      priority: 7,
+      conditions: [
+        { input: "tif", op: "eq", value: "IOC" },
+        { input: "order_type", op: "neq", value: "limit" },
+      ],
+      outputs: { decision: "reject", reason_code: "VAL_IOC_LIMIT_ONLY" },
+    },
+    {
+      id: "8",
+      priority: 8,
+      conditions: [{ input: "price_not_on_tick", op: "eq", value: true }],
+      outputs: { decision: "reject", reason_code: "VAL_TICK_SIZE" },
+    },
+  ],
+};
+var dtFee01 = {
+  id: "DT-FEE-01",
+  hit_policy: "ALL",
+  default_outputs: { commission_usd: 0 },
+  rows: [
+    {
+      id: "1",
+      priority: 1,
+      conditions: [{ input: "side", op: "any" }],
+      outputs: { commission_usd: 0 },
+    },
+    {
+      id: "2",
+      priority: 2,
+      conditions: [{ input: "side", op: "eq", value: "sell" }],
+      outputs: { sec_fee: "notional_x_sec_rate", taf: "qty_x_taf_capped" },
+    },
+    {
+      id: "3",
+      priority: 3,
+      conditions: [{ input: "account_tier", op: "eq", value: "pro" }],
+      outputs: { data_fee_monthly: 0 },
+    },
+  ],
+};
+
 // packages/rules-engine/src/baseline-tables.ts
 var DOMAIN_BINDINGS = [
   { domain: "order_validation", tableKey: "DT-VAL-01", hitPolicy: "COLLECT" },
@@ -4637,6 +4905,375 @@ var DOMAIN_BINDINGS = [
   { domain: "portfolio_analysis", tableKey: "DT-RISK-02", hitPolicy: "COLLECT" },
   { domain: "market_sim", tableKey: "DT-SIM-01", hitPolicy: "ALL" },
 ];
+var dtVal02 = {
+  id: "DT-VAL-02",
+  hit_policy: "COLLECT",
+  default_outputs: { decision: "valid" },
+  rows: [
+    {
+      id: "1",
+      priority: 1,
+      conditions: [
+        { input: "group_type", op: "eq", value: "bracket" },
+        { input: "side", op: "eq", value: "buy" },
+        { input: "tp_not_above_entry", op: "eq", value: true },
+      ],
+      outputs: { decision: "reject", reason_code: "VAL_TP_ABOVE_ENTRY" },
+    },
+    {
+      id: "2",
+      priority: 2,
+      conditions: [
+        { input: "group_type", op: "eq", value: "bracket" },
+        { input: "side", op: "eq", value: "buy" },
+        { input: "sl_not_below_entry", op: "eq", value: true },
+      ],
+      outputs: { decision: "reject", reason_code: "VAL_SL_BELOW_ENTRY" },
+    },
+    {
+      id: "3",
+      priority: 3,
+      conditions: [
+        { input: "group_type", op: "eq", value: "bracket" },
+        { input: "legs_count", op: "neq", value: 3 },
+      ],
+      outputs: { decision: "reject", reason_code: "VAL_BRACKET_LEGS" },
+    },
+    {
+      id: "4",
+      priority: 4,
+      conditions: [
+        { input: "trail_type", op: "eq", value: "percent" },
+        { input: "trail_value", op: "between", value: [0.1, 50], negate: true },
+      ],
+      outputs: { decision: "reject", reason_code: "VAL_TRAIL_RANGE" },
+    },
+    {
+      id: "5",
+      priority: 5,
+      conditions: [
+        { input: "group_type", op: "eq", value: "oco" },
+        { input: "legs_count", op: "neq", value: 2 },
+      ],
+      outputs: { decision: "reject", reason_code: "VAL_OCO_LEGS" },
+    },
+  ],
+};
+var dtHrs01 = {
+  id: "DT-HRS-01",
+  hit_policy: "FIRST",
+  default_outputs: { decision: "allow" },
+  rows: [
+    {
+      id: "1",
+      priority: 1,
+      conditions: [
+        { input: "session", op: "eq", value: "closed" },
+        { input: "order_type", op: "eq", value: "market" },
+      ],
+      outputs: { decision: "reject", reason_code: "HRS_MARKET_CLOSED" },
+    },
+    {
+      id: "2",
+      priority: 2,
+      conditions: [
+        { input: "session", op: "eq", value: "closed" },
+        { input: "order_type", op: "in", value: ["limit", "stop", "stop_limit"] },
+      ],
+      outputs: { decision: "queue_for_open" },
+    },
+    {
+      id: "3",
+      priority: 3,
+      conditions: [{ input: "session", op: "eq", value: "open" }],
+      outputs: { decision: "allow" },
+    },
+  ],
+};
+var dtExec01 = {
+  id: "DT-EXEC-01",
+  hit_policy: "FIRST",
+  default_outputs: { slippage_bps: 5, liquidity_cap_pct_adv: 5 },
+  rows: [
+    {
+      id: "4a",
+      priority: 1,
+      conditions: [
+        { input: "avg_volume_band", op: "eq", value: "high" },
+        { input: "large_notional", op: "eq", value: true },
+      ],
+      outputs: { slippage_bps: 7, liquidity_cap_pct_adv: 10 },
+    },
+    {
+      id: "4b",
+      priority: 2,
+      conditions: [
+        { input: "avg_volume_band", op: "eq", value: "medium" },
+        { input: "large_notional", op: "eq", value: true },
+      ],
+      outputs: { slippage_bps: 10, liquidity_cap_pct_adv: 5 },
+    },
+    {
+      id: "4c",
+      priority: 3,
+      conditions: [
+        { input: "avg_volume_band", op: "eq", value: "low" },
+        { input: "large_notional", op: "eq", value: true },
+      ],
+      outputs: { slippage_bps: 20, liquidity_cap_pct_adv: 2 },
+    },
+    {
+      id: "1",
+      priority: 4,
+      conditions: [{ input: "avg_volume_band", op: "eq", value: "high" }],
+      outputs: { slippage_bps: 2, liquidity_cap_pct_adv: 10 },
+    },
+    {
+      id: "2",
+      priority: 5,
+      conditions: [{ input: "avg_volume_band", op: "eq", value: "medium" }],
+      outputs: { slippage_bps: 5, liquidity_cap_pct_adv: 5 },
+    },
+    {
+      id: "3",
+      priority: 6,
+      conditions: [{ input: "avg_volume_band", op: "eq", value: "low" }],
+      outputs: { slippage_bps: 15, liquidity_cap_pct_adv: 2 },
+    },
+  ],
+};
+var dtAi01 = {
+  id: "DT-AI-01",
+  hit_policy: "FIRST",
+  default_outputs: { decision: "require_approval" },
+  rows: [
+    {
+      id: "4",
+      priority: 1,
+      conditions: [
+        { input: "tool", op: "eq", value: "propose_order" },
+        { input: "order_notional", op: "gt", value: 5e4 },
+      ],
+      outputs: { decision: "block" },
+    },
+    {
+      id: "5",
+      priority: 2,
+      conditions: [{ input: "messages_today", op: "gt", value: 200 }],
+      outputs: { decision: "rate_limit", message: "Daily copilot quota reached." },
+    },
+    {
+      id: "1",
+      priority: 3,
+      conditions: [{ input: "tool", op: "eq", value: "propose_order" }],
+      outputs: { decision: "require_approval" },
+    },
+    {
+      id: "2",
+      priority: 4,
+      conditions: [
+        { input: "tool", op: "in", value: ["create_watchlist_item", "create_alert"] },
+        { input: "actions_today", op: "lt", value: 50 },
+      ],
+      outputs: { decision: "auto_approve" },
+    },
+    {
+      id: "3",
+      priority: 5,
+      conditions: [
+        { input: "tool", op: "eq", value: "create_monitor" },
+        { input: "monitors_count", op: "lt", value: 20 },
+      ],
+      outputs: { decision: "auto_approve" },
+    },
+  ],
+};
+var dtEnt01 = {
+  id: "DT-ENT-01",
+  hit_policy: "FIRST",
+  default_outputs: { decision: "deny" },
+  rows: [
+    {
+      id: "2",
+      priority: 1,
+      conditions: [{ input: "role", op: "eq", value: "admin" }],
+      outputs: { decision: "allow" },
+    },
+    {
+      id: "1",
+      priority: 2,
+      conditions: [
+        { input: "role", op: "eq", value: "trader" },
+        {
+          input: "action",
+          op: "regex",
+          value: "^(trade|watchlist|alerts|copilot|screener):|^portfolio:read$",
+        },
+      ],
+      outputs: { decision: "allow" },
+    },
+    {
+      id: "3",
+      priority: 3,
+      conditions: [
+        { input: "role", op: "eq", value: "compliance" },
+        { input: "action", op: "in", value: ["audit:read", "rules:read"] },
+      ],
+      outputs: { decision: "allow" },
+    },
+    {
+      id: "4",
+      priority: 4,
+      conditions: [
+        { input: "role", op: "eq", value: "compliance" },
+        { input: "action", op: "regex", value: "^trade:" },
+      ],
+      outputs: { decision: "deny" },
+    },
+  ],
+};
+var dtAlrt01 = {
+  id: "DT-ALRT-01",
+  hit_policy: "FIRST",
+  default_outputs: { decision: "deliver" },
+  rows: [
+    {
+      id: "1",
+      priority: 1,
+      conditions: [{ input: "same_rule_fired_within_min", op: "lt", value: 15 }],
+      outputs: { decision: "suppress" },
+    },
+    {
+      id: "2",
+      priority: 2,
+      conditions: [{ input: "rule_fires_today", op: "gte", value: 20 }],
+      outputs: { decision: "suppress_and_pause_rule" },
+    },
+    {
+      id: "3",
+      priority: 3,
+      conditions: [{ input: "user_alerts_today", op: "gte", value: 100 }],
+      outputs: { decision: "suppress" },
+    },
+  ],
+};
+var dtRisk02 = {
+  id: "DT-RISK-02",
+  hit_policy: "COLLECT",
+  default_outputs: { flags: [] },
+  rows: [
+    {
+      id: "1",
+      priority: 1,
+      conditions: [{ input: "max_position_pct", op: "gt", value: 25 }],
+      outputs: { flag: "CONCENTRATION_POSITION" },
+    },
+    {
+      id: "2",
+      priority: 2,
+      conditions: [{ input: "max_sector_pct", op: "gt", value: 40 }],
+      outputs: { flag: "CONCENTRATION_SECTOR" },
+    },
+    {
+      id: "3",
+      priority: 3,
+      conditions: [{ input: "portfolio_beta", op: "gt", value: 1.4 }],
+      outputs: { flag: "HIGH_BETA_TILT" },
+    },
+    {
+      id: "4",
+      priority: 4,
+      conditions: [{ input: "cash_pct", op: "gt", value: 30 }],
+      outputs: { flag: "CASH_DRAG" },
+    },
+    {
+      id: "5",
+      priority: 5,
+      conditions: [
+        { input: "positions_count", op: "lt", value: 3 },
+        { input: "equity", op: "gt", value: 1e4 },
+      ],
+      outputs: { flag: "LOW_DIVERSIFICATION" },
+    },
+  ],
+};
+var dtSuit01 = {
+  id: "DT-SUIT-01",
+  hit_policy: "FIRST",
+  default_outputs: { suitability_tier: "standard" },
+  rows: [
+    {
+      id: "1",
+      priority: 1,
+      conditions: [{ input: "experience_level", op: "eq", value: "novice" }],
+      outputs: { suitability_tier: "conservative" },
+    },
+    {
+      id: "2",
+      priority: 2,
+      conditions: [{ input: "experience_level", op: "eq", value: "intermediate" }],
+      outputs: { suitability_tier: "standard" },
+    },
+    {
+      id: "3",
+      priority: 3,
+      conditions: [{ input: "experience_level", op: "eq", value: "advanced" }],
+      outputs: { suitability_tier: "full" },
+    },
+  ],
+};
+var dtSim01 = {
+  id: "DT-SIM-01",
+  hit_policy: "ALL",
+  default_outputs: { regime: "normal" },
+  rows: [
+    {
+      id: "1",
+      priority: 1,
+      conditions: [{ input: "beta_class", op: "any" }],
+      outputs: { gap_event_prob_per_day: 0.02, gap_range_pct: [1, 6] },
+    },
+    {
+      id: "2",
+      priority: 2,
+      conditions: [{ input: "beta_class", op: "eq", value: "high" }],
+      outputs: { vol_multiplier: 1.8 },
+    },
+    {
+      id: "3",
+      priority: 3,
+      conditions: [{ input: "beta_class", op: "eq", value: "low" }],
+      outputs: { vol_multiplier: 0.6 },
+    },
+    {
+      id: "4",
+      priority: 4,
+      conditions: [{ input: "news_sentiment_shock", op: "eq", value: true }],
+      outputs: { drift_nudge_bps_per_sentiment: 30 },
+    },
+  ],
+};
+var TABLES = {
+  "DT-VAL-01": dtVal01,
+  "DT-VAL-02": dtVal02,
+  "DT-RISK-01": dtRisk01,
+  "DT-HRS-01": dtHrs01,
+  "DT-EXEC-01": dtExec01,
+  "DT-FEE-01": dtFee01,
+  "DT-AI-01": dtAi01,
+  "DT-ENT-01": dtEnt01,
+  "DT-ALRT-01": dtAlrt01,
+  "DT-RISK-02": dtRisk02,
+  "DT-SUIT-01": dtSuit01,
+  "DT-SIM-01": dtSim01,
+};
+function baselineTable(key) {
+  const table = TABLES[key];
+  if (!table) {
+    throw new Error(`UNKNOWN_BASELINE_TABLE:${key}`);
+  }
+  return table;
+}
 
 // packages/rules-engine/src/rules-cache.ts
 var RULES_PUBLISHED_EVENT = "rules:published";
@@ -4668,6 +5305,103 @@ var PublishedRulesCache = class {
     return loaded;
   }
 };
+
+// packages/rules-engine/src/rules-admin.ts
+function rowFingerprint(row) {
+  return JSON.stringify({
+    conditions: row.conditions,
+    outputs: row.outputs,
+    priority: row.priority,
+    effective_from: row.effective_from ?? null,
+    effective_to: row.effective_to ?? null,
+  });
+}
+function diffDecisionTables(published, draft, meta) {
+  const publishedRows = published?.rows ?? [];
+  const draftRows = draft?.rows ?? [];
+  const publishedById = new Map(publishedRows.map((row) => [row.id, row]));
+  const draftById = new Map(draftRows.map((row) => [row.id, row]));
+  const addedRowIds = [];
+  const removedRowIds = [];
+  const changedRowIds = [];
+  for (const row of draftRows) {
+    const prev = publishedById.get(row.id);
+    if (!prev) {
+      addedRowIds.push(row.id);
+    } else if (rowFingerprint(prev) !== rowFingerprint(row)) {
+      changedRowIds.push(row.id);
+    }
+  }
+  for (const row of publishedRows) {
+    if (!draftById.has(row.id)) {
+      removedRowIds.push(row.id);
+    }
+  }
+  return {
+    tableKey: meta?.tableKey ?? draft?.id ?? published?.id ?? "",
+    publishedVersion: meta?.publishedVersion ?? null,
+    draftVersion: meta?.draftVersion ?? null,
+    addedRowIds,
+    removedRowIds,
+    changedRowIds,
+  };
+}
+function outcomesEqual(a, b) {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+function simulateDraftAgainstAudits(input) {
+  const deltas = [];
+  let agree = 0;
+  for (const audit of input.audits) {
+    const published = evaluate(input.published, audit.context, input.clock);
+    const draft = evaluate(input.draft, audit.context, input.clock);
+    if (outcomesEqual(published.outcome, draft.outcome)) {
+      agree += 1;
+      continue;
+    }
+    deltas.push({
+      auditId: audit.id,
+      publishedOutcome: published.outcome,
+      draftOutcome: draft.outcome,
+      publishedRowIds: published.matchedRows.map((row) => row.id),
+      draftRowIds: draft.matchedRows.map((row) => row.id),
+    });
+  }
+  const sampleSize = input.audits.length;
+  return {
+    sampleSize,
+    agreementPct: sampleSize === 0 ? 100 : Math.round((agree / sampleSize) * 100),
+    deltas,
+  };
+}
+function filterRuleAudits(rows, query) {
+  const needle = query.trim().toLowerCase();
+  if (needle.length === 0) {
+    return rows;
+  }
+  return rows.filter((row) => {
+    const hay = `${row.domain} ${row.id} ${JSON.stringify(row.outcome)} ${JSON.stringify(row.context)}`;
+    return hay.toLowerCase().includes(needle);
+  });
+}
+function entitlementAllows(outcome) {
+  if (!outcome || typeof outcome !== "object") {
+    return false;
+  }
+  return outcome.decision === "allow";
+}
+function requiredActionForAdminOp(op) {
+  if (op === "listCatalog" || op === "getTable" || op === "listHistory" || op === "listAudits") {
+    return "rules:read";
+  }
+  if (op === "simulate") {
+    return "rules:simulate";
+  }
+  if (op === "publish" || op === "rollback") {
+    return "rules:publish";
+  }
+  return "rules:write";
+}
 
 // packages/rules-engine/src/evaluate-domain.ts
 function assembleDecisionTable(input) {
@@ -4775,8 +5509,23 @@ async function handleRulesServiceRequest(input) {
   }
   const raw = input.body && typeof input.body === "object" ? input.body : {};
   const op = typeof raw.op === "string" ? raw.op : "evaluateDomain";
-  if ((op === "publish" || op === "invalidate") && !input.isService) {
+  const adminOps = /* @__PURE__ */ new Set([
+    "listCatalog",
+    "getTable",
+    "saveDraft",
+    "rollback",
+    "simulate",
+    "listHistory",
+    "listAudits",
+  ]);
+  if (op === "invalidate" && !input.isService) {
     return { status: 403, body: { error: "SERVICE_ONLY" } };
+  }
+  if (op === "publish" && !input.isService) {
+    return handleAdminRulesOp(input, raw);
+  }
+  if (adminOps.has(op)) {
+    return handleAdminRulesOp(input, raw);
   }
   const actorId = input.isService ? (input.userId ?? "service") : input.userId;
   const action =
@@ -4849,6 +5598,167 @@ async function handleRulesServiceRequest(input) {
     payload: { domain: parsed.data.domain, auditId: result.auditId },
   });
   return { status: 200, body: result };
+}
+function requireAdminPorts(ports) {
+  if (
+    !ports.listCatalog ||
+    !ports.loadAdminTable ||
+    !ports.saveDraft ||
+    !ports.publishDraft ||
+    !ports.rollbackToVersion ||
+    !ports.listHistory ||
+    !ports.listAudits ||
+    !ports.loadCallerRole
+  ) {
+    return null;
+  }
+  return {
+    listCatalog: ports.listCatalog,
+    loadAdminTable: ports.loadAdminTable,
+    saveDraft: ports.saveDraft,
+    publishDraft: ports.publishDraft,
+    rollbackToVersion: ports.rollbackToVersion,
+    listHistory: ports.listHistory,
+    listAudits: ports.listAudits,
+    loadCallerRole: ports.loadCallerRole,
+  };
+}
+async function handleAdminRulesOp(input, raw) {
+  const parsed = rulesAdminRequestSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { status: 400, body: { error: "INVALID_ADMIN_REQUEST" } };
+  }
+  const actorId = input.isService ? (input.userId ?? "service") : input.userId;
+  const session = authorize({ userId: actorId, action: requiredActionForAdminOp(parsed.data.op) });
+  if (!session.allowed) {
+    return { status: 401, body: { error: session.reason ?? "DENIED" } };
+  }
+  if (!input.isService) {
+    if (!input.ports.loadCallerRole || !input.userId) {
+      return { status: 403, body: { error: "FORBIDDEN" } };
+    }
+    const role = (await input.ports.loadCallerRole(input.userId)) ?? "unknown";
+    const entitlementTables = await input.ports.loadPublishedTables("entitlements");
+    const table = entitlementTables[0]?.table ?? baselineTable("DT-ENT-01");
+    const verdict = evaluate(
+      table,
+      { role, action: requiredActionForAdminOp(parsed.data.op) },
+      input.clock ?? /* @__PURE__ */ new Date(),
+    );
+    if (!entitlementAllows(verdict.outcome)) {
+      return { status: 403, body: { error: "FORBIDDEN" } };
+    }
+  }
+  const admin = requireAdminPorts(input.ports);
+  if (!admin) {
+    return { status: 501, body: { error: "ADMIN_PORTS_UNAVAILABLE" } };
+  }
+  const req = parsed.data;
+  if (req.op === "listCatalog") {
+    return { status: 200, body: { tables: await admin.listCatalog() } };
+  }
+  if (req.op === "getTable") {
+    const table = await admin.loadAdminTable(req.tableKey);
+    if (!table) {
+      return { status: 404, body: { error: "TABLE_NOT_FOUND" } };
+    }
+    return { status: 200, body: table };
+  }
+  if (req.op === "saveDraft") {
+    const saved = await admin.saveDraft(req.tableKey, req.table);
+    await input.ports.writeAuditLog({
+      user_id: input.userId,
+      action: "rules.draft.save",
+      entity_type: "decision_tables",
+      payload: { tableKey: req.tableKey },
+    });
+    return { status: 200, body: saved };
+  }
+  if (req.op === "listHistory") {
+    return { status: 200, body: { versions: await admin.listHistory(req.tableKey) } };
+  }
+  if (req.op === "listAudits") {
+    const rows = await admin.listAudits({
+      query: req.query,
+      domain: req.domain,
+      limit: req.limit,
+    });
+    return {
+      status: 200,
+      body: {
+        audits: filterRuleAudits(
+          rows.map((row) => ({ ...row, outcome: row.outcome ?? null })),
+          req.query ?? "",
+        ),
+      },
+    };
+  }
+  if (req.op === "simulate") {
+    const table = await admin.loadAdminTable(req.tableKey);
+    if (!table?.published || !table.draft) {
+      return { status: 404, body: { error: "TABLE_NOT_FOUND" } };
+    }
+    const domain = table.domain;
+    const audits = await admin.listAudits({
+      domain,
+      limit: req.limit ?? 50,
+    });
+    const result = simulateDraftAgainstAudits({
+      published: table.published,
+      draft: table.draft,
+      clock: input.clock ?? /* @__PURE__ */ new Date(),
+      audits: audits.map((row) => ({ id: row.id, context: row.context })),
+    });
+    return { status: 200, body: result };
+  }
+  if (req.op === "rollback") {
+    const rolled = await admin.rollbackToVersion(req.tableKey, req.version);
+    input.cache.invalidate({ event: RULES_PUBLISHED_EVENT });
+    if (input.ports.notifyPublished) {
+      await input.ports.notifyPublished({ tableKey: req.tableKey, event: RULES_PUBLISHED_EVENT });
+    }
+    if (input.ports.publishTable) {
+      await input.ports.publishTable(req.tableKey);
+    }
+    await input.ports.writeAuditLog({
+      user_id: input.userId,
+      action: "rules.rollback",
+      entity_type: "decision_tables",
+      payload: { tableKey: req.tableKey, fromVersion: req.version, version: rolled.version },
+    });
+    return {
+      status: 200,
+      body: {
+        ok: true,
+        tableKey: req.tableKey,
+        version: rolled.version,
+        event: RULES_PUBLISHED_EVENT,
+      },
+    };
+  }
+  const published = await admin.publishDraft(req.tableKey);
+  input.cache.invalidate({ event: RULES_PUBLISHED_EVENT });
+  if (input.ports.publishTable) {
+    await input.ports.publishTable(req.tableKey);
+  }
+  if (input.ports.notifyPublished) {
+    await input.ports.notifyPublished({ tableKey: req.tableKey, event: RULES_PUBLISHED_EVENT });
+  }
+  await input.ports.writeAuditLog({
+    user_id: input.userId,
+    action: "rules.publish",
+    entity_type: "decision_tables",
+    payload: { tableKey: req.tableKey, version: published.version, event: RULES_PUBLISHED_EVENT },
+  });
+  return {
+    status: 200,
+    body: {
+      ok: true,
+      tableKey: req.tableKey,
+      version: published.version,
+      event: RULES_PUBLISHED_EVENT,
+    },
+  };
 }
 
 // insforge/functions/rules-service-src.ts
@@ -4924,6 +5834,127 @@ async function loadPublishedTables(db, domain) {
 function bumpGeneration(raw) {
   const n = typeof raw === "number" ? raw : Number(raw);
   return Number.isFinite(n) ? n + 1 : 1;
+}
+async function loadRowsForTable(db, tableId) {
+  const { data, error } = await db.from("decision_rows").select("*").eq("table_id", tableId);
+  if (error) {
+    throw new Error(error.message);
+  }
+  return (data ?? [])
+    .map((row) => ({
+      id: row.row_key,
+      priority: row.priority,
+      conditions: decisionConditionSchema.array().parse(row.conditions),
+      outputs: decisionOutputsSchema.parse(row.outputs),
+      effective_from: row.effective_from,
+      effective_to: row.effective_to,
+    }))
+    .sort((a, b) => a.priority - b.priority);
+}
+async function replaceDecisionRows(db, tableId, table) {
+  const { data: existing, error: listErr } = await db
+    .from("decision_rows")
+    .select("id")
+    .eq("table_id", tableId);
+  if (listErr) {
+    throw new Error(listErr.message);
+  }
+  for (const row of existing ?? []) {
+    const removed = await db.from("decision_rows").delete().eq("id", row.id);
+    if (removed.error) {
+      throw new Error(removed.error.message);
+    }
+  }
+  if (table.rows.length === 0) {
+    return;
+  }
+  const insert = await db.from("decision_rows").insert(
+    table.rows.map((row) => ({
+      table_id: tableId,
+      row_key: row.id,
+      priority: row.priority,
+      conditions: row.conditions,
+      outputs: row.outputs,
+      effective_from: row.effective_from ?? null,
+      effective_to: row.effective_to ?? null,
+    })),
+  );
+  if (insert.error) {
+    throw new Error(insert.error.message);
+  }
+}
+function toDecisionTable(rec, rows) {
+  return assembleDecisionTable({
+    tableKey: rec.table_key,
+    hit_policy: rec.hit_policy,
+    default_outputs: rec.default_outputs,
+    rows: rows.map((row) => ({
+      row_key: row.id,
+      priority: row.priority,
+      conditions: row.conditions,
+      outputs: row.outputs,
+      effective_from: row.effective_from ?? null,
+      effective_to: row.effective_to ?? null,
+    })),
+  });
+}
+async function loadTablesByKey(db, tableKey) {
+  const { data, error } = await db.from("decision_tables").select("*").eq("table_key", tableKey);
+  if (error) {
+    throw new Error(error.message);
+  }
+  return data ?? [];
+}
+function pickStatus(rows, status) {
+  return [...rows].sort((a, b) => b.version - a.version).find((row) => row.status === status);
+}
+async function domainForTableKey(db, tableKey) {
+  const binding = DOMAIN_BINDINGS.find((row2) => row2.tableKey === tableKey);
+  if (binding) {
+    return binding.domain;
+  }
+  const { data, error } = await db
+    .from("decision_tables")
+    .select("rule_set_id")
+    .eq("table_key", tableKey);
+  if (error) {
+    throw new Error(error.message);
+  }
+  const rec = Array.isArray(data) ? data[0] : void 0;
+  if (!rec?.rule_set_id) {
+    return "unknown";
+  }
+  const set = await db.from("rule_sets").select("domain").eq("id", rec.rule_set_id);
+  const row = Array.isArray(set.data) ? set.data[0] : void 0;
+  return row?.domain ?? "unknown";
+}
+async function adminGetTable(db, tableKey) {
+  const versions = await loadTablesByKey(db, tableKey);
+  if (versions.length === 0) {
+    return null;
+  }
+  const published = pickStatus(versions, "published");
+  const draft = pickStatus(versions, "draft");
+  const publishedTable = published
+    ? toDecisionTable(published, await loadRowsForTable(db, published.id))
+    : null;
+  const draftTable = draft
+    ? toDecisionTable(draft, await loadRowsForTable(db, draft.id))
+    : publishedTable;
+  const domain = await domainForTableKey(db, tableKey);
+  return {
+    tableKey,
+    domain,
+    published: publishedTable,
+    publishedVersion: published?.version ?? null,
+    draft: draftTable,
+    draftVersion: draft?.version ?? published?.version ?? null,
+    diff: diffDecisionTables(publishedTable, draftTable, {
+      tableKey,
+      publishedVersion: published?.version ?? null,
+      draftVersion: draft?.version ?? published?.version ?? null,
+    }),
+  };
 }
 async function rules_service_src_default(req) {
   if (req.method === "OPTIONS") {
@@ -5049,6 +6080,204 @@ async function rules_service_src_default(req) {
         }
         const flag = Array.isArray(data) ? data[0] : null;
         return String(flag?.value ?? "0");
+      },
+      async loadCallerRole(id) {
+        const { data, error } = await admin.database
+          .from("profiles")
+          .select("persona")
+          .eq("user_id", id);
+        if (error) {
+          throw new Error(error.message);
+        }
+        const row = Array.isArray(data) ? data[0] : void 0;
+        return row?.persona ?? null;
+      },
+      async listCatalog() {
+        const { data, error } = await admin.database
+          .from("decision_tables")
+          .select("table_key,status,version");
+        if (error) {
+          throw new Error(error.message);
+        }
+        const byKey = /* @__PURE__ */ new Map();
+        for (const row of data ?? []) {
+          const current = byKey.get(row.table_key) ?? {
+            publishedVersion: null,
+            draftVersion: null,
+          };
+          if (row.status === "published") {
+            current.publishedVersion = row.version;
+          }
+          if (row.status === "draft") {
+            current.draftVersion = row.version;
+          }
+          byKey.set(row.table_key, current);
+        }
+        return [...byKey.entries()].map(([tableKey, versions]) => ({
+          tableKey,
+          domain: DOMAIN_BINDINGS.find((row) => row.tableKey === tableKey)?.domain ?? "unknown",
+          publishedVersion: versions.publishedVersion,
+          draftVersion: versions.draftVersion,
+        }));
+      },
+      async loadAdminTable(tableKey) {
+        return adminGetTable(admin.database, tableKey);
+      },
+      async saveDraft(tableKey, table) {
+        const versions = await loadTablesByKey(admin.database, tableKey);
+        const published = pickStatus(versions, "published");
+        const draft = pickStatus(versions, "draft");
+        const parsed = {
+          ...table,
+          id: tableKey,
+        };
+        if (draft) {
+          const update = await admin.database
+            .from("decision_tables")
+            .update({
+              hit_policy: parsed.hit_policy,
+              default_outputs: parsed.default_outputs,
+            })
+            .eq("id", draft.id);
+          if (update.error) {
+            throw new Error(update.error.message);
+          }
+          await replaceDecisionRows(admin.database, draft.id, parsed);
+        } else {
+          if (!published) {
+            throw new Error(`NO_PUBLISHED:${tableKey}`);
+          }
+          const insert = await admin.database.from("decision_tables").insert([
+            {
+              rule_set_id: published.rule_set_id,
+              table_key: tableKey,
+              status: "draft",
+              version: published.version + 1,
+              hit_policy: parsed.hit_policy,
+              default_outputs: parsed.default_outputs,
+            },
+          ]);
+          if (insert.error) {
+            throw new Error(insert.error.message);
+          }
+          const created = await loadTablesByKey(admin.database, tableKey);
+          const next = pickStatus(created, "draft");
+          if (!next) {
+            throw new Error(`DRAFT_MISSING:${tableKey}`);
+          }
+          await replaceDecisionRows(admin.database, next.id, parsed);
+        }
+        const loaded = await adminGetTable(admin.database, tableKey);
+        if (!loaded) {
+          throw new Error(`UNKNOWN_TABLE:${tableKey}`);
+        }
+        return loaded;
+      },
+      async publishDraft(tableKey) {
+        const versions = await loadTablesByKey(admin.database, tableKey);
+        const draft = pickStatus(versions, "draft");
+        const published = pickStatus(versions, "published");
+        if (!draft) {
+          throw new Error(`NO_DRAFT:${tableKey}`);
+        }
+        if (published) {
+          const retire = await admin.database
+            .from("decision_tables")
+            .update({ status: "retired" })
+            .eq("id", published.id);
+          if (retire.error) {
+            throw new Error(retire.error.message);
+          }
+        }
+        const promote = await admin.database
+          .from("decision_tables")
+          .update({ status: "published" })
+          .eq("id", draft.id);
+        if (promote.error) {
+          throw new Error(promote.error.message);
+        }
+        if (published) {
+          const rebound = await admin.database
+            .from("rule_bindings")
+            .update({ table_id: draft.id })
+            .eq("table_id", published.id);
+          if (rebound.error) {
+            throw new Error(rebound.error.message);
+          }
+        }
+        return { version: draft.version };
+      },
+      async rollbackToVersion(tableKey, version) {
+        const versions = await loadTablesByKey(admin.database, tableKey);
+        const source = versions.find((row) => row.version === version);
+        if (!source) {
+          throw new Error(`UNKNOWN_VERSION:${tableKey}:${version}`);
+        }
+        const published = pickStatus(versions, "published");
+        const nextVersion = Math.max(...versions.map((row) => row.version)) + 1;
+        const rows = await loadRowsForTable(admin.database, source.id);
+        if (published) {
+          const retire = await admin.database
+            .from("decision_tables")
+            .update({ status: "retired" })
+            .eq("id", published.id);
+          if (retire.error) {
+            throw new Error(retire.error.message);
+          }
+        }
+        const insert = await admin.database.from("decision_tables").insert([
+          {
+            rule_set_id: source.rule_set_id,
+            table_key: tableKey,
+            status: "published",
+            version: nextVersion,
+            hit_policy: source.hit_policy,
+            default_outputs: source.default_outputs,
+          },
+        ]);
+        if (insert.error) {
+          throw new Error(insert.error.message);
+        }
+        const created = await loadTablesByKey(admin.database, tableKey);
+        const next = created.find((row) => row.version === nextVersion);
+        if (!next) {
+          throw new Error(`ROLLBACK_MISSING:${tableKey}`);
+        }
+        await replaceDecisionRows(admin.database, next.id, toDecisionTable(next, rows));
+        if (published) {
+          const rebound = await admin.database
+            .from("rule_bindings")
+            .update({ table_id: next.id })
+            .eq("table_id", published.id);
+          if (rebound.error) {
+            throw new Error(rebound.error.message);
+          }
+        }
+        return { version: nextVersion };
+      },
+      async listHistory(tableKey) {
+        const versions = await loadTablesByKey(admin.database, tableKey);
+        const items = [];
+        for (const rec of versions.sort((a, b) => b.version - a.version)) {
+          items.push({
+            version: rec.version,
+            status: rec.status,
+            table: toDecisionTable(rec, await loadRowsForTable(admin.database, rec.id)),
+          });
+        }
+        return items;
+      },
+      async listAudits(input) {
+        let query = admin.database.from("rule_audit").select("*");
+        if (input.domain) {
+          query = query.eq("domain", input.domain);
+        }
+        const { data, error } = await query;
+        if (error) {
+          throw new Error(error.message);
+        }
+        const rows = data ?? [];
+        return rows.slice(0, input.limit ?? 50);
       },
     },
   });

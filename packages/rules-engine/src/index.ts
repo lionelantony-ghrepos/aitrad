@@ -52,4 +52,29 @@ export {
   type EvaluateDomainResult,
   type PublishedDomainTable,
   type RuleAuditWrite,
+  type RulesAdminPorts,
+  type RulesServicePorts,
 } from "./evaluate-domain";
+export {
+  diffDecisionTables,
+  entitlementAllows,
+  enumOptionsForInput,
+  filterRuleAudits,
+  groupTablesByDomain,
+  inferConditionCellKind,
+  reorderDecisionRows,
+  requiredActionForAdminOp,
+  simulateDraftAgainstAudits,
+} from "./rules-admin";
+export {
+  createRulesAdminMemory,
+  memoryAppendAudit,
+  memoryGetTable,
+  memoryListCatalog,
+  memoryListHistory,
+  memoryPublishDraft,
+  memoryPublishedTables,
+  memoryRollback,
+  memorySaveDraft,
+  type RulesAdminMemory,
+} from "./rules-admin-memory";

@@ -17,20 +17,34 @@ export const profileSchema = z.object({
   updated_at: timestamptzSchema,
 });
 
-export const profileInsertSchema = z.object({
-  user_id: uuidSchema,
-  display_name: z.string().nullable().optional(),
+/** Client/self-service insert. Role (`persona`) is service-managed only. */
+export const profileInsertSchema = z
+  .object({
+    user_id: uuidSchema,
+    display_name: z.string().nullable().optional(),
+    experience_level: experienceLevelSchema.nullable().optional(),
+    suitability_tier: suitabilityTierSchema.nullable().optional(),
+    objectives: z.string().nullable().optional(),
+  })
+  .strict();
+
+/** Admin/seed insert — never accept this payload from a user JWT path. */
+export const profileAdminInsertSchema = profileInsertSchema.extend({
   persona: z.string().nullable().optional(),
-  experience_level: experienceLevelSchema.nullable().optional(),
-  suitability_tier: suitabilityTierSchema.nullable().optional(),
-  objectives: z.string().nullable().optional(),
 });
 
-export const profilePatchSchema = profileInsertSchema.omit({ user_id: true }).partial();
+export const profilePatchSchema = profileInsertSchema.omit({ user_id: true }).partial().strict();
+
+export const profileAdminPatchSchema = profileAdminInsertSchema
+  .omit({ user_id: true })
+  .partial()
+  .strict();
 
 export type Profile = z.infer<typeof profileSchema>;
 export type ProfileInsert = z.infer<typeof profileInsertSchema>;
+export type ProfileAdminInsert = z.infer<typeof profileAdminInsertSchema>;
 export type ProfilePatch = z.infer<typeof profilePatchSchema>;
+export type ProfileAdminPatch = z.infer<typeof profileAdminPatchSchema>;
 
 export const accountSchema = z.object({
   id: uuidSchema,

@@ -26,3 +26,4 @@ export * from "./chart";
 export * from "./auth";
 export * from "./decision-table";
 export * from "./rules-service";
+export * from "./rules-admin";

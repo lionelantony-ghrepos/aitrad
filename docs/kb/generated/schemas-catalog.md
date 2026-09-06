@@ -38,6 +38,8 @@ Exported `*Schema` bindings discovered by static scan. Full OpenAPI from Zod is 
 - entities.ts: marketCalendarRowSchema
 - entities.ts: marketCapBandSchema
 - entities.ts: mockInstrumentSchema
+- entities.ts: profileAdminInsertSchema
+- entities.ts: profileAdminPatchSchema
 - entities.ts: profileInsertSchema
 - entities.ts: profilePatchSchema
 - entities.ts: profileSchema
@@ -56,6 +58,18 @@ Exported `*Schema` bindings discovered by static scan. Full OpenAPI from Zod is 
 - primitives.ts: numericSchema
 - primitives.ts: timestamptzSchema
 - primitives.ts: uuidSchema
+- rules-admin.ts: catalogTableItemSchema
+- rules-admin.ts: ruleAuditViewSchema
+- rules-admin.ts: rulesAdminGetTableResponseSchema
+- rules-admin.ts: rulesAdminListCatalogResponseSchema
+- rules-admin.ts: rulesAdminOpSchema
+- rules-admin.ts: rulesAdminPublishResponseSchema
+- rules-admin.ts: rulesAdminRequestSchema
+- rules-admin.ts: rulesAdminRoleSchema
+- rules-admin.ts: simulateDeltaSchema
+- rules-admin.ts: simulateResultSchema
+- rules-admin.ts: tableDiffSchema
+- rules-admin.ts: tableHistoryItemSchema
 - rules-service.ts: evaluateDomainRequestSchema
 - rules-service.ts: evaluateDomainResponseSchema
 - rules-service.ts: invalidateRulesRequestSchema

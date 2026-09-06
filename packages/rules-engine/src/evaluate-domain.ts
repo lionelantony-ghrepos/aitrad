@@ -1,17 +1,28 @@
 import {
   evaluateDomainRequestSchema,
+  rulesAdminRequestSchema,
+  type CatalogTableItem,
+  type DecisionTable,
+  type RuleAuditView,
   type RuleDomain,
+  type RulesAdminGetTableResponse,
+  type TableHistoryItem,
   type TableVersionRef,
 } from "@meridian/schemas";
 import { authorize } from "./authorize";
-import { DOMAIN_BINDINGS } from "./baseline-tables";
+import { baselineTable, DOMAIN_BINDINGS } from "./baseline-tables";
 import {
   evaluate,
   type DecisionRow,
-  type DecisionTable,
   type EvaluationContext,
   type EvaluationResult,
 } from "./evaluate";
+import {
+  entitlementAllows,
+  filterRuleAudits,
+  requiredActionForAdminOp,
+  simulateDraftAgainstAudits,
+} from "./rules-admin";
 import {
   PublishedRulesCache,
   RULES_PUBLISHED_EVENT,
@@ -164,21 +175,37 @@ function mergeDomainResults(
   };
 }
 
-export type RulesServicePorts = EvaluateDomainPorts & {
-  publishTable?: (tableKey: string) => Promise<void>;
-  notifyPublished?: (payload: {
-    tableKey?: string;
-    event: typeof RULES_PUBLISHED_EVENT;
-  }) => Promise<void>;
-  writeAuditLog: (row: {
-    user_id: string | null;
-    action: string;
-    entity_type: string;
-    entity_id?: string | null;
-    payload: Record<string, unknown>;
-  }) => Promise<void>;
-  readPublishGeneration?: () => Promise<string>;
+export type RulesAdminPorts = {
+  listCatalog: () => Promise<CatalogTableItem[]>;
+  loadAdminTable: (tableKey: string) => Promise<RulesAdminGetTableResponse | null>;
+  saveDraft: (tableKey: string, table: DecisionTable) => Promise<RulesAdminGetTableResponse>;
+  publishDraft: (tableKey: string) => Promise<{ version: number }>;
+  rollbackToVersion: (tableKey: string, version: number) => Promise<{ version: number }>;
+  listHistory: (tableKey: string) => Promise<TableHistoryItem[]>;
+  listAudits: (input: {
+    query?: string;
+    domain?: string;
+    limit?: number;
+  }) => Promise<RuleAuditView[]>;
+  loadCallerRole: (userId: string) => Promise<string | null>;
 };
+
+export type RulesServicePorts = EvaluateDomainPorts &
+  Partial<RulesAdminPorts> & {
+    publishTable?: (tableKey: string) => Promise<void>;
+    notifyPublished?: (payload: {
+      tableKey?: string;
+      event: typeof RULES_PUBLISHED_EVENT;
+    }) => Promise<void>;
+    writeAuditLog: (row: {
+      user_id: string | null;
+      action: string;
+      entity_type: string;
+      entity_id?: string | null;
+      payload: Record<string, unknown>;
+    }) => Promise<void>;
+    readPublishGeneration?: () => Promise<string>;
+  };
 
 export function resolveRulesServiceApiKey(env: {
   API_KEY?: string;
@@ -207,8 +234,23 @@ export async function handleRulesServiceRequest(input: {
   const raw =
     input.body && typeof input.body === "object" ? (input.body as Record<string, unknown>) : {};
   const op = typeof raw.op === "string" ? raw.op : "evaluateDomain";
-  if ((op === "publish" || op === "invalidate") && !input.isService) {
+  const adminOps = new Set([
+    "listCatalog",
+    "getTable",
+    "saveDraft",
+    "rollback",
+    "simulate",
+    "listHistory",
+    "listAudits",
+  ]);
+  if (op === "invalidate" && !input.isService) {
     return { status: 403, body: { error: "SERVICE_ONLY" } };
+  }
+  if (op === "publish" && !input.isService) {
+    return handleAdminRulesOp(input, raw);
+  }
+  if (adminOps.has(op)) {
+    return handleAdminRulesOp(input, raw);
   }
   const actorId = input.isService ? (input.userId ?? "service") : input.userId;
   const action =
@@ -286,6 +328,182 @@ export async function handleRulesServiceRequest(input: {
     payload: { domain: parsed.data.domain, auditId: result.auditId },
   });
   return { status: 200, body: result };
+}
+
+function requireAdminPorts(ports: RulesServicePorts): RulesAdminPorts | null {
+  if (
+    !ports.listCatalog ||
+    !ports.loadAdminTable ||
+    !ports.saveDraft ||
+    !ports.publishDraft ||
+    !ports.rollbackToVersion ||
+    !ports.listHistory ||
+    !ports.listAudits ||
+    !ports.loadCallerRole
+  ) {
+    return null;
+  }
+  return {
+    listCatalog: ports.listCatalog,
+    loadAdminTable: ports.loadAdminTable,
+    saveDraft: ports.saveDraft,
+    publishDraft: ports.publishDraft,
+    rollbackToVersion: ports.rollbackToVersion,
+    listHistory: ports.listHistory,
+    listAudits: ports.listAudits,
+    loadCallerRole: ports.loadCallerRole,
+  };
+}
+
+async function handleAdminRulesOp(
+  input: {
+    userId: string | null;
+    isService: boolean;
+    cache: PublishedRulesCache;
+    ports: RulesServicePorts;
+    clock?: Date;
+  },
+  raw: Record<string, unknown>,
+): Promise<{ status: number; body: unknown }> {
+  const parsed = rulesAdminRequestSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { status: 400, body: { error: "INVALID_ADMIN_REQUEST" } };
+  }
+  const actorId = input.isService ? (input.userId ?? "service") : input.userId;
+  const session = authorize({ userId: actorId, action: requiredActionForAdminOp(parsed.data.op) });
+  if (!session.allowed) {
+    return { status: 401, body: { error: session.reason ?? "DENIED" } };
+  }
+
+  if (!input.isService) {
+    if (!input.ports.loadCallerRole || !input.userId) {
+      return { status: 403, body: { error: "FORBIDDEN" } };
+    }
+    const role = (await input.ports.loadCallerRole(input.userId)) ?? "unknown";
+    const entitlementTables = await input.ports.loadPublishedTables("entitlements");
+    const table = entitlementTables[0]?.table ?? baselineTable("DT-ENT-01");
+    const verdict = evaluate(
+      table,
+      { role, action: requiredActionForAdminOp(parsed.data.op) },
+      input.clock ?? new Date(),
+    );
+    if (!entitlementAllows(verdict.outcome)) {
+      return { status: 403, body: { error: "FORBIDDEN" } };
+    }
+  }
+
+  const admin = requireAdminPorts(input.ports);
+  if (!admin) {
+    return { status: 501, body: { error: "ADMIN_PORTS_UNAVAILABLE" } };
+  }
+
+  const req = parsed.data;
+  if (req.op === "listCatalog") {
+    return { status: 200, body: { tables: await admin.listCatalog() } };
+  }
+  if (req.op === "getTable") {
+    const table = await admin.loadAdminTable(req.tableKey);
+    if (!table) {
+      return { status: 404, body: { error: "TABLE_NOT_FOUND" } };
+    }
+    return { status: 200, body: table };
+  }
+  if (req.op === "saveDraft") {
+    const saved = await admin.saveDraft(req.tableKey, req.table);
+    await input.ports.writeAuditLog({
+      user_id: input.userId,
+      action: "rules.draft.save",
+      entity_type: "decision_tables",
+      payload: { tableKey: req.tableKey },
+    });
+    return { status: 200, body: saved };
+  }
+  if (req.op === "listHistory") {
+    return { status: 200, body: { versions: await admin.listHistory(req.tableKey) } };
+  }
+  if (req.op === "listAudits") {
+    const rows = await admin.listAudits({
+      query: req.query,
+      domain: req.domain,
+      limit: req.limit,
+    });
+    return {
+      status: 200,
+      body: {
+        audits: filterRuleAudits(
+          rows.map((row) => ({ ...row, outcome: row.outcome ?? null })),
+          req.query ?? "",
+        ),
+      },
+    };
+  }
+  if (req.op === "simulate") {
+    const table = await admin.loadAdminTable(req.tableKey);
+    if (!table?.published || !table.draft) {
+      return { status: 404, body: { error: "TABLE_NOT_FOUND" } };
+    }
+    const domain = table.domain;
+    const audits = await admin.listAudits({
+      domain,
+      limit: req.limit ?? 50,
+    });
+    const result = simulateDraftAgainstAudits({
+      published: table.published,
+      draft: table.draft,
+      clock: input.clock ?? new Date(),
+      audits: audits.map((row) => ({ id: row.id, context: row.context })),
+    });
+    return { status: 200, body: result };
+  }
+  if (req.op === "rollback") {
+    const rolled = await admin.rollbackToVersion(req.tableKey, req.version);
+    input.cache.invalidate({ event: RULES_PUBLISHED_EVENT });
+    if (input.ports.notifyPublished) {
+      await input.ports.notifyPublished({ tableKey: req.tableKey, event: RULES_PUBLISHED_EVENT });
+    }
+    if (input.ports.publishTable) {
+      await input.ports.publishTable(req.tableKey);
+    }
+    await input.ports.writeAuditLog({
+      user_id: input.userId,
+      action: "rules.rollback",
+      entity_type: "decision_tables",
+      payload: { tableKey: req.tableKey, fromVersion: req.version, version: rolled.version },
+    });
+    return {
+      status: 200,
+      body: {
+        ok: true,
+        tableKey: req.tableKey,
+        version: rolled.version,
+        event: RULES_PUBLISHED_EVENT,
+      },
+    };
+  }
+
+  const published = await admin.publishDraft(req.tableKey);
+  input.cache.invalidate({ event: RULES_PUBLISHED_EVENT });
+  if (input.ports.publishTable) {
+    await input.ports.publishTable(req.tableKey);
+  }
+  if (input.ports.notifyPublished) {
+    await input.ports.notifyPublished({ tableKey: req.tableKey, event: RULES_PUBLISHED_EVENT });
+  }
+  await input.ports.writeAuditLog({
+    user_id: input.userId,
+    action: "rules.publish",
+    entity_type: "decision_tables",
+    payload: { tableKey: req.tableKey, version: published.version, event: RULES_PUBLISHED_EVENT },
+  });
+  return {
+    status: 200,
+    body: {
+      ok: true,
+      tableKey: req.tableKey,
+      version: published.version,
+      event: RULES_PUBLISHED_EVENT,
+    },
+  };
 }
 
 export type { RuleDomain };

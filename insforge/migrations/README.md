@@ -67,4 +67,10 @@ npx -y @insforge/cli db migrations up --all
 | realtime channel `rules`                                         | `publish_rules_published(payload jsonb)` event `rules:published` |
 | `feature_flags` `rules.publish_generation`                       | cache epoch for warm isolates                                    |
 
+## 0006 contents
+
+| Object             | Access                                                                                                                                   |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `profiles.persona` | authenticated cannot INSERT/UPDATE the column; trigger + insert `WITH CHECK (persona IS NULL)`; `project_admin` / service still set role |
+
 UUID primary keys, `created_at` / `updated_at` (except `audit_log`, which is insert-only), and `updated_at` triggers on mutable tables.

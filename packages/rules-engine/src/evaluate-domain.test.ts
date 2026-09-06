@@ -197,7 +197,7 @@ function handlerPorts(initial: PublishedDomainTable[]): RulesServicePorts {
 }
 
 describe("rules-service request gates", () => {
-  it("rejects publish and invalidate from a user JWT", async () => {
+  it("rejects user publish without entitlements and keeps invalidate service-only", async () => {
     const cache = new PublishedRulesCache();
     const ports = handlerPorts([]);
     const publish = await handleRulesServiceRequest({
@@ -208,7 +208,7 @@ describe("rules-service request gates", () => {
       cache,
       ports,
     });
-    expect(publish).toEqual({ status: 403, body: { error: "SERVICE_ONLY" } });
+    expect(publish).toEqual({ status: 403, body: { error: "FORBIDDEN" } });
     const invalidate = await handleRulesServiceRequest({
       method: "POST",
       body: { op: "invalidate" },
