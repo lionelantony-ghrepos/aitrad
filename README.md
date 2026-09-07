@@ -4,7 +4,7 @@ Note: This Project is still in development and is for learning purposes only.
 
 AI-native **agentic trading terminal** for US equities and ETFs. Version 1 is **paper trading** only: simulated fills, no real money, built to the same audit and entitlement discipline as a later live-broker release.
 
-> A Bloomberg-grade intelligence workspace with an AI copilot that watches the market for you, explains everything, and trades under rules you define.
+> An enterprise-grade intelligence workspace with an AI copilot that watches the market for you, explains everything, and trades under rules you define.
 
 This GitHub repo is named `aitrad`; the product name in all specs is **Meridian**.
 
