@@ -35,7 +35,8 @@ export async function loadChartBars(input: {
   const symbol = parsed.data.symbol.trim().toUpperCase();
   const range = parsed.data.range;
   const timeframe = timeframeForRange(range);
-  const tsGte = tsCutoffIso(range, input.now ?? new Date());
+  const now = input.now ?? new Date();
+  const tsGte = tsCutoffIso(range, now);
 
   if (isAuthStub()) {
     const instrument = stubInstrumentBySymbol(symbol);
@@ -51,7 +52,7 @@ export async function loadChartBars(input: {
         }),
       };
     }
-    const bars = stubMarketBars(instrument.id, timeframe, tsGte);
+    const bars = stubMarketBars(instrument.id, timeframe, tsGte, now);
     return {
       ok: true,
       data: chartBarsResponseSchema.parse({

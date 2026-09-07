@@ -349,6 +349,7 @@ export function stubMarketBars(
   instrumentId: string,
   timeframe: "1m" | "1d",
   tsGte: string,
+  now: Date = new Date(),
 ): MarketBar[] {
   const instrument = STUB_INSTRUMENTS.find((row) => row.id === instrumentId);
   if (!instrument) {
@@ -357,10 +358,11 @@ export function stubMarketBars(
   const quote = STUB_QUOTES.find((row) => row.instrument_id === instrumentId);
   const last = quote?.last ?? 100;
   const cutoff = Date.parse(tsGte);
+  const nowMs = now.getTime();
   const bars: MarketBar[] = [];
   if (timeframe === "1d") {
     for (let i = 40; i >= 0; i -= 1) {
-      const ts = new Date(Date.parse(STUB_TS) - i * 24 * 60 * 60 * 1000).toISOString();
+      const ts = new Date(nowMs - i * 24 * 60 * 60 * 1000).toISOString();
       if (Date.parse(ts) < cutoff) {
         continue;
       }
@@ -379,7 +381,7 @@ export function stubMarketBars(
     return bars;
   }
   for (let i = 80; i >= 0; i -= 1) {
-    const ts = new Date(Date.parse(STUB_TS) - i * 60 * 1000).toISOString();
+    const ts = new Date(nowMs - i * 60 * 1000).toISOString();
     if (Date.parse(ts) < cutoff) {
       continue;
     }
