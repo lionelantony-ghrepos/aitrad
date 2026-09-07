@@ -1,5 +1,17 @@
-import { paperAccountSeed } from "@meridian/rules-engine";
-import type { Account, Profile } from "@meridian/schemas";
+import {
+  createRulesAdminMemory,
+  paperAccountSeed,
+  type RulesAdminMemory,
+} from "@meridian/rules-engine";
+import type {
+  Account,
+  Instrument,
+  MarketBar,
+  Profile,
+  QuotesLatest,
+  Watchlist,
+  WatchlistItem,
+} from "@meridian/schemas";
 
 export type StubUser = {
   id: string;
@@ -12,6 +24,9 @@ type StubState = {
   usersById: Map<string, StubUser>;
   profiles: Map<string, Profile>;
   accounts: Map<string, Account>;
+  watchlists: Watchlist[];
+  watchlistItems: WatchlistItem[];
+  rules: RulesAdminMemory;
 };
 
 function createState(): StubState {
@@ -20,7 +35,14 @@ function createState(): StubState {
     usersById: new Map(),
     profiles: new Map(),
     accounts: new Map(),
+    watchlists: [],
+    watchlistItems: [],
+    rules: createRulesAdminMemory(),
   };
+}
+
+export function stubRulesMemory(): RulesAdminMemory {
+  return getStubState().rules;
 }
 
 const globalForStub = globalThis as typeof globalThis & { __meridianAuthStub?: StubState };
@@ -139,4 +161,241 @@ export function stubPatchProfile(userId: string, patch: Partial<Profile>): Profi
 
 export function stubAccountCount(userId: string): number {
   return getStubState().accounts.has(userId) ? 1 : 0;
+}
+
+export const STUB_AAPL_INSTRUMENT_ID = "11111111-1111-4111-8111-111111111111";
+export const STUB_MSFT_INSTRUMENT_ID = "22222222-2222-4222-8222-222222222222";
+export const STUB_NVDA_INSTRUMENT_ID = "33333333-3333-4333-8333-333333333333";
+export const STUB_TSLA_INSTRUMENT_ID = "44444444-4444-4444-8444-444444444444";
+
+const STUB_TS = "2026-09-04T13:30:00.000Z";
+
+function marketInstrument(id: string, symbol: string, name: string): Instrument {
+  return {
+    id,
+    symbol,
+    name,
+    exchange: "NASDAQ",
+    sector: "Technology",
+    industry: "Software",
+    status: "active",
+    currency: "USD",
+    tick_size: 0.01,
+    lot_size: 1,
+    created_at: STUB_TS,
+    updated_at: STUB_TS,
+  };
+}
+
+export const STUB_INSTRUMENTS: Instrument[] = [
+  marketInstrument(STUB_AAPL_INSTRUMENT_ID, "AAPL", "Apple Inc."),
+  marketInstrument(STUB_MSFT_INSTRUMENT_ID, "MSFT", "Microsoft Corporation"),
+  marketInstrument(STUB_NVDA_INSTRUMENT_ID, "NVDA", "NVIDIA Corporation"),
+  marketInstrument(STUB_TSLA_INSTRUMENT_ID, "TSLA", "Tesla, Inc."),
+];
+
+export const STUB_QUOTES: QuotesLatest[] = [
+  {
+    instrument_id: STUB_AAPL_INSTRUMENT_ID,
+    bid: 189.5,
+    ask: 189.7,
+    last: 189.6,
+    prev_close: 185,
+    volume: 1_000_000,
+    ts: STUB_TS,
+  },
+  {
+    instrument_id: STUB_MSFT_INSTRUMENT_ID,
+    bid: 419.8,
+    ask: 420.1,
+    last: 420,
+    prev_close: 415,
+    volume: 800_000,
+    ts: STUB_TS,
+  },
+  {
+    instrument_id: STUB_NVDA_INSTRUMENT_ID,
+    bid: 119.8,
+    ask: 120.1,
+    last: 120,
+    prev_close: 118,
+    volume: 900_000,
+    ts: STUB_TS,
+  },
+  {
+    instrument_id: STUB_TSLA_INSTRUMENT_ID,
+    bid: 249.5,
+    ask: 249.8,
+    last: 249.6,
+    prev_close: 245,
+    volume: 700_000,
+    ts: STUB_TS,
+  },
+];
+
+export function stubSearchInstruments(query: string): Instrument[] {
+  const q = query.trim().toUpperCase();
+  if (q.length === 0) {
+    return [];
+  }
+  return STUB_INSTRUMENTS.filter(
+    (row) => row.symbol.includes(q) || row.name.toUpperCase().includes(q),
+  );
+}
+
+export function stubListWatchlists(userId: string): Watchlist[] {
+  return getStubState().watchlists.filter((row) => row.user_id === userId);
+}
+
+export function stubCreateWatchlist(userId: string, name: string): Watchlist {
+  const ts = nowIso();
+  const row: Watchlist = {
+    id: crypto.randomUUID(),
+    user_id: userId,
+    name: name.trim(),
+    created_at: ts,
+    updated_at: ts,
+  };
+  getStubState().watchlists.push(row);
+  return row;
+}
+
+export function stubRenameWatchlist(userId: string, id: string, name: string): Watchlist | null {
+  const row = getStubState().watchlists.find((item) => item.id === id && item.user_id === userId);
+  if (!row) {
+    return null;
+  }
+  row.name = name.trim();
+  row.updated_at = nowIso();
+  return row;
+}
+
+export function stubDeleteWatchlist(userId: string, id: string): boolean {
+  const state = getStubState();
+  const row = state.watchlists.find((item) => item.id === id && item.user_id === userId);
+  if (!row) {
+    return false;
+  }
+  state.watchlists = state.watchlists.filter((item) => item.id !== id);
+  state.watchlistItems = state.watchlistItems.filter((item) => item.watchlist_id !== id);
+  return true;
+}
+
+export function stubListWatchlistItems(userId: string, watchlistId: string): WatchlistItem[] {
+  const owned = getStubState().watchlists.some(
+    (row) => row.id === watchlistId && row.user_id === userId,
+  );
+  if (!owned) {
+    return [];
+  }
+  return getStubState().watchlistItems.filter((row) => row.watchlist_id === watchlistId);
+}
+
+export function stubAddWatchlistItem(
+  userId: string,
+  watchlistId: string,
+  instrumentId: string,
+): WatchlistItem {
+  const owned = getStubState().watchlists.some(
+    (row) => row.id === watchlistId && row.user_id === userId,
+  );
+  if (!owned) {
+    throw new Error("WATCHLIST_NOT_FOUND");
+  }
+  const exists = getStubState().watchlistItems.some(
+    (row) => row.watchlist_id === watchlistId && row.instrument_id === instrumentId,
+  );
+  if (exists) {
+    throw new Error("DUPLICATE_WATCHLIST_ITEM");
+  }
+  const siblings = getStubState().watchlistItems.filter((row) => row.watchlist_id === watchlistId);
+  const row: WatchlistItem = {
+    id: crypto.randomUUID(),
+    watchlist_id: watchlistId,
+    instrument_id: instrumentId,
+    sort_order: siblings.length,
+    created_at: nowIso(),
+  };
+  getStubState().watchlistItems.push(row);
+  return row;
+}
+
+export function stubRemoveWatchlistItem(userId: string, itemId: string): boolean {
+  const state = getStubState();
+  const item = state.watchlistItems.find((row) => row.id === itemId);
+  if (!item) {
+    return false;
+  }
+  const owned = state.watchlists.some(
+    (row) => row.id === item.watchlist_id && row.user_id === userId,
+  );
+  if (!owned) {
+    return false;
+  }
+  state.watchlistItems = state.watchlistItems.filter((row) => row.id !== itemId);
+  return true;
+}
+
+export function stubQuotesFor(instrumentIds: readonly string[]): QuotesLatest[] {
+  return STUB_QUOTES.filter((row) => instrumentIds.includes(row.instrument_id));
+}
+
+export function stubInstrumentBySymbol(symbol: string): Instrument | null {
+  const key = symbol.trim().toUpperCase();
+  return STUB_INSTRUMENTS.find((row) => row.symbol === key) ?? null;
+}
+
+export function stubMarketBars(
+  instrumentId: string,
+  timeframe: "1m" | "1d",
+  tsGte: string,
+  now: Date = new Date(),
+): MarketBar[] {
+  const instrument = STUB_INSTRUMENTS.find((row) => row.id === instrumentId);
+  if (!instrument) {
+    return [];
+  }
+  const quote = STUB_QUOTES.find((row) => row.instrument_id === instrumentId);
+  const last = quote?.last ?? 100;
+  const cutoff = Date.parse(tsGte);
+  const nowMs = now.getTime();
+  const bars: MarketBar[] = [];
+  if (timeframe === "1d") {
+    for (let i = 40; i >= 0; i -= 1) {
+      const ts = new Date(nowMs - i * 24 * 60 * 60 * 1000).toISOString();
+      if (Date.parse(ts) < cutoff) {
+        continue;
+      }
+      const c = last - i * 0.25;
+      bars.push({
+        instrument_id: instrumentId,
+        timeframe: "1d",
+        ts,
+        o: c - 0.4,
+        h: c + 0.6,
+        l: c - 0.8,
+        c,
+        v: 1_000_000 + i,
+      });
+    }
+    return bars;
+  }
+  for (let i = 80; i >= 0; i -= 1) {
+    const ts = new Date(nowMs - i * 60 * 1000).toISOString();
+    if (Date.parse(ts) < cutoff) {
+      continue;
+    }
+    const c = last - i * 0.02;
+    bars.push({
+      instrument_id: instrumentId,
+      timeframe: "1m",
+      ts,
+      o: c - 0.05,
+      h: c + 0.08,
+      l: c - 0.1,
+      c,
+      v: 1_000 + i,
+    });
+  }
+  return bars;
 }

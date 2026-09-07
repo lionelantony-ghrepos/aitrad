@@ -3,6 +3,7 @@ import {
   LAYOUT_STORAGE_KEY,
   clearStoredLayout,
   loadStoredLayout,
+  persistSelectedWatchlistId,
   saveStoredLayout,
 } from "./layout-storage";
 
@@ -56,5 +57,14 @@ describe("layout storage", () => {
     saveStoredLayout(storage, { version: 1, dockview: {} });
     clearStoredLayout(storage);
     expect(storage.getItem(LAYOUT_STORAGE_KEY)).toBeNull();
+  });
+
+  it("persists selectedWatchlistId onto an existing layout", () => {
+    const storage = memoryStorage();
+    saveStoredLayout(storage, { version: 1, dockview: { panels: {} } });
+    persistSelectedWatchlistId(storage, "11111111-1111-4111-8111-111111111111");
+    expect(loadStoredLayout(storage)?.selectedWatchlistId).toBe(
+      "11111111-1111-4111-8111-111111111111",
+    );
   });
 });

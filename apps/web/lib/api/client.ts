@@ -15,6 +15,7 @@ export type RecordsClientConfig = {
 
 export type ListOptions = {
   query?: Record<string, QueryValue | undefined>;
+  signal?: AbortSignal;
 };
 
 async function parseJson(response: Response): Promise<unknown> {
@@ -34,6 +35,7 @@ export function createRecordsClient(config: RecordsClientConfig) {
     query?: Record<string, QueryValue | undefined>;
     body?: unknown;
     preferRepresentation?: boolean;
+    signal?: AbortSignal;
   }): Promise<unknown> {
     const token = await config.getAccessToken();
     const headers: Record<string, string> = {
@@ -54,6 +56,7 @@ export function createRecordsClient(config: RecordsClientConfig) {
         method: input.method,
         headers,
         body: input.body === undefined ? undefined : JSON.stringify(input.body),
+        signal: input.signal,
       },
     );
 
@@ -81,6 +84,7 @@ export function createRecordsClient(config: RecordsClientConfig) {
         method: "GET",
         table,
         query: options.query,
+        signal: options.signal,
       });
       return z.array(schema).parse(payload);
     },

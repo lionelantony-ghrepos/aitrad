@@ -27,13 +27,22 @@ PBI-023 embeds **news** (and later filings) for the copilot. It must **not** ing
 | 002 | [PBI-002](as-built/PBI-002.md) | InsForge baseline (backfilled from tree) |
 | 003 | [PBI-003](as-built/PBI-003.md) | Terminal shell, dockview, theme tokens |
 | 004 | [PBI-004](as-built/PBI-004.md) | Auth, profile wizard, paper-account provision |
-| 005–031 | _pending_ | Copy [`_template-as-built.md`](_template-as-built.md) when the PBI ships |
+| 005 | [PBI-005](as-built/PBI-005.md) | Instrument master, GBM bars, quotes_latest seed |
+| 006 | [PBI-006](as-built/PBI-006.md) | Mock market-tick, NYSE calendar, quotes channel |
+| 007 | [PBI-007](as-built/PBI-007.md) | Watchlist panel, useQuotes coalesce, symbolContext |
+| 008 | [PBI-008](as-built/PBI-008.md) | Chart panel, lightweight-charts, @meridian/indicators |
+| 009 | [PBI-009](as-built/PBI-009.md) | Command palette, function codes, FunctionRouter |
+| 010 | [PBI-010](as-built/PBI-010.md) | `@meridian/rules-engine` evaluate/compile; Zod in schemas |
+| 011 | [PBI-011](as-built/PBI-011.md) | Rules storage 0005, `rules-service`, seed-rules, publish cache |
+| 012 | [PBI-012](as-built/PBI-012.md) | `/admin/rules` draft/diff/simulate/publish, DT-ENT-01 gate |
+| 013–031 | _pending_ | Copy [`_template-as-built.md`](_template-as-built.md) when the PBI ships |
 
 ## Architecture decision records
 
 | ADR | Title |
 | --- | --- |
 | [0001](adr/0001-docs-as-code-knowledge-layer.md) | Docs-as-code knowledge layer beside the spec |
+| [0002](adr/0002-decision-condition-negate.md) | Optional `negate` on decision-table condition cells |
 
 Add further ADRs from [`_template-adr.md`](_template-adr.md) only for durable choices not already in doc 02.
 

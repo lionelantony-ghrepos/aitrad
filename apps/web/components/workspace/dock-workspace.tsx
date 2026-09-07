@@ -11,16 +11,34 @@ import "dockview-react/dist/styles/dockview.css";
 import { applyDefaultLayout } from "@/lib/apply-default-layout";
 import { clearStoredLayout, loadStoredLayout, saveStoredLayout } from "@/lib/layout-storage";
 import { PANEL_IDS } from "@/lib/panel-registry";
+import { ChartPanel } from "./chart-panel";
+import { CopilotPanel } from "./copilot-panel";
 import { PlaceholderPanel } from "./placeholder-panel";
+import { WatchlistPanel } from "./watchlist-panel";
 
-const components = Object.fromEntries(PANEL_IDS.map((id) => [id, PlaceholderPanel]));
+const components = {
+  ...Object.fromEntries(
+    PANEL_IDS.filter((id) => id !== "watchlist" && id !== "chart" && id !== "copilot").map((id) => [
+      id,
+      PlaceholderPanel,
+    ]),
+  ),
+  watchlist: WatchlistPanel,
+  chart: ChartPanel,
+  copilot: CopilotPanel,
+};
 
 function snapshot(api: DockviewApi): Record<string, unknown> {
   return JSON.parse(JSON.stringify(api.toJSON())) as Record<string, unknown>;
 }
 
 function persist(api: DockviewApi): void {
-  saveStoredLayout(window.localStorage, { version: 1, dockview: snapshot(api) });
+  const prev = loadStoredLayout(window.localStorage);
+  saveStoredLayout(window.localStorage, {
+    version: 1,
+    dockview: snapshot(api),
+    selectedWatchlistId: prev?.selectedWatchlistId ?? null,
+  });
 }
 
 export function resetDockLayout(api: DockviewApi): void {

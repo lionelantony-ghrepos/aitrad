@@ -8,6 +8,16 @@ export const recordTables = {
   instruments: "instruments",
   audit_log: "audit_log",
   feature_flags: "feature_flags",
+  market_bars: "market_bars",
+  quotes_latest: "quotes_latest",
+  market_calendar: "market_calendar",
+  watchlists: "watchlists",
+  watchlist_items: "watchlist_items",
+  rule_sets: "rule_sets",
+  decision_tables: "decision_tables",
+  decision_rows: "decision_rows",
+  rule_bindings: "rule_bindings",
+  rule_audit: "rule_audit",
 } as const;
 
 export type RecordTable = (typeof recordTables)[keyof typeof recordTables];
@@ -16,6 +26,19 @@ export type QueryValue = string | number | boolean;
 
 export function eqFilter(value: string): string {
   return `eq.${value}`;
+}
+
+export function gteFilter(value: string): string {
+  return `gte.${value}`;
+}
+
+export function inFilter(values: readonly string[]): string {
+  return `in.(${values.join(",")})`;
+}
+
+export function ilikeContainsFilter(value: string): string {
+  const sanitized = value.replace(/[%_,*()]/g, "").trim();
+  return `ilike.*${sanitized}*`;
 }
 
 export function recordsUrl(input: {

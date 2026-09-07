@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { WorkspaceShell } from "@/components/workspace/workspace-shell";
 import { formatPaperCash } from "@/lib/format-cash";
+import { isAuthStub } from "@/lib/auth/mode";
 import { loadAuthContext } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +21,7 @@ export default async function WorkspacePage(): Promise<React.JSX.Element> {
       email={ctx.user.email}
       cashLabel={cashLabel}
       accountCount={ctx.account ? 1 : 0}
+      e2eFeed={isAuthStub()}
     />
   );
 }

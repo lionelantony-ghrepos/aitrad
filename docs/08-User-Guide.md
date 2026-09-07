@@ -10,9 +10,11 @@ You receive a **paper cash account** on first login (amount comes from the openi
 ## 2. The workspace
 Meridian is a multi-panel terminal. Open **`/workspace`**. Drag panel edges to resize, drag tabs to rearrange, and your layout is saved automatically (**Reset layout** in the top command bar). The status bar shows the market clock (America/New_York, OPEN/CLOSED) and a connection indicator.
 
-Placeholder panels in this build: Chart, Watchlist, Order ticket, Blotter, News, Screener, Portfolio, Copilot. Their live content ships in later PBIs.
+Placeholder panels in this build: Order ticket, Blotter, News, Screener, Portfolio, Copilot (input only), Description (`DES`). **Watchlist** (PBI-007) and **Chart** (PBI-008) are live. `DES <symbol>` opens the Description placeholder until fundamentals ship.
 
-**Command palette.** Press **Ctrl+K** (or the command-bar **Ctrl+K** control). The palette shell is available now; function parsing is not. When it ships, type:
+**Linked symbol.** The workspace exposes a shared symbol context. Clicking a watchlist row sets it (debug readout for tests: `symbol-context-readout`) and retargets the Chart panel.
+
+**Command palette.** Press **Ctrl+K** (or the command-bar **Ctrl+K** control). Type a function or ticker, then Enter. Recent commands appear when the box is empty. Arrow keys move the highlight. Examples:
 | Command | Action |
 |---|---|
 | `AAPL` | Fuzzy symbol search |
@@ -26,7 +28,9 @@ Placeholder panels in this build: Chart, Watchlist, Order ticket, Blotter, News,
 Panels are linked: clicking a symbol anywhere retargets the chart, news, DES, and order ticket.
 
 ## 3. Watchlists & charts
-Create named watchlists; add symbols via typeahead. Rows show live price, change, bid/ask and a sparkline, flashing green/red on ticks. The chart offers 1D–5Y ranges, volume, and SMA/EMA/VWAP/RSI indicators; the crosshair shows OHLCV.
+Open the **Watchlist** panel. **Create** a named list (tabs along the top). Type a ticker in **Add symbol** and pick a match. Rows show last, net change, % change, volume, bid/ask, and a 30-point sparkline. Last ticks flash green on up / red on down. Click a column header to sort. Click a row to set the linked symbol for other panels. Right-click a row → **Remove**. The selected list is stored with your workspace layout.
+
+The **Chart** panel loads candlesticks and volume for the linked symbol. Use the range buttons (**1D** uses 1-minute bars; **1W**–**5Y** use daily bars). Toggle SMA 20/50/200, EMA 12/26, VWAP, and RSI 14 (RSI opens a sub-pane). The crosshair legend shows OHLCV plus any enabled indicator values. Live ticks update the current candle. If no symbol is selected, the panel asks you to pick one from the watchlist.
 
 ## 4. Trading (paper)
 Open the order ticket (`ORD <symbol>` or Shift+B / Shift+S). Choose side, quantity (shares or dollars), order type (market, limit, stop, stop-limit), and time-in-force. The ticket previews estimated cost, simulated fees, and **pre-trade checks in real time** — if a rule blocks your order (e.g., size limit, concentration limit, market closed), you'll see exactly why. Advanced: **bracket orders** (entry + take-profit + stop-loss), **OCO pairs**, and **trailing stops**.
@@ -47,7 +51,7 @@ It can also **act**: "add NVDA to my watchlist", "alert me if AAPL drops below 2
 Meridian Copilot provides information and analysis, not personalized financial advice.
 
 ## 7. For administrators
-`/admin/rules`: edit decision tables (risk limits, fees, entitlements, AI policy) in a spreadsheet-like editor — simulate against recent activity, then publish; changes apply instantly, no deployment. `/admin/users`: role management. `/admin/audit`: tamper-evident audit trail of every action (compliance role has read-only access). `/admin/health`: feed and service status.
+`/admin/rules`: entitlement-gated spreadsheet editor (draft, side-by-side diff, history/rollback, simulate against recent `rule_audit` contexts, searchable evaluation traces). Publish applies immediately with no deploy. Traders are denied. `/admin/users`: role management. `/admin/audit`: tamper-evident audit trail of every action (compliance role has read-only access). `/admin/health`: feed and service status.
 
 ## 8. FAQ
 **Is my money real?** No — v1 is paper trading with simulated fills (realistic slippage and partial fills).
