@@ -18,6 +18,8 @@ The CLI only applies files in the repo-root `migrations/` directory, named:
 <YYYYMMDDHHMMSS>_<lowercase-hyphen-name>.sql
 ```
 
+That folder must contain **only** those `.sql` files. A `README.md` (or any other name) makes `db migrations up` fail with `Invalid migration filename`.
+
 Numbered sources in this folder are the product record. When applying with the CLI, keep a timestamped copy under `migrations/` with the **same SQL body** as the matching `000N_*.sql` file.
 
 ```bash
@@ -72,5 +74,11 @@ npx -y @insforge/cli db migrations up --all
 | Object             | Access                                                                                                                                   |
 | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | `profiles.persona` | authenticated cannot INSERT/UPDATE the column; trigger + insert `WITH CHECK (persona IS NULL)`; `project_admin` / service still set role |
+
+## 0007 contents
+
+| Table    | Access                                                                                                                                                                  |
+| -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `orders` | RLS owner SELECT (`user_id = auth.uid()`); authenticated SELECT-only. Writes via `order-service` (`project_admin` / API key). FSM reserve / executions land in PBI-014. |
 
 UUID primary keys, `created_at` / `updated_at` (except `audit_log`, which is insert-only), and `updated_at` triggers on mutable tables.

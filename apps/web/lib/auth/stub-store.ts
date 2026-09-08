@@ -8,6 +8,7 @@ import type {
   Instrument,
   MarketBar,
   Profile,
+  OrderRecord,
   QuotesLatest,
   Watchlist,
   WatchlistItem,
@@ -26,6 +27,7 @@ type StubState = {
   accounts: Map<string, Account>;
   watchlists: Watchlist[];
   watchlistItems: WatchlistItem[];
+  orders: OrderRecord[];
   rules: RulesAdminMemory;
 };
 
@@ -37,6 +39,7 @@ function createState(): StubState {
     accounts: new Map(),
     watchlists: [],
     watchlistItems: [],
+    orders: [],
     rules: createRulesAdminMemory(),
   };
 }
@@ -338,6 +341,11 @@ export function stubRemoveWatchlistItem(userId: string, itemId: string): boolean
 
 export function stubQuotesFor(instrumentIds: readonly string[]): QuotesLatest[] {
   return STUB_QUOTES.filter((row) => instrumentIds.includes(row.instrument_id));
+}
+
+export function stubInsertOrder(row: OrderRecord): OrderRecord {
+  getStubState().orders.push(row);
+  return row;
 }
 
 export function stubInstrumentBySymbol(symbol: string): Instrument | null {

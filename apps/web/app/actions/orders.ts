@@ -1,0 +1,213 @@
+"use server";
+
+import { authorize } from "@meridian/rules-engine";
+import {
+  orderCreateResponseSchema,
+  orderDraftSchema,
+  orderPreviewResponseSchema,
+  type Account,
+  type Instrument,
+  type OrderCreateResponse,
+  type OrderDraft,
+  type OrderPreviewResponse,
+  type OrderRecord,
+  type Profile,
+  type QuotesLatest,
+} from "@meridian/schemas";
+import { createAccountsRepository } from "@/lib/api/accounts";
+import { createRecordsClient } from "@/lib/api/client";
+import { createInstrumentsRepository } from "@/lib/api/instruments";
+import { invokeOrderCreate, invokeOrderPreview } from "@/lib/api/order-service";
+import { createProfilesRepository } from "@/lib/api/profiles";
+import { createQuotesLatestRepository } from "@/lib/api/quotes-latest";
+import { isAuthStub } from "@/lib/auth/mode";
+import { getAccessToken, getSessionUser } from "@/lib/auth/session";
+import {
+  stubInsertOrder,
+  stubInstrumentBySymbol,
+  stubLoadProvision,
+  stubQuotesFor,
+  stubRulesMemory,
+} from "@/lib/auth/stub-store";
+import { readPublicInsforgeEnv } from "@/lib/insforge/env";
+import { runLocalOrderPreview } from "@/lib/order-ticket/run-preview";
+
+export type ActionOk<T> = { ok: true; data: T };
+export type ActionErr = { ok: false; message: string };
+export type ActionResult<T> = ActionOk<T> | ActionErr;
+
+export type OrderTicketContext = {
+  account: Account;
+  profile: Profile | null;
+  instrument: Instrument;
+  quote: QuotesLatest | null;
+};
+
+async function requireUser(): Promise<
+  { ok: true; userId: string; token: string } | { ok: false; message: string }
+> {
+  const user = await getSessionUser();
+  const token = await getAccessToken();
+  if (!user || !token) {
+    return { ok: false, message: "You must be signed in." };
+  }
+  return { ok: true, userId: user.id, token };
+}
+
+function records(token: string) {
+  const env = readPublicInsforgeEnv();
+  return createRecordsClient({
+    baseUrl: env.baseUrl,
+    getAccessToken: () => token,
+  });
+}
+
+export async function loadOrderTicketContextAction(
+  symbol: string,
+): Promise<ActionResult<OrderTicketContext>> {
+  const session = await requireUser();
+  if (!session.ok) {
+    return session;
+  }
+  const gate = authorize({ userId: session.userId, action: "trade:preview" });
+  if (!gate.allowed) {
+    return { ok: false, message: "Not allowed." };
+  }
+  const key = symbol.trim().toUpperCase();
+  if (isAuthStub()) {
+    const provision = stubLoadProvision(session.userId);
+    const instrument = stubInstrumentBySymbol(key);
+    if (!provision.account || !instrument) {
+      return { ok: false, message: "Account or instrument unavailable." };
+    }
+    const quote = stubQuotesFor([instrument.id])[0] ?? null;
+    return {
+      ok: true,
+      data: {
+        account: provision.account,
+        profile: provision.profile,
+        instrument,
+        quote,
+      },
+    };
+  }
+  const client = records(session.token);
+  const [accounts, profiles, instruments] = await Promise.all([
+    createAccountsRepository(client).listMine(),
+    createProfilesRepository(client).listMine(),
+    createInstrumentsRepository(client).list({ symbol: key }),
+  ]);
+  const account = accounts[0];
+  const instrument = instruments[0];
+  if (!account || !instrument) {
+    return { ok: false, message: "Account or instrument unavailable." };
+  }
+  const quotes = await createQuotesLatestRepository(client).listByInstrumentIds([instrument.id]);
+  return {
+    ok: true,
+    data: {
+      account,
+      profile: profiles[0] ?? null,
+      instrument,
+      quote: quotes[0] ?? null,
+    },
+  };
+}
+
+export async function previewOrderAction(input: {
+  draft: OrderDraft;
+  last_price: number;
+}): Promise<ActionResult<OrderPreviewResponse>> {
+  const session = await requireUser();
+  if (!session.ok) {
+    return session;
+  }
+  const gate = authorize({ userId: session.userId, action: "trade:preview" });
+  if (!gate.allowed) {
+    return { ok: false, message: "Not allowed." };
+  }
+  const draft = orderDraftSchema.parse(input.draft);
+  if (isAuthStub()) {
+    const provision = stubLoadProvision(session.userId);
+    const instrument = stubInstrumentBySymbol(draft.symbol);
+    if (!provision.account || !instrument) {
+      return { ok: false, message: "Account or instrument unavailable." };
+    }
+    const preview = await runLocalOrderPreview({
+      draft,
+      lastPrice: input.last_price,
+      account: provision.account,
+      profile: provision.profile,
+      instrument,
+      memory: stubRulesMemory(),
+    });
+    return { ok: true, data: orderPreviewResponseSchema.parse(preview) };
+  }
+  const env = readPublicInsforgeEnv();
+  const preview = await invokeOrderPreview({
+    baseUrl: env.baseUrl,
+    accessToken: session.token,
+    request: { draft, last_price: input.last_price, op: "preview" },
+  });
+  return { ok: true, data: preview };
+}
+
+export async function submitOrderAction(input: {
+  draft: OrderDraft;
+  last_price: number;
+}): Promise<ActionResult<OrderCreateResponse>> {
+  const session = await requireUser();
+  if (!session.ok) {
+    return session;
+  }
+  const gate = authorize({ userId: session.userId, action: "trade:create" });
+  if (!gate.allowed) {
+    return { ok: false, message: "Not allowed." };
+  }
+  const draft = orderDraftSchema.parse(input.draft);
+  if (isAuthStub()) {
+    const provision = stubLoadProvision(session.userId);
+    const instrument = stubInstrumentBySymbol(draft.symbol);
+    if (!provision.account || !instrument) {
+      return { ok: false, message: "Account or instrument unavailable." };
+    }
+    const preview = await runLocalOrderPreview({
+      draft,
+      lastPrice: input.last_price,
+      account: provision.account,
+      profile: provision.profile,
+      instrument,
+      memory: stubRulesMemory(),
+    });
+    const now = new Date().toISOString();
+    const order: OrderRecord = {
+      id: crypto.randomUUID(),
+      user_id: session.userId,
+      account_id: provision.account.id,
+      instrument_id: instrument.id,
+      symbol: draft.symbol,
+      side: draft.side,
+      qty: draft.qty,
+      filled_qty: 0,
+      order_type: draft.order_type,
+      limit_price: draft.limit_price ?? null,
+      stop_price: draft.stop_price ?? null,
+      tif: draft.tif,
+      status: preview.passed ? "accepted" : "rejected",
+      reject_reason: preview.rules.find((row) => !row.passed)?.reason ?? null,
+      rule_audit_id: null,
+      parent_order_id: null,
+      created_at: now,
+      updated_at: now,
+    };
+    stubInsertOrder(order);
+    return { ok: true, data: orderCreateResponseSchema.parse({ order, preview }) };
+  }
+  const env = readPublicInsforgeEnv();
+  const created = await invokeOrderCreate({
+    baseUrl: env.baseUrl,
+    accessToken: session.token,
+    request: { draft, last_price: input.last_price, op: "create" },
+  });
+  return { ok: true, data: created };
+}

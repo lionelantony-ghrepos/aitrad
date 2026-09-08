@@ -10,7 +10,7 @@ You receive a **paper cash account** on first login (amount comes from the openi
 ## 2. The workspace
 Meridian is a multi-panel terminal. Open **`/workspace`**. Drag panel edges to resize, drag tabs to rearrange, and your layout is saved automatically (**Reset layout** in the top command bar). The status bar shows the market clock (America/New_York, OPEN/CLOSED) and a connection indicator.
 
-Placeholder panels in this build: Order ticket, Blotter, News, Screener, Portfolio, Copilot (input only), Description (`DES`). **Watchlist** (PBI-007) and **Chart** (PBI-008) are live. `DES <symbol>` opens the Description placeholder until fundamentals ship.
+Placeholder panels in this build: Blotter, News, Screener, Portfolio, Copilot (input only), Description (`DES`). **Watchlist** (PBI-007), **Chart** (PBI-008), and **Order ticket** (PBI-013) are live. `DES <symbol>` opens the Description placeholder until fundamentals ship.
 
 **Linked symbol.** The workspace exposes a shared symbol context. Clicking a watchlist row sets it (debug readout for tests: `symbol-context-readout`) and retargets the Chart panel.
 
@@ -33,7 +33,9 @@ Open the **Watchlist** panel. **Create** a named list (tabs along the top). Type
 The **Chart** panel loads candlesticks and volume for the linked symbol. Use the range buttons (**1D** uses 1-minute bars; **1W**–**5Y** use daily bars). Toggle SMA 20/50/200, EMA 12/26, VWAP, and RSI 14 (RSI opens a sub-pane). The crosshair legend shows OHLCV plus any enabled indicator values. Live ticks update the current candle. If no symbol is selected, the panel asks you to pick one from the watchlist.
 
 ## 4. Trading (paper)
-Open the order ticket (`ORD <symbol>` or Shift+B / Shift+S). Choose side, quantity (shares or dollars), order type (market, limit, stop, stop-limit), and time-in-force. The ticket previews estimated cost, simulated fees, and **pre-trade checks in real time** — if a rule blocks your order (e.g., size limit, concentration limit, market closed), you'll see exactly why. Advanced: **bracket orders** (entry + take-profit + stop-loss), **OCO pairs**, and **trailing stops**.
+Open the **Order ticket** (`ORD <symbol>`, or **Shift+B** / **Shift+S** to prefill Buy/Sell). The ticket follows the linked symbol. Choose side (green Buy / red Sell), quantity as **shares** or **notional** (dollars converted at the live last), type (market, limit, stop, stop-limit), optional limit/stop prices, and TIF (DAY / GTC / IOC). Buying power is the paper cash on the account.
+
+As you edit, a preview runs automatically: each pre-trade check (validation and risk) shows pass or fail with the rule reason, plus estimated fees and total. **Submit** stays disabled until every blocking check passes. Confirm opens a summary that repeats those totals; confirming sends the order to paper (fills and blotter updates come in later releases). Advanced: **bracket orders**, **OCO pairs**, and **trailing stops** are not on this ticket yet.
 
 Track orders in the **Blotter** (cancel/modify from the row; rejected orders have an *Explain* link showing the exact rule that fired). The **Portfolio** panel shows positions, live P&L, allocation, and your equity curve.
 

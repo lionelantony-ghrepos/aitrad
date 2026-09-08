@@ -16,9 +16,10 @@
     "docs:kb-check": "node scripts/check-kb.mjs",
     "docs:generate": "node scripts/generate-kb-reference.mjs",
     "docs:kb-test": "node --test scripts/check-kb.test.mjs",
-    "seed": "tsx scripts/seed.ts",
-    "seed:rules": "tsx scripts/seed-rules.ts",
+    "seed": "node --import tsx --env-file=.env scripts/seed.ts",
+    "seed:rules": "node --import tsx --env-file=.env scripts/seed-rules.ts",
     "functions:bundle:rules-service": "node scripts/bundle-rules-service.mjs",
+    "functions:bundle:order-service": "node scripts/bundle-order-service.mjs",
     "prepare": "husky"
   },
   "dependencies": {
