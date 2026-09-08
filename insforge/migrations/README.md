@@ -18,6 +18,8 @@ The CLI only applies files in the repo-root `migrations/` directory, named:
 <YYYYMMDDHHMMSS>_<lowercase-hyphen-name>.sql
 ```
 
+That folder must contain **only** those `.sql` files. A `README.md` (or any other name) makes `db migrations up` fail with `Invalid migration filename`.
+
 Numbered sources in this folder are the product record. When applying with the CLI, keep a timestamped copy under `migrations/` with the **same SQL body** as the matching `000N_*.sql` file.
 
 ```bash
