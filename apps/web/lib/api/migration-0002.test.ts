@@ -14,18 +14,13 @@ const migrationSql = readFileSync(
 
 describe("PBI-005 migration 0002", () => {
   it("lists 0002 after 0001 and skips both when applied", () => {
-    expect(LOCAL_MIGRATION_IDS).toEqual(["0001", "0002", "0003", "0004", "0005", "0006", "0007"]);
-    expect(planMigrationApply(["0001"]).toApply).toEqual([
-      "0002",
-      "0003",
-      "0004",
-      "0005",
-      "0006",
-      "0007",
-    ]);
-    expect(
-      planMigrationApply(["0001", "0002", "0003", "0004", "0005", "0006", "0007"]).toApply,
-    ).toEqual([]);
+    expect(LOCAL_MIGRATION_IDS[0]).toBe("0001");
+    expect(LOCAL_MIGRATION_IDS[1]).toBe("0002");
+    expect(LOCAL_MIGRATION_IDS).toContain("0008");
+    expect(planMigrationApply(["0001"]).toApply).toEqual(
+      LOCAL_MIGRATION_IDS.filter((id) => id !== "0001"),
+    );
+    expect(planMigrationApply([...LOCAL_MIGRATION_IDS]).toApply).toEqual([]);
   });
 
   it("defines market_bars composite PK, 1m|1d timeframe, and quotes_latest PK", () => {
