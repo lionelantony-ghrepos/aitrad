@@ -83,13 +83,13 @@ npx -y @insforge/cli db migrations up --all
 
 ## 0008 contents
 
-| Table / object                                  | Access                                                                                       |
-| ----------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `accounts.reserved_cash`                        | Owner RLS (existing accounts policies)                                                       |
-| `orders.reserved_amount`                        | Owner RLS                                                                                    |
-| `executions`                                    | Append-only; owner SELECT/INSERT                                                             |
-| `positions`, `portfolio_snapshots`              | Owner-only RLS                                                                               |
-| `reserve_buying_power` / `release_buying_power` | `SELECT … FOR UPDATE` on the account row; authenticated execute; caller must own the account |
-| realtime channel `orders:*`                     | `publish_order_event(user_id, payload)` event `order`                                        |
+| Table / object                                  | Access                                                                                                   |
+| ----------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `accounts.cash_balance` / `reserved_cash`       | Client SELECT own row; UPDATE locked (column grants + trigger). Writes via `project_admin` / reserve RPC |
+| `orders.reserved_amount`                        | Owner SELECT; writes via order-service admin                                                             |
+| `executions`                                    | Append-only; authenticated SELECT-only. Writes via `project_admin`                                       |
+| `positions`, `portfolio_snapshots`              | Authenticated SELECT-only. Writes via `project_admin`                                                    |
+| `reserve_buying_power` / `release_buying_power` | `SELECT … FOR UPDATE`; EXECUTE `project_admin` only; `p_user_id` must match `rec.user_id`                |
+| realtime channel `orders:*`                     | `publish_order_event(user_id, payload)` event `order`; EXECUTE `project_admin` only                      |
 
 UUID primary keys, `created_at` / `updated_at` (except `audit_log` and `executions`, which are insert-only), and `updated_at` triggers on mutable tables.

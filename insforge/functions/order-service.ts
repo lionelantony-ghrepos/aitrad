@@ -5473,8 +5473,29 @@ async function insertOrderRow(admin, row) {
     throw new Error(insert.error.message);
   }
 }
-async function publishOrder(client, userId, order) {
-  const { error } = await client.database.rpc("publish_order_event", {
+async function reserveBuyingPower(admin, accountId, userId, amount) {
+  const { data, error } = await admin.database.rpc("reserve_buying_power", {
+    p_account_id: accountId,
+    p_amount: amount,
+    p_user_id: userId,
+  });
+  if (error) {
+    throw new Error(error.message);
+  }
+  return data;
+}
+async function releaseBuyingPower2(admin, accountId, userId, amount) {
+  const { error } = await admin.database.rpc("release_buying_power", {
+    p_account_id: accountId,
+    p_amount: amount,
+    p_user_id: userId,
+  });
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+async function publishOrder(admin, userId, order) {
+  const { error } = await admin.database.rpc("publish_order_event", {
     p_user_id: userId,
     payload: {
       id: order.id,
@@ -5593,13 +5614,7 @@ async function order_service_src_default(req) {
       }
       const held = current.reserved_amount ?? 0;
       if (held > 0) {
-        const released = await client.database.rpc("release_buying_power", {
-          p_account_id: current.account_id,
-          p_amount: held,
-        });
-        if (released.error) {
-          throw new Error(released.error.message);
-        }
+        await releaseBuyingPower2(admin2, current.account_id, userId, held);
       }
       const updatedAt = /* @__PURE__ */ new Date().toISOString();
       const update = await admin2.database
@@ -5628,7 +5643,7 @@ async function order_service_src_default(req) {
           payload: { from: current.status, to: "cancelled" },
         },
       ]);
-      await publishOrder(client, userId, cancelled);
+      await publishOrder(admin2, userId, cancelled);
       return json(200, { order: cancelled });
     }
     const parsed = orderCreateRequestSchema.parse({
@@ -5645,6 +5660,10 @@ async function order_service_src_default(req) {
       draft,
       sequential: true,
     });
+    const admin = requireAdminWriter(baseUrl);
+    if (!admin) {
+      return json(500, { error: "SERVICE_KEY_UNAVAILABLE" });
+    }
     const placement = await placeWithReserve({
       validation: { outcome: validation.outcome, auditId: validation.auditId },
       risk: { outcome: risk.outcome, auditId: risk.auditId },
@@ -5655,13 +5674,7 @@ async function order_service_src_default(req) {
         estimatedFees: preview.estimated_fees,
       }),
       reserve: async (amount) => {
-        const { data, error } = await client.database.rpc("reserve_buying_power", {
-          p_account_id: ctx.account.id,
-          p_amount: amount,
-        });
-        if (error) {
-          throw new Error(error.message);
-        }
+        const data = await reserveBuyingPower(admin, ctx.account.id, userId, amount);
         return { ok: rpcOk(data) };
       },
     });
@@ -5688,24 +5701,11 @@ async function order_service_src_default(req) {
       updated_at: now,
     };
     const parsedRow = orderRecordSchema.parse(row);
-    const admin = requireAdminWriter(baseUrl);
-    if (!admin) {
-      if (placement.reserved > 0) {
-        await client.database.rpc("release_buying_power", {
-          p_account_id: ctx.account.id,
-          p_amount: placement.reserved,
-        });
-      }
-      return json(500, { error: "SERVICE_KEY_UNAVAILABLE" });
-    }
     try {
       await insertOrderRow(admin, parsedRow);
     } catch (error) {
       if (placement.reserved > 0) {
-        await client.database.rpc("release_buying_power", {
-          p_account_id: ctx.account.id,
-          p_amount: placement.reserved,
-        });
+        await releaseBuyingPower2(admin, ctx.account.id, userId, placement.reserved);
       }
       throw error;
     }
@@ -5723,7 +5723,7 @@ async function order_service_src_default(req) {
         },
       },
     ]);
-    await publishOrder(client, userId, parsedRow);
+    await publishOrder(admin, userId, parsedRow);
     return json(placement.status === "accepted" ? 200 : 422, { order: parsedRow, preview });
   } catch (error) {
     const message = error instanceof Error ? error.message : "ORDER_SERVICE_ERROR";

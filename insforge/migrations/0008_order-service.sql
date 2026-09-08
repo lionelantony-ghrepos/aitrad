@@ -10,6 +10,36 @@ ALTER TABLE public.accounts
 ALTER TABLE public.accounts
   ADD CONSTRAINT accounts_reserved_cash_non_negative CHECK (reserved_cash >= 0);
 
+-- Clients may SELECT their own account. Money columns are service-managed:
+-- authenticated/anon cannot UPDATE cash_balance or reserved_cash.
+CREATE OR REPLACE FUNCTION public.accounts_protect_money_columns()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF CURRENT_USER IN ('authenticated', 'anon') THEN
+    IF TG_OP = 'UPDATE' AND (
+      NEW.cash_balance IS DISTINCT FROM OLD.cash_balance
+      OR NEW.reserved_cash IS DISTINCT FROM OLD.reserved_cash
+    ) THEN
+      RAISE EXCEPTION 'account money columns are service-managed';
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS accounts_protect_money_columns ON public.accounts;
+CREATE TRIGGER accounts_protect_money_columns
+  BEFORE UPDATE ON public.accounts
+  FOR EACH ROW
+  EXECUTE FUNCTION public.accounts_protect_money_columns();
+
+REVOKE ALL ON TABLE public.accounts FROM anon, authenticated;
+GRANT SELECT, INSERT, DELETE ON TABLE public.accounts TO authenticated;
+GRANT UPDATE (currency, updated_at) ON TABLE public.accounts TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.accounts TO project_admin;
+
 ALTER TABLE public.orders
   ADD COLUMN IF NOT EXISTS reserved_amount NUMERIC(20, 8) NOT NULL DEFAULT 0;
 
@@ -103,10 +133,10 @@ CREATE POLICY executions_select_own ON public.executions
   FOR SELECT TO authenticated
   USING (user_id = (SELECT auth.uid()));
 
+-- Writes are order-service / matching-runner only (createAdminClient → project_admin).
 DROP POLICY IF EXISTS executions_insert_own ON public.executions;
-CREATE POLICY executions_insert_own ON public.executions
-  FOR INSERT TO authenticated
-  WITH CHECK (user_id = (SELECT auth.uid()));
+DROP POLICY IF EXISTS executions_update_own ON public.executions;
+DROP POLICY IF EXISTS executions_delete_own ON public.executions;
 
 DROP POLICY IF EXISTS positions_select_own ON public.positions;
 CREATE POLICY positions_select_own ON public.positions
@@ -114,20 +144,8 @@ CREATE POLICY positions_select_own ON public.positions
   USING (user_id = (SELECT auth.uid()));
 
 DROP POLICY IF EXISTS positions_insert_own ON public.positions;
-CREATE POLICY positions_insert_own ON public.positions
-  FOR INSERT TO authenticated
-  WITH CHECK (user_id = (SELECT auth.uid()));
-
 DROP POLICY IF EXISTS positions_update_own ON public.positions;
-CREATE POLICY positions_update_own ON public.positions
-  FOR UPDATE TO authenticated
-  USING (user_id = (SELECT auth.uid()))
-  WITH CHECK (user_id = (SELECT auth.uid()));
-
 DROP POLICY IF EXISTS positions_delete_own ON public.positions;
-CREATE POLICY positions_delete_own ON public.positions
-  FOR DELETE TO authenticated
-  USING (user_id = (SELECT auth.uid()));
 
 DROP POLICY IF EXISTS portfolio_snapshots_select_own ON public.portfolio_snapshots;
 CREATE POLICY portfolio_snapshots_select_own ON public.portfolio_snapshots
@@ -135,20 +153,31 @@ CREATE POLICY portfolio_snapshots_select_own ON public.portfolio_snapshots
   USING (user_id = (SELECT auth.uid()));
 
 DROP POLICY IF EXISTS portfolio_snapshots_insert_own ON public.portfolio_snapshots;
-CREATE POLICY portfolio_snapshots_insert_own ON public.portfolio_snapshots
-  FOR INSERT TO authenticated
-  WITH CHECK (user_id = (SELECT auth.uid()));
+DROP POLICY IF EXISTS portfolio_snapshots_update_own ON public.portfolio_snapshots;
+DROP POLICY IF EXISTS portfolio_snapshots_delete_own ON public.portfolio_snapshots;
 
 REVOKE ALL ON TABLE public.executions FROM anon, authenticated;
-GRANT SELECT, INSERT ON TABLE public.executions TO authenticated;
+GRANT SELECT ON TABLE public.executions TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.executions TO project_admin;
 
 REVOKE ALL ON TABLE public.positions FROM anon, authenticated;
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.positions TO authenticated;
+GRANT SELECT ON TABLE public.positions TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.positions TO project_admin;
 
 REVOKE ALL ON TABLE public.portfolio_snapshots FROM anon, authenticated;
-GRANT SELECT, INSERT ON TABLE public.portfolio_snapshots TO authenticated;
+GRANT SELECT ON TABLE public.portfolio_snapshots TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.portfolio_snapshots TO project_admin;
 
-CREATE OR REPLACE FUNCTION public.reserve_buying_power(p_account_id uuid, p_amount numeric)
+-- Admin-only RPC: JWT ownership is passed as p_user_id (auth.uid() is null for
+-- createAdminClient). Row lock keeps concurrent reserves atomic.
+DROP FUNCTION IF EXISTS public.reserve_buying_power(uuid, numeric);
+DROP FUNCTION IF EXISTS public.reserve_buying_power(uuid, numeric, uuid);
+
+CREATE OR REPLACE FUNCTION public.reserve_buying_power(
+  p_account_id uuid,
+  p_amount numeric,
+  p_user_id uuid
+)
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -158,6 +187,10 @@ DECLARE
   rec public.accounts%ROWTYPE;
   bp numeric;
 BEGIN
+  IF p_user_id IS NULL THEN
+    RAISE EXCEPTION 'RESERVE_FORBIDDEN';
+  END IF;
+
   IF p_amount IS NULL OR p_amount < 0 THEN
     RETURN jsonb_build_object('ok', false, 'reason_code', 'RISK_BUYING_POWER');
   END IF;
@@ -171,7 +204,7 @@ BEGIN
     RETURN jsonb_build_object('ok', false, 'reason_code', 'ACCOUNT_NOT_FOUND');
   END IF;
 
-  IF rec.user_id IS DISTINCT FROM auth.uid() THEN
+  IF rec.user_id IS DISTINCT FROM p_user_id THEN
     RAISE EXCEPTION 'RESERVE_FORBIDDEN';
   END IF;
 
@@ -208,7 +241,14 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION public.release_buying_power(p_account_id uuid, p_amount numeric)
+DROP FUNCTION IF EXISTS public.release_buying_power(uuid, numeric);
+DROP FUNCTION IF EXISTS public.release_buying_power(uuid, numeric, uuid);
+
+CREATE OR REPLACE FUNCTION public.release_buying_power(
+  p_account_id uuid,
+  p_amount numeric,
+  p_user_id uuid
+)
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -218,6 +258,10 @@ DECLARE
   rec public.accounts%ROWTYPE;
   next_reserved numeric;
 BEGIN
+  IF p_user_id IS NULL THEN
+    RAISE EXCEPTION 'RELEASE_FORBIDDEN';
+  END IF;
+
   IF p_amount IS NULL OR p_amount < 0 THEN
     RETURN jsonb_build_object('ok', false, 'reason_code', 'INVALID_RELEASE');
   END IF;
@@ -231,7 +275,7 @@ BEGIN
     RETURN jsonb_build_object('ok', false, 'reason_code', 'ACCOUNT_NOT_FOUND');
   END IF;
 
-  IF rec.user_id IS DISTINCT FROM auth.uid() THEN
+  IF rec.user_id IS DISTINCT FROM p_user_id THEN
     RAISE EXCEPTION 'RELEASE_FORBIDDEN';
   END IF;
 
@@ -249,11 +293,13 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.reserve_buying_power(uuid, numeric) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.reserve_buying_power(uuid, numeric) TO authenticated;
+REVOKE ALL ON FUNCTION public.reserve_buying_power(uuid, numeric, uuid) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.reserve_buying_power(uuid, numeric, uuid) FROM anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.reserve_buying_power(uuid, numeric, uuid) TO project_admin;
 
-REVOKE ALL ON FUNCTION public.release_buying_power(uuid, numeric) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.release_buying_power(uuid, numeric) TO authenticated;
+REVOKE ALL ON FUNCTION public.release_buying_power(uuid, numeric, uuid) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.release_buying_power(uuid, numeric, uuid) FROM anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.release_buying_power(uuid, numeric, uuid) TO project_admin;
 
 INSERT INTO realtime.channels (pattern, description, enabled)
 VALUES ('orders:*', 'Per-user order lifecycle events', true)
@@ -268,7 +314,7 @@ SECURITY DEFINER
 SET search_path = pg_catalog, public, realtime, pg_temp
 AS $$
 BEGIN
-  IF p_user_id IS DISTINCT FROM auth.uid() THEN
+  IF p_user_id IS NULL THEN
     RAISE EXCEPTION 'PUBLISH_FORBIDDEN';
   END IF;
   PERFORM realtime.publish('orders:' || p_user_id::text, 'order', payload);
@@ -276,4 +322,5 @@ END;
 $$;
 
 REVOKE ALL ON FUNCTION public.publish_order_event(uuid, jsonb) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.publish_order_event(uuid, jsonb) TO authenticated;
+REVOKE EXECUTE ON FUNCTION public.publish_order_event(uuid, jsonb) FROM anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.publish_order_event(uuid, jsonb) TO project_admin;
