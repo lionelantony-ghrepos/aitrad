@@ -77,9 +77,9 @@ npx -y @insforge/cli db migrations up --all
 
 ## 0007 contents
 
-| Table    | Access                                                                                                 |
-| -------- | ------------------------------------------------------------------------------------------------------ |
-| `orders` | RLS owner-only (`user_id = auth.uid()`); authenticated CRUD. FSM reserve / executions land in PBI-014. |
+| Table    | Access                                                                                                                                                                  |
+| -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `orders` | RLS owner SELECT (`user_id = auth.uid()`); authenticated SELECT-only. Writes via `order-service` (`project_admin` / API key). FSM reserve / executions land in PBI-014. |
 
 ## 0008 contents
 

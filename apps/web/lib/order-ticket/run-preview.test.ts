@@ -1,3 +1,4 @@
+import { lastPriceForRuleFacts } from "@meridian/paper-engine";
 import { createRulesAdminMemory } from "@meridian/rules-engine";
 import type { Account, Instrument, OrderDraft, Profile } from "@meridian/schemas";
 import { describe, expect, it } from "vitest";
@@ -73,6 +74,25 @@ describe("TC-013-01 local preview risk reason (AC-013-01)", () => {
     });
     expect(ok.passed).toBe(true);
     expect(ok.est_total).toBe(1000);
+  });
+
+  it("spoofed low client last does not understate notional for risk", async () => {
+    const memory = createRulesAdminMemory();
+    const last = lastPriceForRuleFacts({ quoteLast: 200, clientLast: 1 });
+    const preview = await runLocalOrderPreview({
+      draft: { ...baseDraft, qty: 300 },
+      lastPrice: last,
+      account,
+      profile,
+      instrument,
+      memory,
+    });
+    expect(preview.last_price).toBe(200);
+    expect(preview.order_notional).toBe(60_000);
+    expect(preview.passed).toBe(false);
+    const risk = preview.rules.find((row) => row.table_key === "DT-RISK-01");
+    expect(risk?.passed).toBe(false);
+    expect(risk?.reason).toBe("RISK_MAX_NOTIONAL");
   });
 
   it("rejects a market draft when session is closed (DT-HRS-01)", async () => {

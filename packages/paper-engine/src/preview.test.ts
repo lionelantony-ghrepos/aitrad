@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { OrderDraft } from "@meridian/schemas";
-import { applyFeeSchedule, assemblePreview, buildOrderFacts, summarizeRisk } from "./preview";
+import {
+  applyFeeSchedule,
+  assemblePreview,
+  buildOrderFacts,
+  lastPriceForRuleFacts,
+  QUOTE_UNAVAILABLE,
+  summarizeRisk,
+} from "./preview";
 
 const draft: OrderDraft = {
   symbol: "AAPL",
@@ -33,6 +40,40 @@ describe("buildOrderFacts", () => {
     expect(facts.order_notional).toBe(60_000);
     expect(facts.exceeds_buying_power).toBe(false);
     expect(facts.qty).toBe(300);
+  });
+
+  it("spoofed low client last does not understate notional for risk", () => {
+    const qty = 300;
+    const quoteLast = 200;
+    const clientLast = 1;
+    const last = lastPriceForRuleFacts({ quoteLast, clientLast });
+    expect(last).toBe(quoteLast);
+    expect(last).not.toBe(clientLast);
+
+    const facts = factsFor(qty, last);
+    const ifClientTrusted = factsFor(qty, clientLast);
+    expect(facts.order_notional).toBe(qty * quoteLast);
+    expect(facts.order_notional).toBeGreaterThan(ifClientTrusted.order_notional as number);
+    expect(facts.last_price).toBe(quoteLast);
+
+    const preview = assemblePreview({
+      draft: { ...draft, qty },
+      lastPrice: last,
+      buyingPower: 100_000,
+      facts,
+      validationOutcome: { decision: "valid" },
+      riskOutcome: { decision: "reject", reason_code: "RISK_MAX_NOTIONAL" },
+      feeOutcome: { commission_usd: 12 },
+      hoursOutcome: { decision: "allow" },
+    });
+    expect(preview.order_notional).toBe(qty * quoteLast);
+    expect(preview.last_price).toBe(quoteLast);
+    expect(preview.estimated_fees).toBe(12);
+    expect(preview.passed).toBe(false);
+    expect(() => lastPriceForRuleFacts({ quoteLast: null, clientLast })).toThrow(QUOTE_UNAVAILABLE);
+    expect(() => lastPriceForRuleFacts({ quoteLast: undefined, clientLast })).toThrow(
+      QUOTE_UNAVAILABLE,
+    );
   });
 });
 

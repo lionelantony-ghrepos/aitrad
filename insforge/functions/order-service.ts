@@ -6,7 +6,7 @@ var __export = (target, all) => {
 };
 
 // insforge/functions/order-service-src.ts
-import { createClient } from "npm:@insforge/sdk";
+import { createAdminClient, createClient } from "npm:@insforge/sdk";
 
 // packages/mock-data/src/calendar.ts
 function pad2(n) {
@@ -4935,6 +4935,20 @@ function referencePrice(input) {
 }
 
 // packages/paper-engine/src/preview.ts
+var QUOTE_UNAVAILABLE = "QUOTE_UNAVAILABLE";
+function lastPriceForRuleFacts(input) {
+  void input.clientLast;
+  const n =
+    typeof input.quoteLast === "number"
+      ? input.quoteLast
+      : typeof input.quoteLast === "string" && input.quoteLast.length > 0
+        ? Number(input.quoteLast)
+        : Number.NaN;
+  if (!Number.isFinite(n) || n <= 0) {
+    throw new Error(QUOTE_UNAVAILABLE);
+  }
+  return n;
+}
 function priceNotOnTick(price, tickSize) {
   if (price == null || !Number.isFinite(price) || !(tickSize > 0)) {
     return false;
@@ -5221,6 +5235,15 @@ function authorize(input) {
   return { allowed: true };
 }
 
+// packages/rules-engine/src/evaluate-domain.ts
+function resolveRulesServiceApiKey(env) {
+  const key = env.API_KEY ?? env.INSFORGE_API_KEY;
+  if (typeof key !== "string" || key.length === 0) {
+    return null;
+  }
+  return key;
+}
+
 // insforge/functions/order-service-src.ts
 var corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -5318,11 +5341,22 @@ async function loadContext(client, userId, draft) {
   if (!instrument) {
     throw new Error("INSTRUMENT_NOT_FOUND");
   }
+  const typedInstrument = instrument;
+  const { data: quotes, error: quoteErr } = await client.database
+    .from("quotes_latest")
+    .select("last")
+    .eq("instrument_id", typedInstrument.id);
+  if (quoteErr) {
+    throw new Error(quoteErr.message);
+  }
+  const quote = Array.isArray(quotes) ? quotes[0] : null;
+  const quoteLast =
+    quote && typeof quote === "object" && quote !== null && "last" in quote ? quote.last : void 0;
   const { data: positions, error: posErr } = await client.database
     .from("positions")
     .select("qty")
     .eq("account_id", account.id)
-    .eq("instrument_id", instrument.id);
+    .eq("instrument_id", typedInstrument.id);
   if (posErr) {
     throw new Error(posErr.message);
   }
@@ -5347,18 +5381,19 @@ async function loadContext(client, userId, draft) {
   return {
     account,
     profile,
-    instrument,
+    instrument: typedInstrument,
+    lastPrice: lastPriceForRuleFacts({ quoteLast }),
     positionQty,
     ordersToday,
     session,
   };
 }
-async function runPreview(input) {
+async function evaluateOrderDomains(input) {
   const ctx = await loadContext(input.client, input.userId, input.draft);
   const buyingPower = buyingPowerOf(ctx.account);
   const facts = buildOrderFacts({
     draft: input.draft,
-    lastPrice: input.lastPrice,
+    lastPrice: ctx.lastPrice,
     buyingPower,
     positionQty: ctx.positionQty,
     equity: buyingPower,
@@ -5370,35 +5405,33 @@ async function runPreview(input) {
     accountTier: null,
     session: ctx.session,
   });
-  const [validation, risk, fees, hours] = await Promise.all([
+  const call = (domain) =>
     evaluateRemote({
       baseUrl: input.baseUrl,
       accessToken: input.accessToken,
-      domain: "order_validation",
+      domain,
       context: facts,
-    }),
-    evaluateRemote({
-      baseUrl: input.baseUrl,
-      accessToken: input.accessToken,
-      domain: "pre_trade_risk",
-      context: facts,
-    }),
-    evaluateRemote({
-      baseUrl: input.baseUrl,
-      accessToken: input.accessToken,
-      domain: "fees",
-      context: facts,
-    }),
-    evaluateRemote({
-      baseUrl: input.baseUrl,
-      accessToken: input.accessToken,
-      domain: "market_hours",
-      context: facts,
-    }),
-  ]);
+    });
+  let validation;
+  let risk;
+  let hours;
+  let fees;
+  if (input.sequential) {
+    validation = await call("order_validation");
+    risk = await call("pre_trade_risk");
+    hours = await call("market_hours");
+    fees = await call("fees");
+  } else {
+    [validation, risk, fees, hours] = await Promise.all([
+      call("order_validation"),
+      call("pre_trade_risk"),
+      call("fees"),
+      call("market_hours"),
+    ]);
+  }
   const preview = assemblePreview({
     draft: input.draft,
-    lastPrice: input.lastPrice,
+    lastPrice: ctx.lastPrice,
     buyingPower,
     facts,
     validationOutcome: validation.outcome,
@@ -5408,67 +5441,14 @@ async function runPreview(input) {
   });
   return { preview, ctx, validation, risk, hours };
 }
-async function runCreateEvals(input) {
-  const ctx = await loadContext(input.client, input.userId, input.draft);
-  const buyingPower = buyingPowerOf(ctx.account);
-  const facts = buildOrderFacts({
-    draft: input.draft,
-    lastPrice: input.lastPrice,
-    buyingPower,
-    positionQty: ctx.positionQty,
-    equity: buyingPower,
-    experienceLevel: ctx.profile?.experience_level ?? null,
-    instrumentStatus: ctx.instrument.status,
-    tickSize: Number(ctx.instrument.tick_size),
-    instrumentBetaClass: ctx.instrument.beta_class,
-    ordersToday: ctx.ordersToday,
-    accountTier: null,
-    session: ctx.session,
-  });
-  const validation = await evaluateRemote({
-    baseUrl: input.baseUrl,
-    accessToken: input.accessToken,
-    domain: "order_validation",
-    context: facts,
-  });
-  const risk = await evaluateRemote({
-    baseUrl: input.baseUrl,
-    accessToken: input.accessToken,
-    domain: "pre_trade_risk",
-    context: facts,
-  });
-  const hours = await evaluateRemote({
-    baseUrl: input.baseUrl,
-    accessToken: input.accessToken,
-    domain: "market_hours",
-    context: facts,
-  });
-  const fees = await evaluateRemote({
-    baseUrl: input.baseUrl,
-    accessToken: input.accessToken,
-    domain: "fees",
-    context: facts,
-  });
-  const preview = assemblePreview({
-    draft: input.draft,
-    lastPrice: input.lastPrice,
-    buyingPower,
-    facts,
-    validationOutcome: validation.outcome,
-    riskOutcome: risk.outcome,
-    feeOutcome: asRecord(fees.outcome),
-    hoursOutcome: hours.outcome,
-  });
-  return { preview, ctx, validation, risk, hours, facts };
-}
 function rpcOk(data) {
   if (data && typeof data === "object" && "ok" in data) {
     return data.ok === true;
   }
   return false;
 }
-async function insertOrderRow(client, row) {
-  const insert = await client.database.from("orders").insert([
+async function insertOrderRow(admin, row) {
+  const insert = await admin.database.from("orders").insert([
     {
       id: row.id,
       user_id: row.user_id,
@@ -5507,6 +5487,19 @@ async function publishOrder(client, userId, order) {
   if (error) {
     throw new Error(error.message);
   }
+}
+function requireAdminWriter(baseUrl) {
+  const apiKey = resolveRulesServiceApiKey({
+    API_KEY: Deno.env.get("API_KEY"),
+    INSFORGE_API_KEY: Deno.env.get("INSFORGE_API_KEY"),
+  });
+  if (!apiKey) {
+    return null;
+  }
+  return createAdminClient({
+    baseUrl,
+    apiKey,
+  });
 }
 async function order_service_src_default(req) {
   if (req.method === "OPTIONS") {
@@ -5557,13 +5550,14 @@ async function order_service_src_default(req) {
         ...body,
         op: "preview",
       });
-      const { preview: preview2 } = await runPreview({
+      void parsed2.last_price;
+      const { preview: preview2 } = await evaluateOrderDomains({
         client,
         userId,
         accessToken: userToken,
         baseUrl,
         draft: parsed2.draft,
-        lastPrice: parsed2.last_price,
+        sequential: false,
       });
       return json(200, preview2);
     }
@@ -5593,6 +5587,10 @@ async function order_service_src_default(req) {
       if (!canCancel(current.status)) {
         return json(409, { error: `FSM_ILLEGAL:${current.status}->cancelled` });
       }
+      const admin2 = requireAdminWriter(baseUrl);
+      if (!admin2) {
+        return json(500, { error: "SERVICE_KEY_UNAVAILABLE" });
+      }
       const held = current.reserved_amount ?? 0;
       if (held > 0) {
         const released = await client.database.rpc("release_buying_power", {
@@ -5604,7 +5602,7 @@ async function order_service_src_default(req) {
         }
       }
       const updatedAt = /* @__PURE__ */ new Date().toISOString();
-      const update = await client.database
+      const update = await admin2.database
         .from("orders")
         .update({
           status: "cancelled",
@@ -5638,13 +5636,14 @@ async function order_service_src_default(req) {
       op: "create",
     });
     const draft = orderDraftSchema.parse(parsed.draft);
-    const { preview, ctx, validation, risk, hours } = await runCreateEvals({
+    void parsed.last_price;
+    const { preview, ctx, validation, risk, hours } = await evaluateOrderDomains({
       client,
       userId,
       accessToken: userToken,
       baseUrl,
       draft,
-      lastPrice: parsed.last_price,
+      sequential: true,
     });
     const placement = await placeWithReserve({
       validation: { outcome: validation.outcome, auditId: validation.auditId },
@@ -5689,8 +5688,18 @@ async function order_service_src_default(req) {
       updated_at: now,
     };
     const parsedRow = orderRecordSchema.parse(row);
+    const admin = requireAdminWriter(baseUrl);
+    if (!admin) {
+      if (placement.reserved > 0) {
+        await client.database.rpc("release_buying_power", {
+          p_account_id: ctx.account.id,
+          p_amount: placement.reserved,
+        });
+      }
+      return json(500, { error: "SERVICE_KEY_UNAVAILABLE" });
+    }
     try {
-      await insertOrderRow(client, parsedRow);
+      await insertOrderRow(admin, parsedRow);
     } catch (error) {
       if (placement.reserved > 0) {
         await client.database.rpc("release_buying_power", {
