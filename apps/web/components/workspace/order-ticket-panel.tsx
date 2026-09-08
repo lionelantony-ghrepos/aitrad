@@ -92,7 +92,7 @@ export function OrderTicketPanel(props: IDockviewPanelProps): React.JSX.Element 
         return;
       }
       setInstrumentId(result.data.instrument.id);
-      setBuyingPower(result.data.account.cash_balance);
+      setBuyingPower(result.data.account.cash_balance - (result.data.account.reserved_cash ?? 0));
       setSeedLast(result.data.quote?.last ?? null);
       setStatus("ready");
     });

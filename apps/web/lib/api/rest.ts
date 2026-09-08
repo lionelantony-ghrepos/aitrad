@@ -19,6 +19,9 @@ export const recordTables = {
   rule_bindings: "rule_bindings",
   rule_audit: "rule_audit",
   orders: "orders",
+  executions: "executions",
+  positions: "positions",
+  portfolio_snapshots: "portfolio_snapshots",
 } as const;
 
 export type RecordTable = (typeof recordTables)[keyof typeof recordTables];

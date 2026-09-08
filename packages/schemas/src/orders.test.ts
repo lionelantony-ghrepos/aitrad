@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { orderDraftSchema, orderPreviewResponseSchema } from "./orders";
+import { orderCancelRequestSchema, orderDraftSchema, orderPreviewResponseSchema } from "./orders";
 
 describe("orderDraftSchema", () => {
   it("accepts a market DAY draft", () => {
@@ -53,5 +53,16 @@ describe("orderPreviewResponseSchema", () => {
       fee_outcome: { commission_usd: 0 },
     });
     expect(parsed.buying_power).toBe(100000);
+  });
+});
+
+describe("orderCancelRequestSchema", () => {
+  it("accepts cancel with an order id", () => {
+    expect(
+      orderCancelRequestSchema.parse({
+        op: "cancel",
+        order_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      }).order_id,
+    ).toBe("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
   });
 });

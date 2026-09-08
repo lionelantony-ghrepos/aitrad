@@ -50,6 +50,7 @@ export const accountSchema = z.object({
   id: uuidSchema,
   user_id: uuidSchema,
   cash_balance: numericSchema,
+  reserved_cash: numericSchema.optional(),
   currency: z.string().min(1),
   created_at: timestamptzSchema,
   updated_at: timestamptzSchema,
@@ -58,11 +59,13 @@ export const accountSchema = z.object({
 export const accountInsertSchema = z.object({
   user_id: uuidSchema,
   cash_balance: numericSchema.optional(),
+  reserved_cash: numericSchema.optional(),
   currency: z.string().min(1).optional(),
 });
 
 export const accountPatchSchema = z.object({
   cash_balance: numericSchema.optional(),
+  reserved_cash: numericSchema.optional(),
   currency: z.string().min(1).optional(),
 });
 

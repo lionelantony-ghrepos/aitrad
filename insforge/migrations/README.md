@@ -81,4 +81,15 @@ npx -y @insforge/cli db migrations up --all
 | -------- | ------------------------------------------------------------------------------------------------------ |
 | `orders` | RLS owner-only (`user_id = auth.uid()`); authenticated CRUD. FSM reserve / executions land in PBI-014. |
 
-UUID primary keys, `created_at` / `updated_at` (except `audit_log`, which is insert-only), and `updated_at` triggers on mutable tables.
+## 0008 contents
+
+| Table / object                                  | Access                                                                                       |
+| ----------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `accounts.reserved_cash`                        | Owner RLS (existing accounts policies)                                                       |
+| `orders.reserved_amount`                        | Owner RLS                                                                                    |
+| `executions`                                    | Append-only; owner SELECT/INSERT                                                             |
+| `positions`, `portfolio_snapshots`              | Owner-only RLS                                                                               |
+| `reserve_buying_power` / `release_buying_power` | `SELECT … FOR UPDATE` on the account row; authenticated execute; caller must own the account |
+| realtime channel `orders:*`                     | `publish_order_event(user_id, payload)` event `order`                                        |
+
+UUID primary keys, `created_at` / `updated_at` (except `audit_log` and `executions`, which are insert-only), and `updated_at` triggers on mutable tables.

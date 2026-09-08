@@ -3,6 +3,7 @@ import {
   paperAccountSeed,
   type RulesAdminMemory,
 } from "@meridian/rules-engine";
+import { tryReserveBuyingPower, releaseBuyingPower } from "@meridian/paper-engine";
 import type {
   Account,
   Instrument,
@@ -138,6 +139,7 @@ export function stubInsertAccount(userId: string): Account {
     id: crypto.randomUUID(),
     user_id: userId,
     cash_balance: seed.cashBalance,
+    reserved_cash: 0,
     currency: seed.currency,
     created_at: ts,
     updated_at: ts,
@@ -346,6 +348,46 @@ export function stubQuotesFor(instrumentIds: readonly string[]): QuotesLatest[] 
 export function stubInsertOrder(row: OrderRecord): OrderRecord {
   getStubState().orders.push(row);
   return row;
+}
+
+export function stubTryReserve(userId: string, amount: number): boolean {
+  const account = getStubState().accounts.get(userId);
+  if (!account) {
+    return false;
+  }
+  const result = tryReserveBuyingPower(
+    { cashBalance: account.cash_balance, reservedCash: account.reserved_cash ?? 0 },
+    amount,
+  );
+  if (!result.ok) {
+    return false;
+  }
+  account.reserved_cash = result.ledger.reservedCash;
+  return true;
+}
+
+export function stubReleaseReserve(userId: string, amount: number): void {
+  const account = getStubState().accounts.get(userId);
+  if (!account) {
+    return;
+  }
+  const next = releaseBuyingPower(
+    { cashBalance: account.cash_balance, reservedCash: account.reserved_cash ?? 0 },
+    amount,
+  );
+  account.reserved_cash = next.reservedCash;
+}
+
+export function stubGetOrder(userId: string, orderId: string): OrderRecord | null {
+  return getStubState().orders.find((row) => row.id === orderId && row.user_id === userId) ?? null;
+}
+
+export function stubReplaceOrder(row: OrderRecord): void {
+  const state = getStubState();
+  const idx = state.orders.findIndex((item) => item.id === row.id);
+  if (idx >= 0) {
+    state.orders[idx] = row;
+  }
 }
 
 export function stubInstrumentBySymbol(symbol: string): Instrument | null {

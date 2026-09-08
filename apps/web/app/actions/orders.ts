@@ -1,12 +1,15 @@
 "use server";
 
 import { authorize } from "@meridian/rules-engine";
+import { canCancel } from "@meridian/paper-engine";
 import {
+  orderCancelResponseSchema,
   orderCreateResponseSchema,
   orderDraftSchema,
   orderPreviewResponseSchema,
   type Account,
   type Instrument,
+  type OrderCancelResponse,
   type OrderCreateResponse,
   type OrderDraft,
   type OrderPreviewResponse,
@@ -17,20 +20,24 @@ import {
 import { createAccountsRepository } from "@/lib/api/accounts";
 import { createRecordsClient } from "@/lib/api/client";
 import { createInstrumentsRepository } from "@/lib/api/instruments";
-import { invokeOrderCreate, invokeOrderPreview } from "@/lib/api/order-service";
+import { invokeOrderCancel, invokeOrderCreate, invokeOrderPreview } from "@/lib/api/order-service";
 import { createProfilesRepository } from "@/lib/api/profiles";
 import { createQuotesLatestRepository } from "@/lib/api/quotes-latest";
 import { isAuthStub } from "@/lib/auth/mode";
 import { getAccessToken, getSessionUser } from "@/lib/auth/session";
 import {
+  stubGetOrder,
   stubInsertOrder,
   stubInstrumentBySymbol,
   stubLoadProvision,
   stubQuotesFor,
+  stubReleaseReserve,
+  stubReplaceOrder,
   stubRulesMemory,
+  stubTryReserve,
 } from "@/lib/auth/stub-store";
 import { readPublicInsforgeEnv } from "@/lib/insforge/env";
-import { runLocalOrderPreview } from "@/lib/order-ticket/run-preview";
+import { runLocalOrderCreate, runLocalOrderPreview } from "@/lib/order-ticket/run-preview";
 
 export type ActionOk<T> = { ok: true; data: T };
 export type ActionErr = { ok: false; message: string };
@@ -171,13 +178,14 @@ export async function submitOrderAction(input: {
     if (!provision.account || !instrument) {
       return { ok: false, message: "Account or instrument unavailable." };
     }
-    const preview = await runLocalOrderPreview({
+    const { preview, placement } = await runLocalOrderCreate({
       draft,
       lastPrice: input.last_price,
       account: provision.account,
       profile: provision.profile,
       instrument,
       memory: stubRulesMemory(),
+      reserve: async (amount) => ({ ok: stubTryReserve(session.userId, amount) }),
     });
     const now = new Date().toISOString();
     const order: OrderRecord = {
@@ -193,10 +201,11 @@ export async function submitOrderAction(input: {
       limit_price: draft.limit_price ?? null,
       stop_price: draft.stop_price ?? null,
       tif: draft.tif,
-      status: preview.passed ? "accepted" : "rejected",
-      reject_reason: preview.rules.find((row) => !row.passed)?.reason ?? null,
-      rule_audit_id: null,
+      status: placement.status,
+      reject_reason: placement.rejectReason,
+      rule_audit_id: placement.ruleAuditId,
       parent_order_id: null,
+      reserved_amount: placement.reserved,
       created_at: now,
       updated_at: now,
     };
@@ -210,4 +219,45 @@ export async function submitOrderAction(input: {
     request: { draft, last_price: input.last_price, op: "create" },
   });
   return { ok: true, data: created };
+}
+
+export async function cancelOrderAction(
+  orderId: string,
+): Promise<ActionResult<OrderCancelResponse>> {
+  const session = await requireUser();
+  if (!session.ok) {
+    return session;
+  }
+  const gate = authorize({ userId: session.userId, action: "trade:cancel" });
+  if (!gate.allowed) {
+    return { ok: false, message: "Not allowed." };
+  }
+  if (isAuthStub()) {
+    const existing = stubGetOrder(session.userId, orderId);
+    if (!existing) {
+      return { ok: false, message: "Order not found." };
+    }
+    if (!canCancel(existing.status)) {
+      return { ok: false, message: `FSM_ILLEGAL:${existing.status}->cancelled` };
+    }
+    const held = existing.reserved_amount ?? 0;
+    if (held > 0) {
+      stubReleaseReserve(session.userId, held);
+    }
+    const cancelled: OrderRecord = {
+      ...existing,
+      status: "cancelled",
+      reserved_amount: 0,
+      updated_at: new Date().toISOString(),
+    };
+    stubReplaceOrder(cancelled);
+    return { ok: true, data: orderCancelResponseSchema.parse({ order: cancelled }) };
+  }
+  const env = readPublicInsforgeEnv();
+  const cancelled = await invokeOrderCancel({
+    baseUrl: env.baseUrl,
+    accessToken: session.token,
+    orderId,
+  });
+  return { ok: true, data: cancelled };
 }

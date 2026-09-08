@@ -143,14 +143,14 @@ Seeded via `scripts/seed-all.ts` (see doc 06): 150 instruments, 5y daily + 5d 1m
 ### PBI-014 Order service
 | ID | Criterion / Test | Pri | Status |
 |---|---|---|---|
-| AC-014-01 | FSM: only legal transitions possible; illegal → error | P0 | ☐ |
-| AC-014-02 | Buying power reserved atomically; concurrent orders can't overspend | P0 | ☐ |
-| AC-014-03 | Rejections store reject_reason + rule_audit_id | P0 | ☐ |
-| AC-014-04 | Market-closed orders handled per DT-HRS-01 (queue or reject) | P0 | ☐ |
-| TC-014-01 | Unit: FSM transition matrix (AC-014-01) | P0 | ☐ |
-| TC-014-02 | Two parallel orders totalling > cash → one rejected (AC-014-02) | P0 | ☐ |
-| TC-014-03 | Insufficient-funds order → rejected w/ audit link (AC-014-03) | P0 | ☐ |
-| TC-014-04 | Order while CLOSED → outcome per published DT-HRS-01 (AC-014-04) | P0 | ☐ |
+| AC-014-01 | FSM: only legal transitions possible; illegal → error | P0 | ☑ |
+| AC-014-02 | Buying power reserved atomically; concurrent orders can't overspend | P0 | ☑ |
+| AC-014-03 | Rejections store reject_reason + rule_audit_id | P0 | ☑ |
+| AC-014-04 | Market-closed orders handled per DT-HRS-01 (queue or reject) | P0 | ☑ |
+| TC-014-01 | Unit: FSM transition matrix (AC-014-01) | P0 | ☑ |
+| TC-014-02 | Two parallel orders totalling > cash → one rejected (AC-014-02) | P0 | ☑ |
+| TC-014-03 | Insufficient-funds order → rejected w/ audit link (AC-014-03) | P0 | ☑ |
+| TC-014-04 | Order while CLOSED → outcome per published DT-HRS-01 (AC-014-04) | P0 | ☑ |
 
 ### PBI-015 Paper matching engine
 | ID | Criterion / Test | Pri | Status |

@@ -22,4 +22,4 @@ pnpm functions:bundle:order-service
 npx -y @insforge/cli functions deploy order-service --file insforge/functions/order-service.ts --name "Order service"
 ```
 
-`order-service` accepts `POST` `{ op: "preview" | "create", draft, last_price }` (or `/preview` / `/orders` path suffixes). Preview evaluates DT-VAL-01, DT-RISK-01, and DT-FEE-01 via `rules-service` and returns pass/fail reasons plus fee estimate. Create re-previews, writes `orders` when it passes, and always writes `audit_log`. Buying-power reserve and full FSM are PBI-014.
+`order-service` accepts `POST` `{ op: "preview" | "create" | "cancel", … }` (paths `/preview`, `/orders`, `/orders/:id/cancel`). Preview evaluates DT-VAL-01, DT-RISK-01, DT-HRS-01, and DT-FEE-01 via `rules-service` and writes only `rule_audit` (through rules-service). Create evaluates those domains in order, reserves buying power with `reserve_buying_power` (row lock), inserts `accepted` or `rejected` (always storing `reject_reason` + `rule_audit_id` on reject), publishes `orders:{userId}`, and writes `audit_log`. Cancel is FSM-guarded (`accepted` / `working` / `partially_filled`).

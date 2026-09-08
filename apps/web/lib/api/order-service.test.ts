@@ -9,5 +9,12 @@ describe("orderServiceUrl", () => {
     expect(orderServiceUrl("https://app.insforge.app", "orders")).toBe(
       "https://app.insforge.app/functions/order-service/orders",
     );
+    expect(
+      orderServiceUrl("https://app.insforge.app", {
+        cancel: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      }),
+    ).toBe(
+      "https://app.insforge.app/functions/order-service/orders/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/cancel",
+    );
   });
 });

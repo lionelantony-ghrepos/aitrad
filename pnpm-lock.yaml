@@ -195,6 +195,9 @@ importers:
         specifier: workspace:*
         version: link:../schemas
     devDependencies:
+      '@meridian/rules-engine':
+        specifier: workspace:*
+        version: link:../rules-engine
       eslint:
         specifier: ^9.21.0
         version: 9.39.5(jiti@2.7.0)

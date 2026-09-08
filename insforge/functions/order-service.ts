@@ -8,6 +8,205 @@ var __export = (target, all) => {
 // insforge/functions/order-service-src.ts
 import { createClient } from "npm:@insforge/sdk";
 
+// packages/mock-data/src/calendar.ts
+function pad2(n) {
+  return String(n).padStart(2, "0");
+}
+function formatYmd(year, month, day) {
+  return `${year}-${pad2(month)}-${pad2(day)}`;
+}
+function parseYmd(isoDate) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate);
+  if (!match) {
+    throw new Error(`INVALID_DATE:${isoDate}`);
+  }
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  return { year, month, day };
+}
+function utcWeekday(year, month, day) {
+  return new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+}
+function addUtcDays(year, month, day, delta) {
+  const dt = new Date(Date.UTC(year, month - 1, day + delta));
+  return { year: dt.getUTCFullYear(), month: dt.getUTCMonth() + 1, day: dt.getUTCDate() };
+}
+function easterSunday(year) {
+  const a = year % 19;
+  const b = Math.floor(year / 100);
+  const c = year % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const month = Math.floor((h + l - 7 * m + 114) / 31);
+  const day = ((h + l - 7 * m + 114) % 31) + 1;
+  return { year, month, day };
+}
+function nthWeekday(year, month, weekday, nth) {
+  const first = utcWeekday(year, month, 1);
+  const offset = (weekday - first + 7) % 7;
+  const day = 1 + offset + (nth - 1) * 7;
+  return { year, month, day };
+}
+function lastWeekday(year, month, weekday) {
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const lastWd = utcWeekday(year, month, lastDay);
+  const delta = (lastWd - weekday + 7) % 7;
+  return { year, month, day: lastDay - delta };
+}
+function observed(year, month, day) {
+  const wd = utcWeekday(year, month, day);
+  if (wd === 6) {
+    const prev = addUtcDays(year, month, day, -1);
+    return formatYmd(prev.year, prev.month, prev.day);
+  }
+  if (wd === 0) {
+    const next = addUtcDays(year, month, day, 1);
+    return formatYmd(next.year, next.month, next.day);
+  }
+  return formatYmd(year, month, day);
+}
+var holidayCache = /* @__PURE__ */ new Map();
+function nyseHolidays(year) {
+  const cached = holidayCache.get(year);
+  if (cached) {
+    return cached;
+  }
+  const easter = easterSunday(year);
+  const goodFriday = addUtcDays(easter.year, easter.month, easter.day, -2);
+  const mlk = nthWeekday(year, 1, 1, 3);
+  const presidents = nthWeekday(year, 2, 1, 3);
+  const memorial = lastWeekday(year, 5, 1);
+  const labor = nthWeekday(year, 9, 1, 1);
+  const thanksgiving = nthWeekday(year, 11, 4, 4);
+  const set = /* @__PURE__ */ new Set([
+    observed(year, 1, 1),
+    formatYmd(mlk.year, mlk.month, mlk.day),
+    formatYmd(presidents.year, presidents.month, presidents.day),
+    formatYmd(goodFriday.year, goodFriday.month, goodFriday.day),
+    formatYmd(memorial.year, memorial.month, memorial.day),
+    observed(year, 6, 19),
+    observed(year, 7, 4),
+    formatYmd(labor.year, labor.month, labor.day),
+    formatYmd(thanksgiving.year, thanksgiving.month, thanksgiving.day),
+    observed(year, 12, 25),
+  ]);
+  holidayCache.set(year, set);
+  return set;
+}
+var NY_TZ = "America/New_York";
+var REGULAR_OPEN_MINUTE = 9 * 60 + 30;
+var REGULAR_CLOSE_MINUTE = 16 * 60;
+var HALF_CLOSE_MINUTE = 13 * 60;
+function nyClockParts(now) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: NY_TZ,
+    weekday: "short",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(now);
+  const get = (type) => parts.find((p) => p.type === type)?.value ?? "";
+  return {
+    weekday: get("weekday"),
+    dateKey: `${get("year")}-${get("month")}-${get("day")}`,
+    hour: Number(get("hour")),
+    minute: Number(get("minute")),
+    second: Number(get("second")),
+  };
+}
+function nyseHalfDays(year) {
+  const thanksgiving = nthWeekday(year, 11, 4, 4);
+  const friday = addUtcDays(thanksgiving.year, thanksgiving.month, thanksgiving.day, 1);
+  const fridayIso = formatYmd(friday.year, friday.month, friday.day);
+  const eve = formatYmd(year, 12, 24);
+  const set = /* @__PURE__ */ new Set();
+  if (isNyseSession(fridayIso)) {
+    set.add(fridayIso);
+  }
+  if (isNyseSession(eve)) {
+    set.add(eve);
+  }
+  return set;
+}
+function nyseTradingSessions(year) {
+  const half = nyseHalfDays(year);
+  const rows = [];
+  const cursor = { year, month: 1, day: 1 };
+  const end = new Date(Date.UTC(year + 1, 0, 1)).getTime();
+  while (Date.UTC(cursor.year, cursor.month - 1, cursor.day) < end) {
+    const iso = formatYmd(cursor.year, cursor.month, cursor.day);
+    if (isNyseSession(iso)) {
+      const kind = half.has(iso) ? "half" : "regular";
+      rows.push({
+        session_date: iso,
+        venue: "NYSE",
+        session_kind: kind,
+        open_minute: REGULAR_OPEN_MINUTE,
+        close_minute: kind === "half" ? HALF_CLOSE_MINUTE : REGULAR_CLOSE_MINUTE,
+      });
+    }
+    const next = addUtcDays(cursor.year, cursor.month, cursor.day, 1);
+    cursor.year = next.year;
+    cursor.month = next.month;
+    cursor.day = next.day;
+  }
+  return rows;
+}
+function lookupSession(isoDate, sessions) {
+  return sessions.find((row) => row.session_date === isoDate);
+}
+function nyseSessionState(now, sessions) {
+  const p = nyClockParts(now);
+  const rows = sessions ?? nyseTradingSessions(Number.parseInt(p.dateKey.slice(0, 4), 10));
+  const row = lookupSession(p.dateKey, rows);
+  if (!row) {
+    return "CLOSED";
+  }
+  const minutes = p.hour * 60 + p.minute;
+  if (minutes >= row.open_minute && minutes < row.close_minute) {
+    return "OPEN";
+  }
+  return "CLOSED";
+}
+function isNyseSession(isoDate) {
+  const { year, month, day } = parseYmd(isoDate);
+  const wd = utcWeekday(year, month, day);
+  if (wd === 0 || wd === 6) {
+    return false;
+  }
+  return !nyseHolidays(year).has(isoDate);
+}
+
+// packages/mock-data/src/expected-counts.ts
+var EXPECTED_INSTRUMENTS = 150;
+var MINUTE_BARS_PER_INSTRUMENT = 1950;
+var EXPECTED_MINUTE_BARS_TOTAL = EXPECTED_INSTRUMENTS * MINUTE_BARS_PER_INSTRUMENT;
+var SEED_COUNT_SQL = `
+SELECT
+  (SELECT COUNT(*)::int FROM public.instruments) AS instruments,
+  (SELECT COUNT(*)::int FROM public.market_bars WHERE timeframe = '1d') AS daily_bars,
+  (SELECT COUNT(*)::int FROM public.market_bars WHERE timeframe = '1m') AS minute_bars,
+  (SELECT COUNT(*)::int FROM public.quotes_latest) AS quotes,
+  COALESCE((SELECT MIN(cnt)::int FROM (
+    SELECT COUNT(*) AS cnt FROM public.market_bars WHERE timeframe = '1d' GROUP BY instrument_id
+  ) d), 0) AS min_daily_per_instrument,
+  COALESCE((SELECT MIN(cnt)::int FROM (
+    SELECT COUNT(*) AS cnt FROM public.market_bars WHERE timeframe = '1m' GROUP BY instrument_id
+  ) m), 0) AS min_minute_per_instrument
+`.trim();
+
 // node_modules/.pnpm/zod@3.25.76/node_modules/zod/v3/external.js
 var external_exports = {};
 __export(external_exports, {
@@ -4135,6 +4334,7 @@ var accountSchema = external_exports.object({
   id: uuidSchema,
   user_id: uuidSchema,
   cash_balance: numericSchema,
+  reserved_cash: numericSchema.optional(),
   currency: external_exports.string().min(1),
   created_at: timestamptzSchema,
   updated_at: timestamptzSchema,
@@ -4142,10 +4342,12 @@ var accountSchema = external_exports.object({
 var accountInsertSchema = external_exports.object({
   user_id: uuidSchema,
   cash_balance: numericSchema.optional(),
+  reserved_cash: numericSchema.optional(),
   currency: external_exports.string().min(1).optional(),
 });
 var accountPatchSchema = external_exports.object({
   cash_balance: numericSchema.optional(),
+  reserved_cash: numericSchema.optional(),
   currency: external_exports.string().min(1).optional(),
 });
 var instrumentStatusSchema = external_exports.enum(["active", "halted", "delisted"]);
@@ -4621,6 +4823,12 @@ var orderPreviewResponseSchema = external_exports.object({
     external_exports.array(external_exports.record(external_exports.unknown())),
   ]),
   fee_outcome: external_exports.record(external_exports.unknown()),
+  hours_outcome: external_exports
+    .union([
+      external_exports.record(external_exports.unknown()),
+      external_exports.array(external_exports.record(external_exports.unknown())),
+    ])
+    .default({}),
 });
 var orderCreateRequestSchema = external_exports
   .object({
@@ -4646,12 +4854,56 @@ var orderRecordSchema = external_exports.object({
   reject_reason: external_exports.string().nullable(),
   rule_audit_id: external_exports.string().nullable(),
   parent_order_id: uuidSchema.nullable().optional(),
+  reserved_amount: numericSchema.optional(),
   created_at: timestamptzSchema,
   updated_at: timestamptzSchema,
 });
 var orderCreateResponseSchema = external_exports.object({
   order: orderRecordSchema,
   preview: orderPreviewResponseSchema,
+});
+var orderCancelRequestSchema = external_exports
+  .object({
+    op: external_exports.literal("cancel").optional(),
+    order_id: uuidSchema.optional(),
+  })
+  .strict();
+var orderCancelResponseSchema = external_exports.object({
+  order: orderRecordSchema,
+});
+var executionRecordSchema = external_exports.object({
+  id: uuidSchema,
+  order_id: uuidSchema,
+  user_id: uuidSchema,
+  account_id: uuidSchema,
+  instrument_id: uuidSchema,
+  symbol: external_exports.string().min(1),
+  side: orderSideSchema,
+  qty: numericSchema,
+  price: numericSchema,
+  created_at: timestamptzSchema,
+});
+var positionRecordSchema = external_exports.object({
+  id: uuidSchema,
+  user_id: uuidSchema,
+  account_id: uuidSchema,
+  instrument_id: uuidSchema,
+  symbol: external_exports.string().min(1),
+  qty: numericSchema,
+  avg_cost: numericSchema,
+  realized_pnl: numericSchema,
+  created_at: timestamptzSchema,
+  updated_at: timestamptzSchema,
+});
+var portfolioSnapshotSchema = external_exports.object({
+  id: uuidSchema,
+  user_id: uuidSchema,
+  account_id: uuidSchema,
+  as_of_date: external_exports.string().min(1),
+  equity: numericSchema,
+  cash: numericSchema,
+  buying_power: numericSchema,
+  created_at: timestamptzSchema,
 });
 
 // packages/schemas/src/index.ts
@@ -4723,6 +4975,7 @@ function buildOrderFacts(input) {
     instrument_beta_class: input.instrumentBetaClass,
     orders_today: input.ordersToday,
     account_tier: input.accountTier,
+    session: input.session,
     price_not_on_tick:
       priceNotOnTick(draft.limit_price, input.tickSize) ||
       priceNotOnTick(draft.stop_price, input.tickSize),
@@ -4804,6 +5057,18 @@ function summarizeValidation(outcome) {
     },
   ];
 }
+function summarizeHours(outcome) {
+  const row = asRecords(outcome)[0] ?? { decision: "allow" };
+  const decision = decisionOf(row);
+  const passed = decision !== "reject";
+  return {
+    table_key: "DT-HRS-01",
+    passed,
+    decision,
+    reason: reasonFromOutcome(row),
+    ...(typeof row.reason_code === "string" ? { reason_code: row.reason_code } : {}),
+  };
+}
 function summarizeRisk(outcome) {
   const row = asRecords(outcome)[0] ?? { decision: "allow" };
   const decision = decisionOf(row);
@@ -4824,9 +5089,11 @@ function assemblePreview(input) {
     input.draft.side === "sell" ? notional - estimatedFees : notional + estimatedFees;
   const valRules = summarizeValidation(input.validationOutcome);
   const riskRule = summarizeRisk(input.riskOutcome);
+  const hoursRule = summarizeHours(input.hoursOutcome);
   const rules = [
     ...valRules,
     riskRule,
+    hoursRule,
     {
       table_key: "DT-FEE-01",
       passed: true,
@@ -4835,7 +5102,7 @@ function assemblePreview(input) {
     },
   ];
   return {
-    passed: valRules.every((row) => row.passed) && riskRule.passed,
+    passed: valRules.every((row) => row.passed) && riskRule.passed && hoursRule.passed,
     buying_power: input.buyingPower,
     last_price: input.lastPrice,
     qty: input.draft.qty,
@@ -4849,7 +5116,98 @@ function assemblePreview(input) {
       : (input.validationOutcome ?? {}),
     risk_outcome: Array.isArray(input.riskOutcome) ? input.riskOutcome : (input.riskOutcome ?? {}),
     fee_outcome: input.feeOutcome,
+    hours_outcome: Array.isArray(input.hoursOutcome)
+      ? input.hoursOutcome
+      : (input.hoursOutcome ?? {}),
   };
+}
+
+// packages/paper-engine/src/fsm.ts
+var ORDER_STATUSES = orderStatusSchema.options;
+var LEGAL = {
+  draft: ["validated", "rejected"],
+  validated: ["accepted", "rejected"],
+  accepted: ["working", "cancelled", "expired"],
+  working: ["partially_filled", "filled", "cancelled", "expired"],
+  partially_filled: ["partially_filled", "filled", "cancelled", "expired"],
+  filled: [],
+  cancelled: [],
+  rejected: [],
+  expired: [],
+};
+function canTransition(from, to) {
+  return LEGAL[from].includes(to);
+}
+function canCancel(status) {
+  return canTransition(status, "cancelled");
+}
+
+// packages/paper-engine/src/buying-power.ts
+function reserveAmountForSide(input) {
+  if (input.side !== "buy") {
+    return 0;
+  }
+  return Math.max(0, input.orderNotional + input.estimatedFees);
+}
+
+// packages/paper-engine/src/order-pipeline.ts
+function decideOrderPlacement(input) {
+  const valRules = summarizeValidation(input.validation.outcome);
+  const valFail = valRules.find((row) => !row.passed);
+  if (valFail) {
+    return {
+      status: "rejected",
+      rejectReason: valFail.reason,
+      ruleAuditId: input.validation.auditId,
+      blockingTable: "DT-VAL-01",
+    };
+  }
+  const risk = summarizeRisk(input.risk.outcome);
+  if (!risk.passed) {
+    return {
+      status: "rejected",
+      rejectReason: risk.reason,
+      ruleAuditId: input.risk.auditId,
+      blockingTable: "DT-RISK-01",
+    };
+  }
+  const hours = summarizeHours(input.hours.outcome);
+  if (!hours.passed) {
+    return {
+      status: "rejected",
+      rejectReason: hours.reason,
+      ruleAuditId: input.hours.auditId,
+      blockingTable: "DT-HRS-01",
+    };
+  }
+  return {
+    status: "accepted",
+    rejectReason: null,
+    ruleAuditId: input.hours.auditId,
+    blockingTable: null,
+  };
+}
+function applyReserveFailure(riskAuditId) {
+  return {
+    status: "rejected",
+    rejectReason: "RISK_BUYING_POWER",
+    ruleAuditId: riskAuditId,
+    blockingTable: "DT-RISK-01",
+  };
+}
+async function placeWithReserve(input) {
+  const decided = decideOrderPlacement(input);
+  if (decided.status === "rejected") {
+    return { ...decided, reserved: 0 };
+  }
+  const reserved = input.reserveAmount;
+  if (reserved > 0) {
+    const result = await input.reserve(reserved);
+    if (!result.ok) {
+      return { ...applyReserveFailure(input.risk.auditId), reserved: 0 };
+    }
+  }
+  return { ...decided, reserved };
 }
 
 // packages/rules-engine/src/authorize.ts
@@ -4877,11 +5235,15 @@ function json(status, body) {
 }
 function pathOp(req) {
   const pathname = new URL(req.url).pathname.replace(/\/+$/, "");
+  const cancelMatch = /\/orders\/([^/]+)\/cancel$/.exec(pathname);
+  if (cancelMatch?.[1]) {
+    return { op: "cancel", orderId: cancelMatch[1] };
+  }
   if (pathname.endsWith("/preview")) {
-    return "preview";
+    return { op: "preview" };
   }
   if (pathname.endsWith("/orders")) {
-    return "create";
+    return { op: "create" };
   }
   return null;
 }
@@ -4905,6 +5267,25 @@ function asRecord(outcome) {
     return Object.assign({}, ...outcome);
   }
   return outcome;
+}
+function buyingPowerOf(account) {
+  return Number(account.cash_balance) - Number(account.reserved_cash ?? 0);
+}
+async function loadCalendar(client) {
+  const { data, error } = await client.database
+    .from("market_calendar")
+    .select("session_date,venue,session_kind,open_minute,close_minute");
+  if (error) {
+    throw new Error(error.message);
+  }
+  const rows = Array.isArray(data) ? data : [];
+  return rows.map((row) => ({
+    session_date: String(row.session_date).slice(0, 10),
+    venue: "NYSE",
+    session_kind: row.session_kind,
+    open_minute: Number(row.open_minute),
+    close_minute: Number(row.close_minute),
+  }));
 }
 async function loadContext(client, userId, draft) {
   const { data: accounts, error: accountErr } = await client.database
@@ -4937,29 +5318,59 @@ async function loadContext(client, userId, draft) {
   if (!instrument) {
     throw new Error("INSTRUMENT_NOT_FOUND");
   }
+  const { data: positions, error: posErr } = await client.database
+    .from("positions")
+    .select("qty")
+    .eq("account_id", account.id)
+    .eq("instrument_id", instrument.id);
+  if (posErr) {
+    throw new Error(posErr.message);
+  }
+  const position = Array.isArray(positions) ? positions[0] : null;
+  const positionQty = position ? Number(position.qty) : 0;
+  const now = /* @__PURE__ */ new Date();
+  const dateKey = nyClockParts(now).dateKey;
+  const { data: todayOrders, error: todayErr } = await client.database
+    .from("orders")
+    .select("id,created_at")
+    .eq("user_id", userId);
+  if (todayErr) {
+    throw new Error(todayErr.message);
+  }
+  const ordersToday = (Array.isArray(todayOrders) ? todayOrders : []).filter((row) => {
+    const created = String(row.created_at);
+    return nyClockParts(new Date(created)).dateKey === dateKey;
+  }).length;
+  const calendar = await loadCalendar(client);
+  const nyse = nyseSessionState(now, calendar.length > 0 ? calendar : void 0);
+  const session = nyse === "OPEN" ? "open" : "closed";
   return {
     account,
     profile,
     instrument,
+    positionQty,
+    ordersToday,
+    session,
   };
 }
 async function runPreview(input) {
   const ctx = await loadContext(input.client, input.userId, input.draft);
-  const buyingPower = Number(ctx.account.cash_balance);
+  const buyingPower = buyingPowerOf(ctx.account);
   const facts = buildOrderFacts({
     draft: input.draft,
     lastPrice: input.lastPrice,
     buyingPower,
-    positionQty: 0,
+    positionQty: ctx.positionQty,
     equity: buyingPower,
     experienceLevel: ctx.profile?.experience_level ?? null,
     instrumentStatus: ctx.instrument.status,
     tickSize: Number(ctx.instrument.tick_size),
     instrumentBetaClass: ctx.instrument.beta_class,
-    ordersToday: 0,
+    ordersToday: ctx.ordersToday,
     accountTier: null,
+    session: ctx.session,
   });
-  const [validation, risk, fees] = await Promise.all([
+  const [validation, risk, fees, hours] = await Promise.all([
     evaluateRemote({
       baseUrl: input.baseUrl,
       accessToken: input.accessToken,
@@ -4978,8 +5389,14 @@ async function runPreview(input) {
       domain: "fees",
       context: facts,
     }),
+    evaluateRemote({
+      baseUrl: input.baseUrl,
+      accessToken: input.accessToken,
+      domain: "market_hours",
+      context: facts,
+    }),
   ]);
-  return assemblePreview({
+  const preview = assemblePreview({
     draft: input.draft,
     lastPrice: input.lastPrice,
     buyingPower,
@@ -4987,7 +5404,109 @@ async function runPreview(input) {
     validationOutcome: validation.outcome,
     riskOutcome: risk.outcome,
     feeOutcome: asRecord(fees.outcome),
+    hoursOutcome: hours.outcome,
   });
+  return { preview, ctx, validation, risk, hours };
+}
+async function runCreateEvals(input) {
+  const ctx = await loadContext(input.client, input.userId, input.draft);
+  const buyingPower = buyingPowerOf(ctx.account);
+  const facts = buildOrderFacts({
+    draft: input.draft,
+    lastPrice: input.lastPrice,
+    buyingPower,
+    positionQty: ctx.positionQty,
+    equity: buyingPower,
+    experienceLevel: ctx.profile?.experience_level ?? null,
+    instrumentStatus: ctx.instrument.status,
+    tickSize: Number(ctx.instrument.tick_size),
+    instrumentBetaClass: ctx.instrument.beta_class,
+    ordersToday: ctx.ordersToday,
+    accountTier: null,
+    session: ctx.session,
+  });
+  const validation = await evaluateRemote({
+    baseUrl: input.baseUrl,
+    accessToken: input.accessToken,
+    domain: "order_validation",
+    context: facts,
+  });
+  const risk = await evaluateRemote({
+    baseUrl: input.baseUrl,
+    accessToken: input.accessToken,
+    domain: "pre_trade_risk",
+    context: facts,
+  });
+  const hours = await evaluateRemote({
+    baseUrl: input.baseUrl,
+    accessToken: input.accessToken,
+    domain: "market_hours",
+    context: facts,
+  });
+  const fees = await evaluateRemote({
+    baseUrl: input.baseUrl,
+    accessToken: input.accessToken,
+    domain: "fees",
+    context: facts,
+  });
+  const preview = assemblePreview({
+    draft: input.draft,
+    lastPrice: input.lastPrice,
+    buyingPower,
+    facts,
+    validationOutcome: validation.outcome,
+    riskOutcome: risk.outcome,
+    feeOutcome: asRecord(fees.outcome),
+    hoursOutcome: hours.outcome,
+  });
+  return { preview, ctx, validation, risk, hours, facts };
+}
+function rpcOk(data) {
+  if (data && typeof data === "object" && "ok" in data) {
+    return data.ok === true;
+  }
+  return false;
+}
+async function insertOrderRow(client, row) {
+  const insert = await client.database.from("orders").insert([
+    {
+      id: row.id,
+      user_id: row.user_id,
+      account_id: row.account_id,
+      instrument_id: row.instrument_id,
+      symbol: row.symbol,
+      side: row.side,
+      qty: row.qty,
+      filled_qty: row.filled_qty,
+      order_type: row.order_type,
+      limit_price: row.limit_price,
+      stop_price: row.stop_price,
+      tif: row.tif,
+      status: row.status,
+      reject_reason: row.reject_reason,
+      rule_audit_id: row.rule_audit_id,
+      parent_order_id: row.parent_order_id ?? null,
+      reserved_amount: row.reserved_amount,
+    },
+  ]);
+  if (insert.error) {
+    throw new Error(insert.error.message);
+  }
+}
+async function publishOrder(client, userId, order) {
+  const { error } = await client.database.rpc("publish_order_event", {
+    p_user_id: userId,
+    payload: {
+      id: order.id,
+      status: order.status,
+      symbol: order.symbol,
+      reject_reason: order.reject_reason,
+      rule_audit_id: order.rule_audit_id,
+    },
+  });
+  if (error) {
+    throw new Error(error.message);
+  }
 }
 async function order_service_src_default(req) {
   if (req.method === "OPTIONS") {
@@ -5021,12 +5540,13 @@ async function order_service_src_default(req) {
     body = {};
   }
   const fromPath = pathOp(req);
-  const opRaw = body && typeof body === "object" && "op" in body ? body.op : fromPath;
-  const op = opRaw === "preview" || opRaw === "create" ? opRaw : fromPath;
-  if (op !== "preview" && op !== "create") {
+  const opRaw = body && typeof body === "object" && "op" in body ? body.op : fromPath?.op;
+  const op = opRaw === "preview" || opRaw === "create" || opRaw === "cancel" ? opRaw : fromPath?.op;
+  if (!op) {
     return json(400, { error: "UNKNOWN_OP" });
   }
-  const action = op === "preview" ? "trade:preview" : "trade:create";
+  const action =
+    op === "preview" ? "trade:preview" : op === "create" ? "trade:create" : "trade:cancel";
   const gate = authorize({ userId, action });
   if (!gate.allowed) {
     return json(403, { error: gate.reason ?? "DENIED" });
@@ -5037,7 +5557,7 @@ async function order_service_src_default(req) {
         ...body,
         op: "preview",
       });
-      const preview2 = await runPreview({
+      const { preview: preview2 } = await runPreview({
         client,
         userId,
         accessToken: userToken,
@@ -5045,22 +5565,80 @@ async function order_service_src_default(req) {
         draft: parsed2.draft,
         lastPrice: parsed2.last_price,
       });
+      return json(200, preview2);
+    }
+    if (op === "cancel") {
+      const parsed2 = orderCancelRequestSchema.parse({
+        ...(typeof body === "object" && body ? body : {}),
+        op: "cancel",
+      });
+      const orderId = uuidSchema.parse(parsed2.order_id ?? fromPath?.orderId);
+      const { data: rows, error: loadErr } = await client.database
+        .from("orders")
+        .select("*")
+        .eq("id", orderId)
+        .eq("user_id", userId);
+      if (loadErr) {
+        throw new Error(loadErr.message);
+      }
+      const existing = Array.isArray(rows) ? rows[0] : null;
+      if (!existing) {
+        return json(404, { error: "ORDER_NOT_FOUND" });
+      }
+      const current = orderRecordSchema.parse({
+        ...existing,
+        parent_order_id: existing.parent_order_id ?? null,
+        reserved_amount: existing.reserved_amount ?? 0,
+      });
+      if (!canCancel(current.status)) {
+        return json(409, { error: `FSM_ILLEGAL:${current.status}->cancelled` });
+      }
+      const held = current.reserved_amount ?? 0;
+      if (held > 0) {
+        const released = await client.database.rpc("release_buying_power", {
+          p_account_id: current.account_id,
+          p_amount: held,
+        });
+        if (released.error) {
+          throw new Error(released.error.message);
+        }
+      }
+      const updatedAt = /* @__PURE__ */ new Date().toISOString();
+      const update = await client.database
+        .from("orders")
+        .update({
+          status: "cancelled",
+          reserved_amount: 0,
+        })
+        .eq("id", current.id)
+        .eq("user_id", userId);
+      if (update.error) {
+        throw new Error(update.error.message);
+      }
+      const cancelled = {
+        ...current,
+        status: "cancelled",
+        reserved_amount: 0,
+        updated_at: updatedAt,
+      };
       await client.database.from("audit_log").insert([
         {
           user_id: userId,
-          action: "trade:preview",
+          action: "trade:cancel",
           entity_type: "orders",
-          payload: { symbol: parsed2.draft.symbol, passed: preview2.passed },
+          entity_id: cancelled.id,
+          payload: { from: current.status, to: "cancelled" },
         },
       ]);
-      return json(200, preview2);
+      await publishOrder(client, userId, cancelled);
+      return json(200, { order: cancelled });
     }
     const parsed = orderCreateRequestSchema.parse({
       ...body,
       op: "create",
     });
     const draft = orderDraftSchema.parse(parsed.draft);
-    const preview = await runPreview({
+    const { preview, ctx, validation, risk, hours } = await runCreateEvals({
       client,
       userId,
       accessToken: userToken,
@@ -5068,11 +5646,27 @@ async function order_service_src_default(req) {
       draft,
       lastPrice: parsed.last_price,
     });
-    const ctx = await loadContext(client, userId, draft);
+    const placement = await placeWithReserve({
+      validation: { outcome: validation.outcome, auditId: validation.auditId },
+      risk: { outcome: risk.outcome, auditId: risk.auditId },
+      hours: { outcome: hours.outcome, auditId: hours.auditId },
+      reserveAmount: reserveAmountForSide({
+        side: draft.side,
+        orderNotional: preview.order_notional,
+        estimatedFees: preview.estimated_fees,
+      }),
+      reserve: async (amount) => {
+        const { data, error } = await client.database.rpc("reserve_buying_power", {
+          p_account_id: ctx.account.id,
+          p_amount: amount,
+        });
+        if (error) {
+          throw new Error(error.message);
+        }
+        return { ok: rpcOk(data) };
+      },
+    });
     const now = /* @__PURE__ */ new Date().toISOString();
-    const status = preview.passed ? "accepted" : "rejected";
-    const rejectReason =
-      preview.rules.find((row2) => !row2.passed)?.reason ?? (preview.passed ? null : "rejected");
     const row = {
       id: crypto.randomUUID(),
       user_id: userId,
@@ -5086,38 +5680,25 @@ async function order_service_src_default(req) {
       limit_price: draft.limit_price ?? null,
       stop_price: draft.stop_price ?? null,
       tif: draft.tif,
-      status,
-      reject_reason: rejectReason,
-      rule_audit_id: null,
+      status: placement.status,
+      reject_reason: placement.rejectReason,
+      rule_audit_id: placement.ruleAuditId,
       parent_order_id: null,
+      reserved_amount: placement.reserved,
       created_at: now,
       updated_at: now,
     };
     const parsedRow = orderRecordSchema.parse(row);
-    if (preview.passed) {
-      const insert = await client.database.from("orders").insert([
-        {
-          id: parsedRow.id,
-          user_id: parsedRow.user_id,
-          account_id: parsedRow.account_id,
-          instrument_id: parsedRow.instrument_id,
-          symbol: parsedRow.symbol,
-          side: parsedRow.side,
-          qty: parsedRow.qty,
-          filled_qty: parsedRow.filled_qty,
-          order_type: parsedRow.order_type,
-          limit_price: parsedRow.limit_price,
-          stop_price: parsedRow.stop_price,
-          tif: parsedRow.tif,
-          status: parsedRow.status,
-          reject_reason: parsedRow.reject_reason,
-          rule_audit_id: parsedRow.rule_audit_id,
-          parent_order_id: parsedRow.parent_order_id,
-        },
-      ]);
-      if (insert.error) {
-        return json(500, { error: insert.error.message });
+    try {
+      await insertOrderRow(client, parsedRow);
+    } catch (error) {
+      if (placement.reserved > 0) {
+        await client.database.rpc("release_buying_power", {
+          p_account_id: ctx.account.id,
+          p_amount: placement.reserved,
+        });
       }
+      throw error;
     }
     await client.database.from("audit_log").insert([
       {
@@ -5125,10 +5706,16 @@ async function order_service_src_default(req) {
         action: "trade:create",
         entity_type: "orders",
         entity_id: parsedRow.id,
-        payload: { status: parsedRow.status, symbol: draft.symbol },
+        payload: {
+          status: parsedRow.status,
+          symbol: draft.symbol,
+          reject_reason: parsedRow.reject_reason,
+          rule_audit_id: parsedRow.rule_audit_id,
+        },
       },
     ]);
-    return json(preview.passed ? 200 : 422, { order: parsedRow, preview });
+    await publishOrder(client, userId, parsedRow);
+    return json(placement.status === "accepted" ? 200 : 422, { order: parsedRow, preview });
   } catch (error) {
     const message = error instanceof Error ? error.message : "ORDER_SERVICE_ERROR";
     return json(400, { error: message });

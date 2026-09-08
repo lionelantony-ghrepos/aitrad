@@ -18,6 +18,7 @@ export type OrderFactInput = {
   instrumentBetaClass: string | null;
   ordersToday: number;
   accountTier: string | null;
+  session: "open" | "closed";
 };
 
 export type OrderFacts = Record<string, unknown>;
@@ -64,6 +65,7 @@ export function buildOrderFacts(input: OrderFactInput): OrderFacts {
     instrument_beta_class: input.instrumentBetaClass,
     orders_today: input.ordersToday,
     account_tier: input.accountTier,
+    session: input.session,
     price_not_on_tick:
       priceNotOnTick(draft.limit_price, input.tickSize) ||
       priceNotOnTick(draft.stop_price, input.tickSize),
@@ -158,6 +160,19 @@ export function summarizeValidation(outcome: unknown): OrderPreviewRule[] {
   ];
 }
 
+export function summarizeHours(outcome: unknown): OrderPreviewRule {
+  const row = asRecords(outcome)[0] ?? { decision: "allow" };
+  const decision = decisionOf(row);
+  const passed = decision !== "reject";
+  return {
+    table_key: "DT-HRS-01",
+    passed,
+    decision,
+    reason: reasonFromOutcome(row),
+    ...(typeof row.reason_code === "string" ? { reason_code: row.reason_code } : {}),
+  };
+}
+
 export function summarizeRisk(outcome: unknown): OrderPreviewRule {
   const row = asRecords(outcome)[0] ?? { decision: "allow" };
   const decision = decisionOf(row);
@@ -179,6 +194,7 @@ export function assemblePreview(input: {
   validationOutcome: unknown;
   riskOutcome: unknown;
   feeOutcome: Record<string, unknown>;
+  hoursOutcome: unknown;
 }): OrderPreviewResponse {
   const notional = typeof input.facts.order_notional === "number" ? input.facts.order_notional : 0;
   const fees = applyFeeSchedule(input.feeOutcome, { notional, qty: input.draft.qty });
@@ -187,9 +203,11 @@ export function assemblePreview(input: {
     input.draft.side === "sell" ? notional - estimatedFees : notional + estimatedFees;
   const valRules = summarizeValidation(input.validationOutcome);
   const riskRule = summarizeRisk(input.riskOutcome);
+  const hoursRule = summarizeHours(input.hoursOutcome);
   const rules: OrderPreviewRule[] = [
     ...valRules,
     riskRule,
+    hoursRule,
     {
       table_key: "DT-FEE-01",
       passed: true,
@@ -198,7 +216,7 @@ export function assemblePreview(input: {
     },
   ];
   return {
-    passed: valRules.every((row) => row.passed) && riskRule.passed,
+    passed: valRules.every((row) => row.passed) && riskRule.passed && hoursRule.passed,
     buying_power: input.buyingPower,
     last_price: input.lastPrice,
     qty: input.draft.qty,
@@ -214,5 +232,8 @@ export function assemblePreview(input: {
       ? input.riskOutcome
       : ((input.riskOutcome as Record<string, unknown> | undefined) ?? {}),
     fee_outcome: input.feeOutcome,
+    hours_outcome: Array.isArray(input.hoursOutcome)
+      ? input.hoursOutcome
+      : ((input.hoursOutcome as Record<string, unknown> | undefined) ?? {}),
   };
 }
