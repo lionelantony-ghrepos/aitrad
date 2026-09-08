@@ -20,10 +20,15 @@ Personas: active retail trader, research-driven investor, power/quant hobbyist, 
 
 ## Current repo state
 
-This clone currently holds **spec + seed JSON only**. Application code (`apps/`, `packages/`, `insforge/`) is not scaffolded until PBI-001 / PBI-002.
+Monorepo through the merged PBI-001–012 tree is in `apps/`, `packages/`, and `insforge/`. Specs stay in `docs/`; seed JSON stays in `mock_data/`.
+
+Local backend for this Linux / WSL2 workspace is **InsForge in Docker** via `npx -y @insforge/cli local start` (loopback, default `http://localhost:7130`). `.insforge/` and `.env.local` are machine-local and must not be committed. Hosted InsForge Cloud remains valid; point the same env names at that project instead.
 
 | Path | Role |
 |---|---|
+| `apps/web/` | Next.js terminal |
+| `packages/` | schemas, rules-engine, paper-engine, mock-data, indicators |
+| `insforge/` | numbered SQL + edge function sources |
 | `docs/` | Canonical product, architecture, PRD, tests, rules, seed, agent, user docs |
 | `mock_data/` | Seed JSON (instruments, fundamentals, news templates, demo users). Specs also call this `mock-data/` — keep generators in `@meridian/mock-data`; do not fork a second universe |
 | `.cursor/rules/aitrad.mdc` | Always-on build rules |
@@ -55,7 +60,7 @@ InsForge access only through `apps/web/lib/api` (repository layer) or shared fun
 
 ## How to work (doc 07)
 
-1. Human: InsForge project + InsForge MCP in Cursor; copy rules from `.cursor/rules/aitrad.mdc`.
+1. Human: start local Docker InsForge (`npx -y @insforge/cli local start`) **or** link a hosted project + InsForge MCP; copy rules from `.cursor/rules/aitrad.mdc`. See [docs/07](docs/07-Agent-Build-Guide.md) §1.
 2. Build **strictly** `docs/03` PBI-001 → PBI-031. One PBI per chat session.
 3. Prepend the PRD prompt preamble to every PBI prompt.
 4. Tests named in `docs/04` are the source of truth. Tick Status boxes in the **same commit** as the passing tests.

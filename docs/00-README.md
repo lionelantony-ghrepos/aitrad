@@ -17,7 +17,7 @@ AI-native agentic trading terminal (US equities/ETFs, paper trading v1). Fronten
 **Human README:** [../README.md](../README.md) (product overview, stack, build-order summary).  
 **Agent profile:** [../AGENTS.md](../AGENTS.md) and `.cursor/rules/aitrad.mdc`.
 
-**Start here:** doc 07 §1 (setup), then execute doc 03 PBI-001 → PBI-031.
+**Start here:** doc 07 §1 (setup: Linux/WSL2 + local Docker InsForge or hosted cloud), then execute doc 03 PBI-001 → PBI-031.
 Traceability: PBI-nnn → AC-nnn-xx → TC-nnn-xx (doc 04 is the single source of truth; agents tick status boxes as tests pass).
 As-built knowledge base: [kb/INDEX.md](kb/INDEX.md) (do not mix with PBI-023 news RAG).
 

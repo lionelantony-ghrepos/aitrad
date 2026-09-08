@@ -2,7 +2,7 @@
 
 Schema changes live here as **numbered, append-only SQL files** (`0001_…`, `0002_…`). Never edit a file that has already been applied to a shared environment; add a new number instead.
 
-InsForge MCP is the preferred apply path when it is connected in Cursor. This workspace currently uses the **InsForge CLI** against the linked project (`npx -y @insforge/cli`).
+InsForge MCP is the apply path for a **hosted** project when it is connected in Cursor. This workspace’s default backend is **local Docker InsForge**. After `npx -y @insforge/cli local start`, the same CLI targets this directory’s stack (`npx -y @insforge/cli db …`) with no cloud login.
 
 ## How apply works
 

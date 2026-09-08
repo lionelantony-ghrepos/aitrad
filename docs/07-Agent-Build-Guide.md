@@ -4,10 +4,31 @@
 Purpose: everything a coding agent needs to build Meridian with zero manual coding.
 
 ## 1. One-time setup (human, ~15 min)
-1. Create a GitHub repo `meridian`; clone; open in Cursor.
-2. Copy this repo's `docs/` and `mock-data/` folders into it.
-3. Sign up at insforge.dev, create project `meridian-dev`; in Cursor, add the **InsForge MCP server** (Settings → MCP → follow InsForge docs; paste project key). Verify Cursor can list InsForge tools.
-4. Create `.cursor/rules/meridian.mdc` with §2 below (set `alwaysApply: true`).
+1. Clone this repo and open it in Cursor on **Linux or WSL2**. Install Node.js 20+ and pnpm. Native Windows (outside WSL) is not a supported path for the local Docker backend.
+2. This tree already has `docs/`, `mock_data/`, `apps/`, `packages/`, and `insforge/`. Do not invent a second seed universe.
+3. **InsForge backend** — pick one. This workspace uses **A**.
+
+   **A. Local Docker (default here)**  
+   Requires Docker Engine with Compose **2.24.4+** (~1.5 GB for the daemon). From the repo root:
+
+   ```bash
+   npx -y @insforge/cli local start
+   ```
+
+   First start needs network (fetches `deploy/setup.sh`, pulls images). It writes `.insforge/checkout/` and seeds **`.env.local`** with the app URL and **anon** key only (default app port `7130`; if that block is taken the CLI shifts by ten and prints the new ports). After start, project-scoped CLI (`db`, `functions`, …) targets this directory’s stack with no cloud login.
+
+   ```bash
+   npx -y @insforge/cli local status          # health; keys masked
+   npx -y @insforge/cli db migrations up --all
+   npx -y @insforge/cli local stop            # keeps volumes
+   ```
+
+   Do not commit `.insforge/` or `.env.local`. Server-side seed needs `INSFORGE_URL` + `INSFORGE_API_KEY` in a gitignored `.env` (not `NEXT_PUBLIC_*`). Read the API key from `local start --json` / `local status --show-keys` into that file; do not paste keys into the repo or chat logs.
+
+   **B. Hosted InsForge Cloud**  
+   Sign up at insforge.dev, create project `meridian-dev`; in Cursor, add the **InsForge MCP server** (Settings → MCP; paste project key). Set `apps/web/.env.local` from `apps/web/.env.example` to the `*.insforge.app` URL. Verify Cursor can list InsForge tools.
+
+4. Cursor rules already live at `.cursor/rules/aitrad.mdc` (`alwaysApply: true`). If you bootstrap a greenfield clone, copy §2 below.
 5. Work PBI by PBI from `docs/03`: paste the preamble + the PBI prompt into Cursor (Agent mode). Review diffs, let tests run, commit per PBI (`feat(PBI-00X): …`). One PBI per chat session keeps context clean.
 
 ## 2. `.cursor/rules/meridian.mdc` (copy verbatim)
@@ -61,7 +82,9 @@ You are Meridian Copilot, a market analyst inside a trading terminal. Rules:
 ```
 
 ## 6. Troubleshooting
-- InsForge MCP tool errors → check project key + docs.insforge.dev; re-add server in Cursor.
+- Local Docker will not start → Docker daemon running? Compose ≥ 2.24.4? First start needs network. If `.insforge/checkout/.env` is missing but volumes still exist, restore that file or `local stop --delete-data` (destroys the local DB).
+- App cannot reach InsForge → `NEXT_PUBLIC_INSFORGE_URL` must match the printed app port (`http://localhost:7130` unless the CLI shifted ports). Restart `pnpm dev` after `.env.local` changes.
+- InsForge MCP tool errors (hosted) → check project key + docs.insforge.dev; re-add server in Cursor. Do not start `local` to work around a failed cloud login — that is a different backend.
 - Realtime flakiness in tests → use feed test mode (`feed.paused` + `force_price`) instead of sleeps.
 - LLM nondeterminism in tests → fake-LLM harness (scripted transcripts) is mandatory for CI; live-LLM tests are smoke-only, non-blocking.
 - Migration drift → migrations are append-only numbered files; never edit an applied migration; add a new one.
