@@ -30,6 +30,8 @@ type StubState = {
   watchlistItems: WatchlistItem[];
   orders: OrderRecord[];
   rules: RulesAdminMemory;
+  /** Next stub create for these users fails reserve so the ticket can show a rejected order. */
+  forceOrderRejectUserIds: Set<string>;
 };
 
 function createState(): StubState {
@@ -42,6 +44,7 @@ function createState(): StubState {
     watchlistItems: [],
     orders: [],
     rules: createRulesAdminMemory(),
+    forceOrderRejectUserIds: new Set(),
   };
 }
 
@@ -60,6 +63,20 @@ export function getStubState(): StubState {
 
 export function resetStubState(): void {
   globalForStub.__meridianAuthStub = createState();
+}
+
+export function stubArmForceOrderReject(userId: string): void {
+  getStubState().forceOrderRejectUserIds.add(userId);
+}
+
+/** Returns true once, then clears, so a retry can succeed. */
+export function stubConsumeForceOrderReject(userId: string): boolean {
+  const ids = getStubState().forceOrderRejectUserIds;
+  if (!ids.has(userId)) {
+    return false;
+  }
+  ids.delete(userId);
+  return true;
 }
 
 function nowIso(): string {

@@ -26,6 +26,7 @@ import { createQuotesLatestRepository } from "@/lib/api/quotes-latest";
 import { isAuthStub } from "@/lib/auth/mode";
 import { getAccessToken, getSessionUser } from "@/lib/auth/session";
 import {
+  stubConsumeForceOrderReject,
   stubGetOrder,
   stubInsertOrder,
   stubInstrumentBySymbol,
@@ -178,6 +179,7 @@ export async function submitOrderAction(input: {
     if (!provision.account || !instrument) {
       return { ok: false, message: "Account or instrument unavailable." };
     }
+    const forceReject = stubConsumeForceOrderReject(session.userId);
     const { preview, placement } = await runLocalOrderCreate({
       draft,
       lastPrice: input.last_price,
@@ -185,7 +187,12 @@ export async function submitOrderAction(input: {
       profile: provision.profile,
       instrument,
       memory: stubRulesMemory(),
-      reserve: async (amount) => ({ ok: stubTryReserve(session.userId, amount) }),
+      reserve: async (amount) => {
+        if (forceReject) {
+          return { ok: false };
+        }
+        return { ok: stubTryReserve(session.userId, amount) };
+      },
     });
     const now = new Date().toISOString();
     const order: OrderRecord = {
@@ -213,12 +220,19 @@ export async function submitOrderAction(input: {
     return { ok: true, data: orderCreateResponseSchema.parse({ order, preview }) };
   }
   const env = readPublicInsforgeEnv();
-  const created = await invokeOrderCreate({
-    baseUrl: env.baseUrl,
-    accessToken: session.token,
-    request: { draft, last_price: input.last_price, op: "create" },
-  });
-  return { ok: true, data: created };
+  try {
+    const created = await invokeOrderCreate({
+      baseUrl: env.baseUrl,
+      accessToken: session.token,
+      request: { draft, last_price: input.last_price, op: "create" },
+    });
+    return { ok: true, data: created };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : "Order submit failed.",
+    };
+  }
 }
 
 export async function cancelOrderAction(
