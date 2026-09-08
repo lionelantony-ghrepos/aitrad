@@ -55,18 +55,12 @@ CREATE POLICY orders_select_own ON public.orders
   FOR SELECT TO authenticated
   USING (user_id = (SELECT auth.uid()));
 
+-- Writes are order-service only (createAdminClient / API_KEY → project_admin).
+-- Drop any leftover authenticated write policies from earlier 0007 drafts.
 DROP POLICY IF EXISTS orders_insert_own ON public.orders;
-CREATE POLICY orders_insert_own ON public.orders
-  FOR INSERT TO authenticated
-  WITH CHECK (user_id = (SELECT auth.uid()));
-
 DROP POLICY IF EXISTS orders_update_own ON public.orders;
-CREATE POLICY orders_update_own ON public.orders
-  FOR UPDATE TO authenticated
-  USING (user_id = (SELECT auth.uid()))
-  WITH CHECK (user_id = (SELECT auth.uid()));
-
 DROP POLICY IF EXISTS orders_delete_own ON public.orders;
-CREATE POLICY orders_delete_own ON public.orders
-  FOR DELETE TO authenticated
-  USING (user_id = (SELECT auth.uid()));
+
+REVOKE ALL ON TABLE public.orders FROM anon, authenticated;
+GRANT SELECT ON TABLE public.orders TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.orders TO project_admin;

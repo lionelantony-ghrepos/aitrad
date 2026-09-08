@@ -22,6 +22,28 @@ export type OrderFactInput = {
 
 export type OrderFacts = Record<string, unknown>;
 
+/** Fail-closed when `quotes_latest.last` is missing or non-positive. */
+export const QUOTE_UNAVAILABLE = "QUOTE_UNAVAILABLE";
+
+/**
+ * Last used for DT-VAL / DT-RISK / DT-FEE facts and preview totals.
+ * Client `last_price` is accepted on the wire for display callers but is never
+ * a fallback when the server quote is absent.
+ */
+export function lastPriceForRuleFacts(input: { quoteLast: unknown; clientLast?: unknown }): number {
+  void input.clientLast;
+  const n =
+    typeof input.quoteLast === "number"
+      ? input.quoteLast
+      : typeof input.quoteLast === "string" && input.quoteLast.length > 0
+        ? Number(input.quoteLast)
+        : Number.NaN;
+  if (!Number.isFinite(n) || n <= 0) {
+    throw new Error(QUOTE_UNAVAILABLE);
+  }
+  return n;
+}
+
 function priceNotOnTick(price: number | null | undefined, tickSize: number): boolean {
   if (price == null || !Number.isFinite(price) || !(tickSize > 0)) {
     return false;

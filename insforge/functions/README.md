@@ -22,4 +22,4 @@ pnpm functions:bundle:order-service
 npx -y @insforge/cli functions deploy order-service --file insforge/functions/order-service.ts --name "Order service"
 ```
 
-`order-service` accepts `POST` `{ op: "preview" | "create", draft, last_price }` (or `/preview` / `/orders` path suffixes). Preview evaluates DT-VAL-01, DT-RISK-01, and DT-FEE-01 via `rules-service` and returns pass/fail reasons plus fee estimate. Create re-previews, writes `orders` when it passes, and always writes `audit_log`. Buying-power reserve and full FSM are PBI-014.
+`order-service` accepts `POST` `{ op: "preview" | "create", draft, last_price }` (or `/preview` / `/orders` path suffixes). Preview evaluates DT-VAL-01, DT-RISK-01, and DT-FEE-01 via `rules-service` using `quotes_latest.last` (4xx if the quote is missing; client `last_price` is not used for rule facts). Create re-previews, writes `orders` through `createAdminClient` (`API_KEY` / `INSFORGE_API_KEY`; fail-closed if missing) when it passes, and always writes `audit_log`. Buying-power reserve and full FSM are PBI-014.

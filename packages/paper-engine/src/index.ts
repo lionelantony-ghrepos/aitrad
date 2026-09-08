@@ -10,6 +10,8 @@ export {
   applyFeeSchedule,
   assemblePreview,
   buildOrderFacts,
+  lastPriceForRuleFacts,
+  QUOTE_UNAVAILABLE,
   reasonFromOutcome,
   summarizeRisk,
   summarizeValidation,

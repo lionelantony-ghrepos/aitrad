@@ -6,7 +6,7 @@ var __export = (target, all) => {
 };
 
 // insforge/functions/order-service-src.ts
-import { createClient } from "npm:@insforge/sdk";
+import { createAdminClient, createClient } from "npm:@insforge/sdk";
 
 // node_modules/.pnpm/zod@3.25.76/node_modules/zod/v3/external.js
 var external_exports = {};
@@ -4683,6 +4683,20 @@ function referencePrice(input) {
 }
 
 // packages/paper-engine/src/preview.ts
+var QUOTE_UNAVAILABLE = "QUOTE_UNAVAILABLE";
+function lastPriceForRuleFacts(input) {
+  void input.clientLast;
+  const n =
+    typeof input.quoteLast === "number"
+      ? input.quoteLast
+      : typeof input.quoteLast === "string" && input.quoteLast.length > 0
+        ? Number(input.quoteLast)
+        : Number.NaN;
+  if (!Number.isFinite(n) || n <= 0) {
+    throw new Error(QUOTE_UNAVAILABLE);
+  }
+  return n;
+}
 function priceNotOnTick(price, tickSize) {
   if (price == null || !Number.isFinite(price) || !(tickSize > 0)) {
     return false;
@@ -4863,6 +4877,15 @@ function authorize(input) {
   return { allowed: true };
 }
 
+// packages/rules-engine/src/evaluate-domain.ts
+function resolveRulesServiceApiKey(env) {
+  const key = env.API_KEY ?? env.INSFORGE_API_KEY;
+  if (typeof key !== "string" || key.length === 0) {
+    return null;
+  }
+  return key;
+}
+
 // insforge/functions/order-service-src.ts
 var corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -4937,10 +4960,22 @@ async function loadContext(client, userId, draft) {
   if (!instrument) {
     throw new Error("INSTRUMENT_NOT_FOUND");
   }
+  const typedInstrument = instrument;
+  const { data: quotes, error: quoteErr } = await client.database
+    .from("quotes_latest")
+    .select("last")
+    .eq("instrument_id", typedInstrument.id);
+  if (quoteErr) {
+    throw new Error(quoteErr.message);
+  }
+  const quote = Array.isArray(quotes) ? quotes[0] : null;
+  const quoteLast =
+    quote && typeof quote === "object" && quote !== null && "last" in quote ? quote.last : void 0;
   return {
     account,
     profile,
-    instrument,
+    instrument: typedInstrument,
+    lastPrice: lastPriceForRuleFacts({ quoteLast }),
   };
 }
 async function runPreview(input) {
@@ -4948,7 +4983,7 @@ async function runPreview(input) {
   const buyingPower = Number(ctx.account.cash_balance);
   const facts = buildOrderFacts({
     draft: input.draft,
-    lastPrice: input.lastPrice,
+    lastPrice: ctx.lastPrice,
     buyingPower,
     positionQty: 0,
     equity: buyingPower,
@@ -4981,12 +5016,25 @@ async function runPreview(input) {
   ]);
   return assemblePreview({
     draft: input.draft,
-    lastPrice: input.lastPrice,
+    lastPrice: ctx.lastPrice,
     buyingPower,
     facts,
     validationOutcome: validation.outcome,
     riskOutcome: risk.outcome,
     feeOutcome: asRecord(fees.outcome),
+  });
+}
+function requireAdminWriter(baseUrl) {
+  const apiKey = resolveRulesServiceApiKey({
+    API_KEY: Deno.env.get("API_KEY"),
+    INSFORGE_API_KEY: Deno.env.get("INSFORGE_API_KEY"),
+  });
+  if (!apiKey) {
+    return null;
+  }
+  return createAdminClient({
+    baseUrl,
+    apiKey,
   });
 }
 async function order_service_src_default(req) {
@@ -5037,13 +5085,13 @@ async function order_service_src_default(req) {
         ...body,
         op: "preview",
       });
+      void parsed2.last_price;
       const preview2 = await runPreview({
         client,
         userId,
         accessToken: userToken,
         baseUrl,
         draft: parsed2.draft,
-        lastPrice: parsed2.last_price,
       });
       await client.database.from("audit_log").insert([
         {
@@ -5060,13 +5108,13 @@ async function order_service_src_default(req) {
       op: "create",
     });
     const draft = orderDraftSchema.parse(parsed.draft);
+    void parsed.last_price;
     const preview = await runPreview({
       client,
       userId,
       accessToken: userToken,
       baseUrl,
       draft,
-      lastPrice: parsed.last_price,
     });
     const ctx = await loadContext(client, userId, draft);
     const now = /* @__PURE__ */ new Date().toISOString();
@@ -5095,7 +5143,11 @@ async function order_service_src_default(req) {
     };
     const parsedRow = orderRecordSchema.parse(row);
     if (preview.passed) {
-      const insert = await client.database.from("orders").insert([
+      const admin = requireAdminWriter(baseUrl);
+      if (!admin) {
+        return json(500, { error: "SERVICE_KEY_UNAVAILABLE" });
+      }
+      const insert = await admin.database.from("orders").insert([
         {
           id: parsedRow.id,
           user_id: parsedRow.user_id,
