@@ -133,12 +133,12 @@ Seeded via `scripts/seed-all.ts` (see doc 06): 150 instruments, 5y daily + 5d 1m
 ### PBI-013 Order ticket
 | ID | Criterion / Test | Pri | Status |
 |---|---|---|---|
-| AC-013-01 | Preview shows rule pass/fail with reasons + fee estimate live | P0 | ☐ |
-| AC-013-02 | Submit disabled until preview passes; confirm modal accurate | P0 | ☐ |
-| AC-013-03 | Notional↔shares conversion correct at live price | P1 | ☐ |
-| TC-013-01 | Oversized qty → DT-RISK-01 reason rendered; fix → submit enabled (AC-013-01/02) | P0 | ☐ |
-| TC-013-02 | Confirm modal totals = preview response (AC-013-02) | P0 | ☐ |
-| TC-013-03 | $1000 notional at forced $200 price → 5 shares (AC-013-03) | P1 | ☐ |
+| AC-013-01 | Preview shows rule pass/fail with reasons + fee estimate live | P0 | ☑ |
+| AC-013-02 | Submit disabled until preview passes; confirm modal accurate | P0 | ☑ |
+| AC-013-03 | Notional↔shares conversion correct at live price | P1 | ☑ |
+| TC-013-01 | Oversized qty → DT-RISK-01 reason rendered; fix → submit enabled (AC-013-01/02) | P0 | ☑ |
+| TC-013-02 | Confirm modal totals = preview response (AC-013-02) | P0 | ☑ |
+| TC-013-03 | $1000 notional at forced $200 price → 5 shares (AC-013-03) | P1 | ☑ |
 
 ### PBI-014 Order service
 | ID | Criterion / Test | Pri | Status |

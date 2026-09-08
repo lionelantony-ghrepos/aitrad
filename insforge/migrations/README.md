@@ -75,4 +75,10 @@ npx -y @insforge/cli db migrations up --all
 | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | `profiles.persona` | authenticated cannot INSERT/UPDATE the column; trigger + insert `WITH CHECK (persona IS NULL)`; `project_admin` / service still set role |
 
+## 0007 contents
+
+| Table    | Access                                                                                                 |
+| -------- | ------------------------------------------------------------------------------------------------------ |
+| `orders` | RLS owner-only (`user_id = auth.uid()`); authenticated CRUD. FSM reserve / executions land in PBI-014. |
+
 UUID primary keys, `created_at` / `updated_at` (except `audit_log`, which is insert-only), and `updated_at` triggers on mutable tables.

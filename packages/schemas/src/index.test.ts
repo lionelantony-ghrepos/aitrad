@@ -17,6 +17,7 @@ import {
   workspaceLayoutV1Schema,
   commandRecentsV1Schema,
   decisionTableSchema,
+  orderDraftSchema,
 } from "./index";
 
 describe("@meridian/schemas", () => {
@@ -187,6 +188,18 @@ describe("@meridian/schemas", () => {
         created_at: "2026-09-04T00:00:00.000Z",
       }).sort_order,
     ).toBe(0);
+  });
+
+  it("parses an order draft", () => {
+    expect(
+      orderDraftSchema.parse({
+        symbol: "AAPL",
+        side: "buy",
+        qty: 1,
+        order_type: "market",
+        tif: "DAY",
+      }).symbol,
+    ).toBe("AAPL");
   });
 
   it("parses decision tables and rejects incomplete payloads", () => {

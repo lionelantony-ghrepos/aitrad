@@ -19,6 +19,7 @@
     "seed": "node --import tsx --env-file=.env scripts/seed.ts",
     "seed:rules": "node --import tsx --env-file=.env scripts/seed-rules.ts",
     "functions:bundle:rules-service": "node scripts/bundle-rules-service.mjs",
+    "functions:bundle:order-service": "node scripts/bundle-order-service.mjs",
     "prepare": "husky"
   },
   "dependencies": {

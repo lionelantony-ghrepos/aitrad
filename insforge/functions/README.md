@@ -16,3 +16,10 @@ npx -y @insforge/cli functions deploy rules-service --file insforge/functions/ru
 ```
 
 `rules-service` evaluates `evaluateDomain(domain, context)` against published tables (in-memory cache, invalidated by realtime `rules:published` or service-only `op: "invalidate"` / `op: "publish"`). User JWTs may evaluate only; they cannot supply `clock`. Missing `API_KEY` / `INSFORGE_API_KEY` fails closed. Every evaluation writes `rule_audit` and `audit_log`. Seed baseline tables with `pnpm seed:rules`.
+
+```bash
+pnpm functions:bundle:order-service
+npx -y @insforge/cli functions deploy order-service --file insforge/functions/order-service.ts --name "Order service"
+```
+
+`order-service` accepts `POST` `{ op: "preview" | "create", draft, last_price }` (or `/preview` / `/orders` path suffixes). Preview evaluates DT-VAL-01, DT-RISK-01, and DT-FEE-01 via `rules-service` and returns pass/fail reasons plus fee estimate. Create re-previews, writes `orders` when it passes, and always writes `audit_log`. Buying-power reserve and full FSM are PBI-014.

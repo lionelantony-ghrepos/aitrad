@@ -18,6 +18,7 @@ export const recordTables = {
   decision_rows: "decision_rows",
   rule_bindings: "rule_bindings",
   rule_audit: "rule_audit",
+  orders: "orders",
 } as const;
 
 export type RecordTable = (typeof recordTables)[keyof typeof recordTables];

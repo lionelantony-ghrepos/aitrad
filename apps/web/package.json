@@ -15,6 +15,7 @@
     "@insforge/sdk": "^1.5.2",
     "@meridian/indicators": "workspace:*",
     "@meridian/mock-data": "workspace:*",
+    "@meridian/paper-engine": "workspace:*",
     "@meridian/rules-engine": "workspace:^",
     "@meridian/schemas": "workspace:*",
     "@radix-ui/react-slot": "^1.1.2",

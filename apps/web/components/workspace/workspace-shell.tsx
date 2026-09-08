@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { DockviewApi } from "dockview-react";
+import { focusPanel } from "@/lib/command-palette/focus-panel";
+import { useOrderTicketIntent } from "@/lib/order-ticket/intent";
 import { isPaletteHotkey } from "@/lib/palette-hotkey";
 import { useSymbolContext } from "@/lib/symbol-context";
 import { WorkspaceRuntimeContext } from "@/lib/workspace-runtime";
@@ -27,6 +29,7 @@ export function WorkspaceShell({
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [focusedPanel, setFocusedPanel] = useState("");
   const activeSymbol = useSymbolContext((s) => s.activeSymbol);
+  const setTicketSide = useOrderTicketIntent((s) => s.setSide);
 
   const openPalette = useCallback(() => {
     setPaletteOpen(true);
@@ -34,17 +37,30 @@ export function WorkspaceShell({
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
-      if (!isPaletteHotkey(e)) {
+      if (isPaletteHotkey(e)) {
+        e.preventDefault();
+        setPaletteOpen(true);
+        return;
+      }
+      if (paletteOpen || e.ctrlKey || e.metaKey || e.altKey || !e.shiftKey) {
+        return;
+      }
+      const key = e.key.toLowerCase();
+      if (key !== "b" && key !== "s") {
         return;
       }
       e.preventDefault();
-      setPaletteOpen(true);
+      setTicketSide(key === "b" ? "buy" : "sell");
+      if (api) {
+        focusPanel(api, "orderTicket");
+        setFocusedPanel("orderTicket");
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => {
       window.removeEventListener("keydown", onKey);
     };
-  }, []);
+  }, [api, paletteOpen, setTicketSide]);
 
   return (
     <WorkspaceRuntimeContext.Provider value={{ e2eFeed, dockApi: api }}>
