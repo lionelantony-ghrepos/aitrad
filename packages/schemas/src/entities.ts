@@ -63,11 +63,11 @@ export const accountInsertSchema = z.object({
   currency: z.string().min(1).optional(),
 });
 
-export const accountPatchSchema = z.object({
-  cash_balance: numericSchema.optional(),
-  reserved_cash: numericSchema.optional(),
-  currency: z.string().min(1).optional(),
-});
+export const accountPatchSchema = z
+  .object({
+    currency: z.string().min(1).optional(),
+  })
+  .strict();
 
 export type Account = z.infer<typeof accountSchema>;
 export type AccountInsert = z.infer<typeof accountInsertSchema>;
