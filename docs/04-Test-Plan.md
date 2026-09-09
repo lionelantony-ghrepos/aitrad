@@ -214,12 +214,12 @@ Seeded via `scripts/seed-all.ts` (see doc 06): 150 instruments, 5y daily + 5d 1m
 ### PBI-021 Screener
 | ID | Criterion / Test | Pri | Status |
 |---|---|---|---|
-| AC-021-01 | Criteria compile to parameterized SQL; injection attempts fail safely | P0 | ☑ |
-| AC-021-02 | Results correct for known fixture criteria; save/load round-trips | P0 | ☑ |
-| AC-021-03 | Add-to-watchlist adds all result rows | P1 | ☑ |
-| TC-021-01 | Unit: compiler incl. `'; DROP TABLE` inputs (AC-021-01) | P0 | ☑ |
-| TC-021-02 | "Tech, P/E<20, div>1%" → matches SQL oracle query (AC-021-02) | P0 | ☑ |
-| TC-021-03 | Save, reload, run → same criteria/results (AC-021-02) | P1 | ☑ |
+| AC-021-01 | Criteria compile to parameterized SQL; injection attempts fail safely | P0 | ☐ |
+| AC-021-02 | Results correct for known fixture criteria; save/load round-trips | P0 | ☐ |
+| AC-021-03 | Add-to-watchlist adds all result rows | P1 | ☐ |
+| TC-021-01 | Unit: compiler incl. `'; DROP TABLE` inputs (AC-021-01) | P0 | ☐ |
+| TC-021-02 | "Tech, P/E<20, div>1%" → matches SQL oracle query (AC-021-02) | P0 | ☐ |
+| TC-021-03 | Save, reload, run → same criteria/results (AC-021-02) | P1 | ☐ |
 
 ### PBI-022 Alerts
 | ID | Criterion / Test | Pri | Status |
