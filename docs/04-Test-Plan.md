@@ -206,10 +206,10 @@ Seeded via `scripts/seed-all.ts` (see doc 06): 150 instruments, 5y daily + 5d 1m
 ### PBI-020 Fundamentals/DES
 | ID | Criterion / Test | Pri | Status |
 |---|---|---|---|
-| AC-020-01 | DES renders all stat groups for every seeded instrument (no missing-field crashes) | P0 | ☑ |
-| AC-020-02 | Peer click switches symbolContext | P1 | ☑ |
-| TC-020-01 | E2E: DES NVDA renders; property test: render 20 random instruments (AC-020-01) | P0 | ☑ |
-| TC-020-02 | Peer strip click → context change (AC-020-02) | P1 | ☑ |
+| AC-020-01 | DES renders all stat groups for every seeded instrument (no missing-field crashes) | P0 | ☐ |
+| AC-020-02 | Peer click switches symbolContext | P1 | ☐ |
+| TC-020-01 | E2E: DES NVDA renders; property test: render 20 random instruments (AC-020-01) | P0 | ☐ |
+| TC-020-02 | Peer strip click → context change (AC-020-02) | P1 | ☐ |
 
 ### PBI-021 Screener
 | ID | Criterion / Test | Pri | Status |

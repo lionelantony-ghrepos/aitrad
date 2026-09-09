@@ -17,10 +17,12 @@ describe("getDesProfileAction security", () => {
     expect(desAction).not.toContain("INSFORGE_API_KEY");
   });
 
-  it("does not put a service-role client in the DES panel", () => {
-    expect(desPanel).toContain("getDesProfileAction");
+  it("does not write fundamentals (no edge/admin client, reads only)", () => {
+    expect(desAction).not.toContain("createAdminClient");
+    expect(desAction).not.toContain(".insert(");
+    expect(desAction).not.toContain(".upsert(");
+    expect(desAction).not.toContain("/functions/");
     expect(desPanel).not.toContain("createAdminClient");
-    expect(desPanel).not.toContain("INSFORGE_API_KEY");
     expect(desPanel).not.toContain("service_role");
   });
 });
