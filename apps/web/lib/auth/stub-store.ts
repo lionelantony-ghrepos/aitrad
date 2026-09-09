@@ -27,6 +27,8 @@ import type {
   ScreenerFact,
   ScreenerRunRequest,
   ScreenerRunResponse,
+  AlertRule,
+  AlertInstance,
 } from "@meridian/schemas";
 
 export type StubUser = {
@@ -43,6 +45,8 @@ type StubState = {
   watchlists: Watchlist[];
   watchlistItems: WatchlistItem[];
   screens: ScreenRecord[];
+  alertRules: AlertRule[];
+  alerts: AlertInstance[];
   orders: OrderRecord[];
   executions: ExecutionRecord[];
   positions: PositionRecord[];
@@ -61,6 +65,8 @@ function createState(): StubState {
     watchlists: [],
     watchlistItems: [],
     screens: [],
+    alertRules: [],
+    alerts: [],
     orders: [],
     executions: [],
     positions: [],
@@ -838,4 +844,68 @@ export function stubMarketBars(
     });
   }
   return bars;
+}
+
+export function stubListAlertRules(userId: string): AlertRule[] {
+  return getStubState().alertRules.filter((row) => row.user_id === userId);
+}
+
+export function stubListAlerts(userId: string): AlertInstance[] {
+  return getStubState()
+    .alerts.filter((row) => row.user_id === userId)
+    .slice()
+    .sort((a, b) => b.fired_at.localeCompare(a.fired_at));
+}
+
+export function stubCreateAlertRule(row: AlertRule): AlertRule {
+  getStubState().alertRules.push(row);
+  return row;
+}
+
+export function stubPatchAlertRule(
+  userId: string,
+  id: string,
+  patch: Partial<Pick<AlertRule, "active" | "name" | "throttle_state">>,
+): AlertRule | null {
+  const row = getStubState().alertRules.find((item) => item.id === id && item.user_id === userId);
+  if (!row) {
+    return null;
+  }
+  if (patch.active !== undefined) {
+    row.active = patch.active;
+  }
+  if (patch.name !== undefined) {
+    row.name = patch.name;
+  }
+  if (patch.throttle_state !== undefined) {
+    row.throttle_state = patch.throttle_state;
+  }
+  row.updated_at = nowIso();
+  return row;
+}
+
+export function stubDeleteAlertRule(userId: string, id: string): boolean {
+  const state = getStubState();
+  const before = state.alertRules.length;
+  state.alertRules = state.alertRules.filter((row) => !(row.id === id && row.user_id === userId));
+  state.alerts = state.alerts.filter((row) => row.alert_rule_id !== id || row.user_id !== userId);
+  return state.alertRules.length !== before;
+}
+
+export function stubInsertAlert(row: AlertInstance): AlertInstance {
+  getStubState().alerts.push(row);
+  return row;
+}
+
+export function stubMarkAlertRead(userId: string, id: string, read: boolean): AlertInstance | null {
+  const row = getStubState().alerts.find((item) => item.id === id && item.user_id === userId);
+  if (!row) {
+    return null;
+  }
+  row.read = read;
+  return row;
+}
+
+export function stubQuoteForInstrument(instrumentId: string): QuotesLatest | undefined {
+  return STUB_QUOTES.find((row) => row.instrument_id === instrumentId);
 }

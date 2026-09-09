@@ -8,7 +8,7 @@ Open **`/signup`** (email + password) or **`/login`**. Google OAuth is available
 You receive a **paper cash account** on first login (amount comes from the opening-account seed policy — all trading is simulated; no real money moves). Open **`/workspace`** once the wizard is done. The command-bar **user menu** shows your email and paper cash; **Log out** returns you to `/login`. Reloading the workspace keeps you signed in. Visiting `/workspace` while signed out sends you to `/login`.
 
 ## 2. The workspace
-Meridian is a multi-panel terminal. Open **`/workspace`**. Drag panel edges to resize, drag tabs to rearrange, and your layout is saved automatically (**Reset layout** in the top command bar). The status bar shows the market clock (America/New_York, OPEN/CLOSED) and a connection indicator.
+Meridian is a multi-panel terminal. Open **`/workspace`**. Drag panel edges to resize, drag tabs to rearrange, and your layout is saved automatically (**Reset layout** in the top command bar). The status bar shows the market clock (America/New_York, OPEN/CLOSED), a **bell** with unread alert count, and a connection indicator.
 
 Placeholder panels in this build: Copilot (input only). **Watchlist** (PBI-007), **Chart** (PBI-008), **Order ticket** (PBI-013), **Blotter** (PBI-017), **Portfolio** (PBI-018), **News** (PBI-019), **Description / DES** (PBI-020), and **Screener / SCR** (PBI-021) are live. `DES <symbol>` opens the instrument profile (key stats, financials, analyst mix, industry peers). `SCR` opens the criteria builder.
 
@@ -22,13 +22,15 @@ Placeholder panels in this build: Copilot (input only). **Watchlist** (PBI-007),
 | `GIP AAPL` | Chart |
 | `NEWS TSLA` | News filtered to a symbol |
 | `ORD NVDA` | Order ticket prefilled |
-| `WL` / `PORT` / `SCR` | Watchlists / Portfolio / Screener |
+| `WL` / `PORT` / `SCR` / `ALRT` | Watchlists / Portfolio / Screener / Alerts tab |
 | `AI <question>` | Ask the Copilot |
 
 Panels are linked: clicking a symbol anywhere retargets the chart, news, DES, and order ticket.
 
 ## 3. Watchlists & charts
-Open the **Watchlist** panel. **Create** a named list (tabs along the top). Type a ticker in **Add symbol** and pick a match. Rows show last, net change, % change, volume, bid/ask, and a 30-point sparkline. Last ticks flash green on up / red on down. Click a column header to sort. Click a row to set the linked symbol for other panels. Right-click a row → **Remove**. The selected list is stored with your workspace layout.
+Open the **Watchlist** panel. **Create** a named list (tabs along the top). Type a ticker in **Add symbol** and pick a match. Rows show last, net change, % change, volume, bid/ask, and a 30-point sparkline. Last ticks flash green on up / red on down. Click a column header to sort. Click a row to set the linked symbol for other panels. Right-click a row → **Create alert** or **Remove**. The selected list is stored with your workspace layout.
+
+The **Alerts** tab (`ALRT`, or right-click a row) creates typed rules: price crosses above/below, % change, volume, RSI, or negative news. Enable, disable, or delete a rule; **Fired** lists history. A toast appears when a rule fires; the status-bar bell shows unread count and opens the notification list. Delivery is throttled by the alerting policy table so the same rule does not spam.
 
 The **Chart** panel loads candlesticks and volume for the linked symbol. Use the range buttons (**1D** uses 1-minute bars; **1W**–**5Y** use daily bars). Toggle SMA 20/50/200, EMA 12/26, VWAP, and RSI 14 (RSI opens a sub-pane). The crosshair legend shows OHLCV plus any enabled indicator values. Live ticks update the current candle. If no symbol is selected, the panel asks you to pick one from the watchlist.
 
@@ -43,7 +45,7 @@ The **Blotter** lists orders in Working / Filled / Rejected / All tabs (virtuali
 - **News panel:** reverse-chron headline stream with color-scaled sentiment badges and event-type chips. It follows the linked symbol (`NEWS TSLA`) unless you turn on **All markets**. Click a row for the full body in a detail drawer. Semantic search over embeddings ships later.
 - **DES page:** `DES NVDA` (or any ticker) opens Description: company header, 52-week range vs last, dense key stats, revenue/EPS bars, stacked analyst ratings, and same-industry peers. Click a peer to retarget the linked symbol.
 - **Screener:** `SCR` opens the criteria builder (sector, market-cap band, P/E, dividend yield, % change, volume, RSI(14), 52-week proximity) with one-level AND/OR groups. **Run** fills a sortable results grid (click a row to set the linked symbol). Save, load, and delete named screens. **Add results to watchlist** copies the current result set; **Export CSV** downloads it. Live match count updates as you edit.
-- **Alerts:** set price/%change/RSI/news alerts from any watchlist row; the bell in the status bar collects them.
+- **Alerts:** set price/%change/RSI/news alerts from the Watchlist **Alerts** tab or a row context menu; the status-bar bell collects toasts and unread count.
 
 ## 6. Copilot (AI)
 Open the Copilot panel or type `AI <question>`. It can quote prices, chart data, search news with citations, screen the market, and analyze your portfolio — everything it says is pulled live from data tools, with citation chips you can click.

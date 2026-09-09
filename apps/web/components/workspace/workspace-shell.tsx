@@ -11,6 +11,7 @@ import { CommandBar } from "./command-bar";
 import { CommandPalette } from "./command-palette";
 import { DockWorkspace, resetDockLayout } from "./dock-workspace";
 import { StatusBar } from "./status-bar";
+import { AlertListener } from "./alert-listener";
 
 type WorkspaceShellProps = {
   email: string;
@@ -93,6 +94,7 @@ export function WorkspaceShell({
         <div className="min-h-0 w-full flex-1" style={{ height: "calc(100vh - 3.5rem)" }}>
           <DockWorkspace onApiReady={setApi} />
         </div>
+        <AlertListener />
         <StatusBar connection="live" />
         <CommandPalette
           open={paletteOpen}

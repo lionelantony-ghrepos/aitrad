@@ -16,6 +16,7 @@ describe("news-ticker source", () => {
     expect(src).toContain('action: "news-ticker"');
     expect(src).toContain("publish_news_batch");
     expect(src).toContain("NEWS_TICKER_INTERVAL_SECONDS");
+    expect(src).toContain("/functions/alert-runner");
   });
 
   it("requires API_KEY / INSFORGE_API_KEY and upserts via createAdminClient", () => {

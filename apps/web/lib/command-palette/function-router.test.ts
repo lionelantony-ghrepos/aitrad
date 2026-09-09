@@ -14,7 +14,17 @@ describe("FunctionRouter", () => {
 
   it("registers the v1 function codes with panel mappings", () => {
     const byCode = Object.fromEntries(listFunctions().map((fn) => [fn.code, fn]));
-    expect(FUNCTION_CODES).toEqual(["DES", "GIP", "NEWS", "ORD", "WL", "PORT", "SCR", "AI"]);
+    expect(FUNCTION_CODES).toEqual([
+      "DES",
+      "GIP",
+      "NEWS",
+      "ORD",
+      "WL",
+      "PORT",
+      "SCR",
+      "ALRT",
+      "AI",
+    ]);
     expect(byCode.DES?.panelId).toBe("des");
     expect(byCode.GIP?.panelId).toBe("chart");
     expect(byCode.NEWS?.panelId).toBe("news");
@@ -22,6 +32,7 @@ describe("FunctionRouter", () => {
     expect(byCode.WL?.panelId).toBe("watchlist");
     expect(byCode.PORT?.panelId).toBe("portfolio");
     expect(byCode.SCR?.panelId).toBe("screener");
+    expect(byCode.ALRT?.panelId).toBe("watchlist");
     expect(byCode.AI?.panelId).toBe("copilot");
     expect(byCode.DES?.arg).toBe("symbol");
     expect(byCode.AI?.arg).toBe("query");

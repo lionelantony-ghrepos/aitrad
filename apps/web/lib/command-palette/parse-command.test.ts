@@ -46,6 +46,7 @@ describe("parseCommand TC-009-01", () => {
     { name: "WL no arg", input: "WL", ok: true, type: "function", code: "WL", arg: null },
     { name: "PORT no arg", input: "PORT", ok: true, type: "function", code: "PORT", arg: null },
     { name: "SCR no arg", input: "SCR", ok: true, type: "function", code: "SCR", arg: null },
+    { name: "ALRT no arg", input: "ALRT", ok: true, type: "function", code: "ALRT", arg: null },
     {
       name: "AI with question",
       input: "AI hello",

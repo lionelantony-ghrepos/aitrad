@@ -145,6 +145,7 @@ export default async function (req: Request): Promise<Response> {
     nowIso: new Date().toISOString(),
   });
 
+  let alerting: { ok: boolean } | { ok: false; error: string } = { ok: true };
   if (plan.items.length > 0) {
     const { error } = await admin.database.from("news_items").upsert(
       plan.items.map((item) => ({
@@ -168,6 +169,27 @@ export default async function (req: Request): Promise<Response> {
     if (published.error) {
       return json(500, { error: published.error.message });
     }
+    try {
+      const alertRes = await fetch(
+        `${(Deno.env.get("INSFORGE_INTERNAL_URL") ?? Deno.env.get("INSFORGE_BASE_URL") ?? "").replace(/\/+$/, "")}/functions/alert-runner`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${expected}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ news: plan.items }),
+        },
+      );
+      if (!alertRes.ok) {
+        alerting = { ok: false, error: `ALERT_RUNNER_${alertRes.status}` };
+      }
+    } catch (error) {
+      alerting = {
+        ok: false,
+        error: error instanceof Error ? error.message : "ALERT_RUNNER_UNAVAILABLE",
+      };
+    }
   }
 
   if (elapsedRow) {
@@ -190,6 +212,7 @@ export default async function (req: Request): Promise<Response> {
         bursts: plan.bursts,
         paused: flags.paused,
         nextSimElapsedSec: plan.nextSimElapsedSec,
+        alerting,
       },
     },
   ]);
@@ -199,5 +222,6 @@ export default async function (req: Request): Promise<Response> {
     bursts: plan.bursts,
     paused: flags.paused,
     nextSimElapsedSec: plan.nextSimElapsedSec,
+    alerting,
   });
 }

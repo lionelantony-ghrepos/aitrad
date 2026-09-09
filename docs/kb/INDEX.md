@@ -44,7 +44,8 @@ PBI-023 embeds **news** (and later filings) for the copilot. It must **not** ing
 | 019 | [PBI-019](as-built/PBI-019.md) | news_items, mock generator, news-ticker, News panel; AC/TC ticks owned by QA |
 | 020 | [PBI-020](as-built/PBI-020.md) | fundamentals 0012, DES panel, seed hydrate from fundamentals.json; AC/TC ticks owned by QA |
 | 021 | [PBI-021](as-built/PBI-021.md) | screens 0013, SCR panel, parameterized `/functions/screener`, daily RSI in analytics-service; AC/TC ticks owned by QA |
-| 022–031 | _pending_ | Copy [`_template-as-built.md`](_template-as-built.md) when the PBI ships |
+| 022 | [PBI-022](as-built/PBI-022.md) | alert_rules/alerts 0014, alert-runner, Watchlist Alerts tab, status-bar bell/toast; DT-ALRT-01 |
+| 023–031 | _pending_ | Copy [`_template-as-built.md`](_template-as-built.md) when the PBI ships |
 
 ## Architecture decision records
 
