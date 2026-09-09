@@ -27,6 +27,14 @@ describe("PBI-015 migration 0009 paper matching", () => {
     expect(migrationSql).toContain("publish_position_event");
     expect(migrationSql).toContain("positions:*");
     expect(migrationSql).toContain("FOR UPDATE");
+    expect(migrationSql).toMatch(
+      /FROM public\.positions\s+WHERE account_id = ord\.account_id\s+AND instrument_id = ord\.instrument_id\s+FOR UPDATE/,
+    );
+    expect(migrationSql).toContain("computed_filled_qty := ord.filled_qty + p_qty");
+    expect(migrationSql).toContain("FILLED_QTY_MISMATCH");
+    expect(migrationSql).toContain("CASH_DELTA_MISMATCH");
+    expect(migrationSql).toContain("expected_cash_delta := -(p_qty * p_price)");
+    expect(migrationSql).toContain("expected_cash_delta := p_qty * p_price");
     expect(migrationSql).toContain("REVOKE EXECUTE ON FUNCTION public.apply_paper_fill");
     expect(migrationSql).toContain("GRANT EXECUTE ON FUNCTION public.apply_paper_fill");
     expect(migrationSql).toContain(

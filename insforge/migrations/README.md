@@ -97,7 +97,7 @@ npx -y @insforge/cli db migrations up --all
 | Table / object                 | Access                                                                                            |
 | ------------------------------ | ------------------------------------------------------------------------------------------------- |
 | `orders.stop_triggered`        | Owner SELECT; writes via matching-runner admin                                                    |
-| `apply_paper_fill`             | Locks order + account; inserts execution; upserts position; adjusts cash. EXECUTE `project_admin` |
+| `apply_paper_fill`             | Locks order + account + position; asserts filled_qty and cash_delta; inserts execution; upserts position; adjusts cash. EXECUTE `project_admin` |
 | realtime channel `positions:*` | `publish_position_event(user_id, payload)` event `position`; EXECUTE `project_admin` only         |
 
 UUID primary keys, `created_at` / `updated_at` (except `audit_log` and `executions`, which are insert-only), and `updated_at` triggers on mutable tables.
