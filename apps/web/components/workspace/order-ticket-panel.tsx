@@ -18,6 +18,7 @@ import {
   previewOrderAction,
   submitOrderAction,
 } from "@/app/actions/orders";
+import { notifyOrdersChanged } from "@/lib/orders/orders-live";
 import { useOrderTicketIntent } from "@/lib/order-ticket/intent";
 import { interpretOrderCreateResult } from "@/lib/order-ticket/submit-result";
 import { useQuotes } from "@/lib/quotes/use-quotes";
@@ -42,8 +43,10 @@ export function OrderTicketPanel(props: IDockviewPanelProps): React.JSX.Element 
     [e2eFeed],
   );
   const activeSymbol = useSymbolContext((s) => s.activeSymbol);
+  const setActiveSymbol = useSymbolContext((s) => s.setActiveSymbol);
   const intentSide = useOrderTicketIntent((s) => s.side);
   const setIntentSide = useOrderTicketIntent((s) => s.setSide);
+  const ticketPrefill = useOrderTicketIntent((s) => s.prefill);
 
   const [instrumentId, setInstrumentId] = useState<string | null>(null);
   const [buyingPower, setBuyingPower] = useState<number | null>(null);
@@ -74,6 +77,30 @@ export function OrderTicketPanel(props: IDockviewPanelProps): React.JSX.Element 
   useEffect(() => {
     setSide(intentSide);
   }, [intentSide]);
+
+  useEffect(() => {
+    if (!ticketPrefill) {
+      return;
+    }
+    const draft = ticketPrefill.draft;
+    setActiveSymbol(draft.symbol);
+    setSide(draft.side);
+    setQtyMode("shares");
+    setQtyInput(String(draft.qty));
+    setTicketTab(draft.group_type === "bracket" ? "bracket" : "single");
+    setOrderType(
+      draft.trail_type
+        ? "trailing_stop"
+        : draft.group_type === "bracket"
+          ? "market"
+          : draft.order_type,
+    );
+    setLimitPrice(draft.limit_price == null ? "" : String(draft.limit_price));
+    setStopPrice(draft.stop_price == null ? "" : String(draft.stop_price));
+    setTrailType(draft.trail_type ?? "percent");
+    setTrailValue(draft.trail_value == null ? "" : String(draft.trail_value));
+    setTif(draft.tif);
+  }, [ticketPrefill, setActiveSymbol]);
 
   const symbols = activeSymbol ? [activeSymbol] : [];
   const ids = instrumentId ? [instrumentId] : [];
@@ -239,6 +266,7 @@ export function OrderTicketPanel(props: IDockviewPanelProps): React.JSX.Element 
             },
           ]);
         }
+        notifyOrdersChanged();
         return;
       }
       if (ui.kind === "error") {
@@ -247,6 +275,7 @@ export function OrderTicketPanel(props: IDockviewPanelProps): React.JSX.Element 
       }
       setRejectReason(ui.reason);
       setRuleAuditLine(ui.auditLine);
+      notifyOrdersChanged();
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : "Order submit failed.");
     }

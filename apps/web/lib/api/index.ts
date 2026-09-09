@@ -28,3 +28,5 @@ export {
   orderServiceUrl,
 } from "./order-service";
 export { createOrdersRepository } from "./orders";
+export { createExecutionsRepository } from "./executions";
+export { createRuleAuditRepository } from "./rule-audit";

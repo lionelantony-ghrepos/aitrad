@@ -14,6 +14,7 @@ import { StatusBar } from "./status-bar";
 
 type WorkspaceShellProps = {
   email: string;
+  userId: string;
   cashLabel: string | null;
   accountCount: number;
   e2eFeed: boolean;
@@ -21,6 +22,7 @@ type WorkspaceShellProps = {
 
 export function WorkspaceShell({
   email,
+  userId,
   cashLabel,
   accountCount,
   e2eFeed,
@@ -63,7 +65,7 @@ export function WorkspaceShell({
   }, [api, paletteOpen, setTicketSide]);
 
   return (
-    <WorkspaceRuntimeContext.Provider value={{ e2eFeed, dockApi: api }}>
+    <WorkspaceRuntimeContext.Provider value={{ e2eFeed, userId, dockApi: api }}>
       <div
         className="flex h-screen flex-col bg-background text-foreground"
         data-testid="workspace"

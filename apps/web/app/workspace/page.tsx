@@ -19,6 +19,7 @@ export default async function WorkspacePage(): Promise<React.JSX.Element> {
   return (
     <WorkspaceShell
       email={ctx.user.email}
+      userId={ctx.user.id}
       cashLabel={cashLabel}
       accountCount={ctx.account ? 1 : 0}
       e2eFeed={isAuthStub()}
