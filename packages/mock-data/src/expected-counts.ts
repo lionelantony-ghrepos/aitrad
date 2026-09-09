@@ -4,6 +4,7 @@ export const MINUTE_BARS_PER_INSTRUMENT = 1950;
 export const EXPECTED_MINUTE_BARS_TOTAL = EXPECTED_INSTRUMENTS * MINUTE_BARS_PER_INSTRUMENT;
 
 export const EXPECTED_NEWS_ITEMS = 500;
+export const EXPECTED_NEWS_EMBEDDINGS = 500;
 export const EXPECTED_FUNDAMENTALS = 150;
 
 export type SeedCounts = {
@@ -14,6 +15,7 @@ export type SeedCounts = {
   minDailyPerInstrument: number;
   minMinutePerInstrument: number;
   newsItems?: number;
+  newsEmbeddings?: number;
   fundamentals?: number;
 };
 
@@ -37,6 +39,10 @@ export function evaluateSeedCounts(counts: SeedCounts): { ok: boolean; lines: st
     lines.push(`news_items ${counts.newsItems} (expected ${EXPECTED_NEWS_ITEMS})`);
     ok = ok && counts.newsItems === EXPECTED_NEWS_ITEMS;
   }
+  if (counts.newsEmbeddings !== undefined) {
+    lines.push(`news_embeddings ${counts.newsEmbeddings} (expected ${EXPECTED_NEWS_EMBEDDINGS})`);
+    ok = ok && counts.newsEmbeddings === EXPECTED_NEWS_EMBEDDINGS;
+  }
   if (counts.fundamentals !== undefined) {
     lines.push(`fundamentals ${counts.fundamentals} (expected ${EXPECTED_FUNDAMENTALS})`);
     ok = ok && counts.fundamentals === EXPECTED_FUNDAMENTALS;
@@ -57,5 +63,6 @@ SELECT
     SELECT COUNT(*) AS cnt FROM public.market_bars WHERE timeframe = '1m' GROUP BY instrument_id
   ) m), 0) AS min_minute_per_instrument,
   (SELECT COUNT(*)::int FROM public.news_items) AS news_items,
+  (SELECT COUNT(*)::int FROM public.news_embeddings) AS news_embeddings,
   (SELECT COUNT(*)::int FROM public.fundamentals) AS fundamentals
 `.trim();

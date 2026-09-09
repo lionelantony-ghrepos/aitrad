@@ -57,4 +57,18 @@ pnpm functions:bundle:news-ticker
 npx -y @insforge/cli functions deploy news-ticker --file insforge/functions/news-ticker.ts --name "News ticker"
 ```
 
-`news-ticker` is service-key only. It advances simulated time with `feed.speed` / `feed.paused`, writes 1–5 `news_items` per simulated 5 minutes from `mock_data/news-templates.json`, publishes realtime `news` / `news_batch`, and writes `audit_log`. Schedule `POST /functions/news-ticker` (interval syntax; `NEWS_TICKER_INTERVAL_SECONDS`). `market-tick` applies DT-SIM-01 news-sentiment drift nudges from recent items.
+`news-ticker` is service-key only. It advances simulated time with `feed.speed` / `feed.paused`, writes 1–5 `news_items` per simulated 5 minutes from `mock_data/news-templates.json`, publishes realtime `news` / `news_batch`, and writes `audit_log`. After each burst it invokes `embed-worker` (best-effort) and `alert-runner`. Schedule `POST /functions/news-ticker` (interval syntax; `NEWS_TICKER_INTERVAL_SECONDS`). `market-tick` applies DT-SIM-01 news-sentiment drift nudges from recent items.
+
+```bash
+pnpm functions:bundle:embed-worker
+npx -y @insforge/cli functions deploy embed-worker --file insforge/functions/embed-worker.ts --name "Embed worker"
+```
+
+`embed-worker` is service-key only. It polls pending `news_items` (no embedding row, not dead-lettered), calls the InsForge Model Gateway embeddings path (`OPENROUTER_API_KEY` / `OPENROUTER_EMBEDDING_MODEL`), upserts `news_embeddings`, and on repeated gateway failures writes `news_embed_dead_letters`. `op: "backfill"` uses a larger batch. `MERIDIAN_EMBEDDING_MODE=hash` is for local seed without a gateway. Corpus is `news_items` only.
+
+```bash
+pnpm functions:bundle:search-news
+npx -y @insforge/cli functions deploy search-news --file insforge/functions/search-news.ts --name "Search news"
+```
+
+`search-news` accepts `POST` `{ query, symbols?, since?, limit }`. User JWT + `authorize` `news:search`. Embeds the query, then `search_news_hybrid` (cosine + symbol/date filters). Writes `audit_log`. Gateway failures return 503 `SEARCH_UNAVAILABLE`.

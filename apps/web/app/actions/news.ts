@@ -1,10 +1,17 @@
 "use server";
 
-import { newsItemSchema, type NewsItem } from "@meridian/schemas";
+import { authorize } from "@meridian/rules-engine";
+import {
+  newsItemSchema,
+  newsSearchRequestSchema,
+  type NewsItem,
+  type NewsSearchHit,
+} from "@meridian/schemas";
 import { createRecordsClient } from "@/lib/api/client";
 import { createNewsItemsRepository } from "@/lib/api/news-items";
+import { invokeSearchNews } from "@/lib/api/search-news";
 import { isAuthStub } from "@/lib/auth/mode";
-import { stubListNews } from "@/lib/auth/stub-store";
+import { stubListNews, stubSearchNews } from "@/lib/auth/stub-store";
 import { getAccessToken, getSessionUser } from "@/lib/auth/session";
 import { readPublicInsforgeEnv } from "@/lib/insforge/env";
 
@@ -48,4 +55,36 @@ export async function listNewsAction(symbol?: string): Promise<ActionResult<News
 
 function zArray(rows: NewsItem[]): NewsItem[] {
   return newsItemSchema.array().parse(rows);
+}
+
+export async function searchNewsAction(input: unknown): Promise<ActionResult<NewsSearchHit[]>> {
+  const session = await requireUser();
+  if (!session.ok) {
+    return session;
+  }
+  const gate = authorize({ userId: session.userId, action: "news:search" });
+  if (!gate.allowed) {
+    return { ok: false, message: "Not allowed." };
+  }
+  const parsed = newsSearchRequestSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, message: "Invalid search." };
+  }
+  if (isAuthStub()) {
+    return { ok: true, data: stubSearchNews(parsed.data) };
+  }
+  const env = readPublicInsforgeEnv();
+  try {
+    const result = await invokeSearchNews({
+      baseUrl: env.baseUrl,
+      accessToken: session.token,
+      request: parsed.data,
+    });
+    return { ok: true, data: result.items };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : "SEARCH_UNAVAILABLE",
+    };
+  }
 }

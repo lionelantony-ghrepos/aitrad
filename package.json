@@ -26,11 +26,14 @@
     "functions:bundle:analytics-service": "node scripts/bundle-analytics-service.mjs",
     "functions:bundle:screener": "node scripts/bundle-screener.mjs",
     "functions:bundle:alert-runner": "node scripts/bundle-alert-runner.mjs",
+    "functions:bundle:embed-worker": "node scripts/bundle-embed-worker.mjs",
+    "functions:bundle:search-news": "node scripts/bundle-search-news.mjs",
     "prepare": "husky"
   },
   "dependencies": {
     "@insforge/sdk": "^1.5.2",
     "@meridian/mock-data": "workspace:*",
+    "@meridian/rag": "workspace:*",
     "@meridian/schemas": "workspace:*"
   },
   "devDependencies": {

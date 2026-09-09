@@ -17,6 +17,7 @@ import {
   type OhlcvBar,
   type SeedCounts,
 } from "@meridian/mock-data";
+import { mergeNewsCorpusWithRagFixtures } from "@meridian/rag";
 import { seedEnvSchema } from "@meridian/schemas";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -68,6 +69,7 @@ function querySeedCounts(): SeedCounts {
     minDailyPerInstrument: Number(row.min_daily_per_instrument),
     minMinutePerInstrument: Number(row.min_minute_per_instrument),
     newsItems: Number(row.news_items),
+    newsEmbeddings: Number(row.news_embeddings),
     fundamentals: Number(row.fundamentals),
   };
 }
@@ -174,7 +176,9 @@ export async function runUniverseSeed(): Promise<void> {
       readFileSync(path.join(repoRoot, "mock_data", "news-templates.json"), "utf8"),
     ) as unknown,
   );
-  const newsRows = generateNewsBackfill({ universe, templates }).map((row) => ({
+  const newsRows = mergeNewsCorpusWithRagFixtures(
+    generateNewsBackfill({ universe, templates }),
+  ).map((row) => ({
     id: row.id,
     ts: row.ts,
     headline: row.headline,
@@ -206,6 +210,33 @@ export async function runUniverseSeed(): Promise<void> {
 
   process.stdout.write(`Upserting ${newsRows.length} news_items…\n`);
   await upsertBatch(admin.database, "news_items", newsRows, "id");
+
+  const functionsOrigin = env.INSFORGE_URL.replace(/\/+$/, "");
+  process.stdout.write("Backfilling news_embeddings via embed-worker…\n");
+  for (let i = 0; i < 20; i += 1) {
+    const response = await fetch(`${functionsOrigin}/functions/embed-worker`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${env.INSFORGE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ op: "backfill" }),
+    });
+    const payload = (await response.json().catch(() => null)) as {
+      scanned?: number;
+      embedded?: number;
+      error?: string;
+    } | null;
+    if (!response.ok) {
+      throw new Error(`EMBED_WORKER_${response.status}:${payload?.error ?? "failed"}`);
+    }
+    process.stdout.write(
+      `  embed-worker scanned=${payload?.scanned ?? "?"} embedded=${payload?.embedded ?? "?"}\n`,
+    );
+    if ((payload?.scanned ?? 0) === 0) {
+      break;
+    }
+  }
 
   process.stdout.write("SQL count check:\n");
   process.stdout.write(`${SEED_COUNT_SQL}\n`);

@@ -30,6 +30,7 @@ export * from "./rules-admin";
 export * from "./orders";
 export * from "./analytics";
 export * from "./news";
+export * from "./news-search";
 export * from "./fundamentals";
 export * from "./screener";
 export * from "./alerts";

@@ -1,99 +1,12 @@
-// insforge/functions/news-ticker-src.ts
+// bundled from insforge/functions/search-news-src.ts
 
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all) __defProp(target, name, { get: all[name], enumerable: true });
 };
 
-// insforge/functions/news-ticker-src.ts
-import { createAdminClient } from "npm:@insforge/sdk";
-
-// packages/mock-data/src/calendar.ts
-var HISTORY_SEED = 42;
-var REGULAR_OPEN_MINUTE = 9 * 60 + 30;
-var REGULAR_CLOSE_MINUTE = 16 * 60;
-var HALF_CLOSE_MINUTE = 13 * 60;
-
-// packages/mock-data/src/rng.ts
-function hashSymbolSeed(symbol, seed) {
-  let h = seed >>> 0;
-  for (let i = 0; i < symbol.length; i += 1) {
-    h = Math.imul(h ^ symbol.charCodeAt(i), 16777619);
-  }
-  return h >>> 0;
-}
-function mulberry32(seed) {
-  let a = seed >>> 0;
-  return () => {
-    a = (a + 1831565813) >>> 0;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-// packages/mock-data/src/feed.ts
-function asRecord(value) {
-  if (typeof value === "object" && value !== null && !Array.isArray(value)) {
-    return value;
-  }
-  return null;
-}
-function parsePaused(value) {
-  if (value === true || value === "true") {
-    return true;
-  }
-  const rec = asRecord(value);
-  if (rec && "paused" in rec) {
-    return rec.paused === true || rec.paused === "true";
-  }
-  return false;
-}
-function parseSpeed(value) {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return value;
-  }
-  if (typeof value === "string" && value.trim() !== "") {
-    const n = Number(value);
-    return Number.isFinite(n) ? n : void 0;
-  }
-  const rec = asRecord(value);
-  if (rec && typeof rec.speed === "number" && Number.isFinite(rec.speed)) {
-    return rec.speed;
-  }
-  return void 0;
-}
-function parseForce(value) {
-  const rec = asRecord(value);
-  if (!rec) {
-    return null;
-  }
-  const symbol = rec.symbol;
-  const price = rec.price;
-  if (typeof symbol === "string" && price !== void 0 && Number.isFinite(Number(price))) {
-    return { symbol, price: Number(price) };
-  }
-  return null;
-}
-function parseFeedControls(rows) {
-  let paused = false;
-  let speed = 1;
-  let forcePrice = null;
-  for (const row of rows) {
-    if (row.key === "feed.paused") {
-      paused = parsePaused(row.value);
-    } else if (row.key === "feed.speed") {
-      const parsed = parseSpeed(row.value);
-      if (parsed !== void 0) {
-        speed = parsed;
-      }
-    } else if (row.key === "feed.force_price") {
-      forcePrice = parseForce(row.value);
-    }
-  }
-  return { paused, speed, forcePrice };
-}
+// insforge/functions/search-news-src.ts
+import { createAdminClient, createClient } from "npm:@insforge/sdk";
 
 // node_modules/.pnpm/zod@3.25.76/node_modules/zod/v3/external.js
 var external_exports = {};
@@ -5000,6 +4913,7 @@ var newsRealtimeBatchSchema = external_exports.object({
 
 // packages/schemas/src/news-search.ts
 var NEWS_SEARCH_LIMIT = 50;
+var NEWS_EMBEDDING_DIM = 1536;
 var newsSearchRequestSchema = external_exports.object({
   query: external_exports.string().trim().min(1).max(500),
   symbols: external_exports.array(external_exports.string().min(1)).max(32).optional(),
@@ -5471,532 +5385,240 @@ var seedEnvSchema = external_exports.object({
   INSFORGE_API_KEY: external_exports.string().min(1),
 });
 
-// packages/mock-data/src/news.ts
-var NEWS_LIVE_WINDOW_SEC = 300;
-var NEWS_LIVE_MIN_ITEMS = 1;
-var NEWS_LIVE_MAX_ITEMS = 5;
-var EVENT_WEIGHTS = [
-  { type: "analyst", weight: 0.3 },
-  { type: "earnings", weight: 0.2 },
-  { type: "macro", weight: 0.2 },
-  { type: "product", weight: 0.15 },
-  { type: "regulatory", weight: 0.1 },
-  { type: "mna", weight: 0.05 },
-];
-var CAP_WEIGHTS = {
-  mega: 8,
-  large: 4,
-  mid: 2,
-  small: 1,
-  micro: 0.5,
-};
-var SOURCES = ["Reuters", "Bloomberg", "WSJ", "CNBC", "AP"];
-var BODY_LINES = {
-  earnings: [
-    "Management highlighted {segment} as the primary swing factor.",
-    "Street models now imply a {pct}% revision path into the next print.",
-    "The result lands against a busy {sector} reporting calendar.",
-  ],
-  analyst: [
-    "The note cites {concern} as the key debate versus consensus.",
-    "{bank} frames risk/reward as balanced near ${target}.",
-    "Positioning in {sector} names may shift after the call.",
-  ],
-  product: [
-    "Early demand checks in {market} will set the near-term narrative.",
-    "Rivals in {sector} are watching execution on {product}.",
-    "Investors will parse commentary on {segment} attach rates.",
-  ],
-  macro: [
-    "Rates traders marked the {stance} path into the next session.",
-    "{sector} factor baskets {direction} as yields {yielddir}.",
-    "Futures {futdir} after the inflation print came in {inflation}.",
-  ],
-  regulatory: [
-    "Counsel said the {agency} process remains at an early stage.",
-    "The {issue} docket has been a lingering {sector} overhang.",
-    "A timeline for the next filing was not specified.",
-  ],
-  mna: [
-    "Advisors put the cash-and-stock mix as still in flux.",
-    "The {targetco} asset would expand {company} in {segment}.",
-    "Antitrust review is the next gating item for the ${dealsize}B package.",
-  ],
-};
-function parseNewsTemplatesJson(raw) {
-  return newsTemplatesFileSchema.parse(raw);
-}
-function requireItem(item, code) {
-  if (item === void 0) {
-    throw new Error(code);
+// packages/rules-engine/src/authorize.ts
+function authorize(input) {
+  if (!input.userId) {
+    return { allowed: false, reason: "UNAUTHENTICATED" };
   }
-  return item;
-}
-function pickWeighted(rng, items) {
-  if (items.length === 0) {
-    throw new Error("NEWS_WEIGHT_EMPTY");
+  if (input.action.length === 0) {
+    return { allowed: false, reason: "ACTION_REQUIRED" };
   }
-  const total = items.reduce((sum, row) => sum + row.weight, 0);
-  let cursor = rng() * total;
-  for (const row of items) {
-    cursor -= row.weight;
-    if (cursor <= 0) {
-      return row.item;
-    }
-  }
-  return requireItem(items[items.length - 1], "NEWS_WEIGHT_EMPTY").item;
+  return { allowed: true };
 }
-function pickOne(rng, values) {
-  if (values.length === 0) {
-    throw new Error("NEWS_FILL_EMPTY");
+
+// packages/rules-engine/src/evaluate-domain.ts
+function resolveRulesServiceApiKey(env) {
+  const key = env.API_KEY ?? env.INSFORGE_API_KEY;
+  if (typeof key !== "string" || key.length === 0) {
+    return null;
   }
-  return requireItem(values[Math.floor(rng() * values.length)] ?? values[0], "NEWS_FILL_EMPTY");
+  return key;
 }
-function fillSlots(template, vars) {
-  return template.replace(/\{([a-z0-9]+)\}/gi, (_match, key) => {
-    const value = vars[key];
-    if (value === void 0) {
-      throw new Error(`NEWS_FILL_MISSING:${key}`);
-    }
-    return value;
+
+// packages/rag/src/gateway.ts
+var embeddingsResponseSchema = external_exports.object({
+  data: external_exports
+    .array(
+      external_exports.object({
+        embedding: external_exports.array(external_exports.number()).min(1),
+      }),
+    )
+    .min(1),
+});
+var DEFAULT_OPENROUTER_EMBEDDINGS_URL = "https://openrouter.ai/api/v1/embeddings";
+var DEFAULT_EMBEDDING_MODEL = "openai/text-embedding-3-small";
+function parseEmbeddingsResponse(body, expectedDim = NEWS_EMBEDDING_DIM) {
+  const parsed = embeddingsResponseSchema.safeParse(body);
+  if (!parsed.success) {
+    return { ok: false, error: "EMBEDDINGS_RESPONSE_INVALID" };
+  }
+  const vector = parsed.data.data[0]?.embedding;
+  if (!vector || vector.length !== expectedDim) {
+    return { ok: false, error: "EMBEDDINGS_DIM_MISMATCH" };
+  }
+  return { ok: true, vector };
+}
+async function requestOpenRouterEmbedding(input) {
+  const fetchImpl = input.fetchImpl ?? fetch;
+  const response = await fetchImpl(input.url ?? DEFAULT_OPENROUTER_EMBEDDINGS_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${input.apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: input.model,
+      input: input.text,
+      encoding_format: "float",
+    }),
   });
-}
-function eventTypeFromRng(rng) {
-  return pickWeighted(
-    rng,
-    EVENT_WEIGHTS.map((row) => ({ item: row.type, weight: row.weight })),
-  );
-}
-function pickInstrument(rng, universe) {
-  return pickWeighted(
-    rng,
-    universe.map((item) => ({ item, weight: CAP_WEIGHTS[item.market_cap_band] })),
-  );
-}
-function buildVars(rng, templates, instrument) {
-  const fills = templates.fills;
-  const pick = (key, fallback) => {
-    const vocab = fills[key];
-    return pickOne(rng, vocab && vocab.length > 0 ? vocab : fallback);
-  };
-  return {
-    company: instrument.name,
-    symbol: instrument.symbol,
-    sector: instrument.sector,
-    q: String(1 + Math.floor(rng() * 4)),
-    pct: String(3 + Math.floor(rng() * 26)),
-    target: String(20 + Math.floor(rng() * 480)),
-    dealsize: (1 + rng() * 44).toFixed(1),
-    bank: pick("bank", ["Goldman Sachs"]),
-    concern: pick("concern", ["valuation"]),
-    segment: pick("segment", ["cloud"]),
-    product: pick("product", ["next-gen AI platform"]),
-    market: pick("market", ["enterprise AI"]),
-    stance: pick("stance", ["a data-dependent"]),
-    direction: pick("direction", ["climb"]),
-    yielddir: pick("yielddir", ["ease"]),
-    inflation: pick("inflation", ["in line"]),
-    futdir: pick("futdir", ["hold steady"]),
-    agency: pick("agency", ["SEC"]),
-    issue: pick("issue", ["disclosure practices"]),
-    targetco: pick("targetco", ["a private AI startup"]),
-  };
-}
-function generateNewsItem(input) {
-  const seed = input.seed ?? HISTORY_SEED;
-  const rng = mulberry32(hashSymbolSeed(`news:${input.index}`, seed));
-  const eventType = eventTypeFromRng(rng);
-  const primary = pickInstrument(rng, input.universe);
-  const headlines = input.templates[eventType];
-  const template = requireItem(
-    headlines[Math.floor(rng() * headlines.length)] ?? headlines[0],
-    "NEWS_TEMPLATE_EMPTY",
-  );
-  const vars = buildVars(rng, input.templates, primary);
-  const lo = Math.min(template.sentiment[0], template.sentiment[1]);
-  const hi = Math.max(template.sentiment[0], template.sentiment[1]);
-  const sentiment = lo + rng() * (hi - lo);
-  const sentenceCount = 2 + Math.floor(rng() * 2);
-  const bodyPool = BODY_LINES[eventType];
-  const sentences = [];
-  const used = /* @__PURE__ */ new Set();
-  while (sentences.length < sentenceCount) {
-    const idx = Math.floor(rng() * bodyPool.length);
-    if (used.has(idx) && used.size < bodyPool.length) {
-      continue;
-    }
-    used.add(idx);
-    sentences.push(fillSlots(requireItem(bodyPool[idx], "NEWS_BODY_EMPTY"), vars));
+  const raw = await response.json().catch(() => null);
+  if (!response.ok) {
+    return {
+      ok: false,
+      status: response.status,
+      error: `GATEWAY_${response.status}`,
+    };
   }
-  let symbols = [primary.symbol];
-  if (eventType === "macro") {
-    const peers = input.universe.filter((row) => row.sector === primary.sector);
-    const extra = Math.min(peers.length, 2 + Math.floor(rng() * 3));
-    const picked = /* @__PURE__ */ new Set([primary.symbol]);
-    for (let i = 0; i < extra && picked.size < extra; i += 1) {
-      picked.add(
-        pickOne(
-          rng,
-          peers.map((p) => p.symbol),
-        ),
-      );
-    }
-    symbols = [...picked];
+  const parsed = parseEmbeddingsResponse(raw);
+  if (!parsed.ok) {
+    return { ok: false, status: 502, error: parsed.error };
   }
-  return {
-    ts: input.ts,
-    headline: fillSlots(template.headline, vars),
-    body: sentences.join(" "),
-    source: pickOne(rng, SOURCES),
-    symbols,
-    sector: primary.sector,
-    sentiment: Math.round(sentiment * 1e3) / 1e3,
-    event_type: eventType,
-  };
-}
-function newsSeedId(index, seed = HISTORY_SEED) {
-  const rng = mulberry32(hashSymbolSeed(`news-id:${index}`, seed));
-  const bytes = Array.from({ length: 16 }, () => Math.floor(rng() * 256));
-  bytes[6] = ((bytes[6] ?? 0) & 15) | 64;
-  bytes[8] = ((bytes[8] ?? 0) & 63) | 128;
-  const hex = bytes.map((b) => b.toString(16).padStart(2, "0")).join("");
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
-}
-function liveCount(rng) {
-  return NEWS_LIVE_MIN_ITEMS + Math.floor(rng() * (NEWS_LIVE_MAX_ITEMS - NEWS_LIVE_MIN_ITEMS + 1));
-}
-function planNewsTickerInvocation(input) {
-  const seed = input.seed ?? HISTORY_SEED;
-  if (input.paused || input.speed <= 0) {
-    return { items: [], nextSimElapsedSec: input.simElapsedSec, bursts: 0 };
-  }
-  const delta = Math.max(0, input.speed * input.intervalSeconds);
-  let elapsed = input.simElapsedSec + delta;
-  const items = [];
-  let bursts = 0;
-  let liveIndexBase = Math.floor(input.simElapsedSec / NEWS_LIVE_WINDOW_SEC) * 1e4;
-  while (elapsed >= NEWS_LIVE_WINDOW_SEC) {
-    elapsed -= NEWS_LIVE_WINDOW_SEC;
-    bursts += 1;
-    const bucket = Math.floor(liveIndexBase / 1e4);
-    const rng = mulberry32(hashSymbolSeed(`news-live:${bucket}`, seed));
-    const count = liveCount(rng);
-    const burstTs = new Date(Date.parse(input.nowIso) + bursts * 1e3).toISOString();
-    for (let j = 0; j < count; j += 1) {
-      const index = 1e6 + bucket * 8 + j;
-      const generated = generateNewsItem({
-        universe: input.universe,
-        templates: input.templates,
-        index,
-        seed,
-        ts: burstTs,
-      });
-      items.push({ ...generated, id: newsSeedId(index, seed) });
-    }
-    liveIndexBase += 1e4;
-  }
-  return { items, nextSimElapsedSec: elapsed, bursts };
+  return { ok: true, vector: parsed.vector };
 }
 
-// mock_data/news-templates.json
-var news_templates_default = {
-  earnings: [
-    {
-      headline: "{company} beats Q{q} estimates as {segment} revenue jumps {pct}%",
-      sentiment: [0.4, 0.9],
-    },
-    {
-      headline: "{company} misses on Q{q} earnings; guidance cut sends shares lower",
-      sentiment: [-0.9, -0.4],
-    },
-    {
-      headline: "{company} reports in-line Q{q} results, maintains full-year outlook",
-      sentiment: [-0.1, 0.2],
-    },
-  ],
-  analyst: [
-    {
-      headline: "{bank} upgrades {company} to Buy, lifts target to ${target}",
-      sentiment: [0.3, 0.8],
-    },
-    {
-      headline: "{bank} downgrades {company} on {concern} concerns",
-      sentiment: [-0.8, -0.3],
-    },
-    {
-      headline: "{bank} initiates {company} at Neutral, sees balanced risk/reward",
-      sentiment: [-0.1, 0.15],
-    },
-  ],
-  product: [
-    {
-      headline: "{company} unveils {product}, targeting the {market} market",
-      sentiment: [0.2, 0.7],
-    },
-    {
-      headline: "{company} delays {product} launch to address quality issues",
-      sentiment: [-0.7, -0.2],
-    },
-  ],
-  macro: [
-    {
-      headline: "Fed signals {stance} path; {sector} stocks {direction}",
-      sentiment: [-0.5, 0.5],
-    },
-    {
-      headline: "{sector} sector rallies as Treasury yields {yielddir}",
-      sentiment: [0.1, 0.6],
-    },
-    {
-      headline: "Inflation print comes in {inflation}; futures {futdir}",
-      sentiment: [-0.6, 0.6],
-    },
-  ],
-  regulatory: [
-    {
-      headline: "{company} faces {agency} probe over {issue}",
-      sentiment: [-0.9, -0.4],
-    },
-    {
-      headline: "{company} settles {agency} case; overhang removed",
-      sentiment: [0.1, 0.5],
-    },
-  ],
-  mna: [
-    {
-      headline: "{company} to acquire {targetco} in ${dealsize}B deal",
-      sentiment: [-0.2, 0.6],
-    },
-    {
-      headline: "Report: {company} explores strategic alternatives for {segment} unit",
-      sentiment: [0, 0.4],
-    },
-  ],
-  fills: {
-    bank: [
-      "Goldman Sachs",
-      "Morgan Stanley",
-      "JPMorgan",
-      "Barclays",
-      "UBS",
-      "Jefferies",
-      "Piper Sandler",
-    ],
-    concern: [
-      "valuation",
-      "margin compression",
-      "demand softness",
-      "competitive pressure",
-      "execution",
-    ],
-    segment: ["cloud", "AI", "consumer", "enterprise", "international", "services"],
-    product: ["next-gen AI platform", "flagship device", "autonomous suite", "subscription tier"],
-    market: ["enterprise AI", "consumer robotics", "digital health", "edge computing"],
-    stance: ["a slower easing", "a data-dependent", "an extended hold"],
-    direction: ["climb", "slip", "churn sideways"],
-    yielddir: ["ease", "spike"],
-    inflation: ["cooler than expected", "hotter than expected", "in line"],
-    futdir: ["rise", "fall", "hold steady"],
-    agency: ["SEC", "FTC", "DOJ", "EU Commission"],
-    issue: ["disclosure practices", "market dominance", "data handling"],
-    targetco: ["a private AI startup", "a logistics platform", "a fintech challenger"],
-  },
+// packages/rag/src/vector.ts
+var STOP = /* @__PURE__ */ new Set([
+  "a",
+  "an",
+  "the",
+  "and",
+  "or",
+  "of",
+  "in",
+  "on",
+  "to",
+  "for",
+  "as",
+  "at",
+  "is",
+  "are",
+]);
+function tokenize(text) {
+  return text
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((token) => token.length > 1 && !STOP.has(token));
+}
+function tokenIndex(token, dim) {
+  let h = 2166136261;
+  for (let i = 0; i < token.length; i += 1) {
+    h ^= token.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return Math.abs(h) % dim;
+}
+function hashEmbed(text, dim = NEWS_EMBEDDING_DIM) {
+  const vec = new Array(dim).fill(0);
+  const tokens = tokenize(text);
+  if (tokens.length === 0) {
+    vec[0] = 1;
+    return vec;
+  }
+  for (const token of tokens) {
+    const idx = tokenIndex(token, dim);
+    vec[idx] = (vec[idx] ?? 0) + 1;
+  }
+  let norm = 0;
+  for (const n of vec) {
+    norm += n * n;
+  }
+  const mag = Math.sqrt(norm);
+  if (mag === 0) {
+    vec[0] = 1;
+    return vec;
+  }
+  return vec.map((n) => n / mag);
+}
+function formatVectorLiteral(values) {
+  return `[${values.join(",")}]`;
+}
+
+// insforge/functions/search-news-src.ts
+var corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
-
-// insforge/functions/news-ticker-src.ts
 function json(status, body) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "Content-Type": "application/json" },
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }
 function asRows(data) {
   return Array.isArray(data) ? data : [];
 }
-function flagValue(row) {
-  if (typeof row.key !== "string") {
-    return null;
+async function search_news_src_default(req) {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: corsHeaders });
   }
-  return { key: row.key, value: row.value };
-}
-function readElapsed(value) {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return value;
-  }
-  if (typeof value === "string" && value.trim() !== "") {
-    const n = Number(value);
-    return Number.isFinite(n) ? n : 0;
-  }
-  return 0;
-}
-async function news_ticker_src_default(req) {
   if (req.method !== "POST") {
     return json(405, { error: "METHOD_NOT_ALLOWED" });
   }
-  const expected = Deno.env.get("API_KEY") ?? Deno.env.get("INSFORGE_API_KEY");
   const authHeader = req.headers.get("Authorization");
   const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
-  if (!expected || token !== expected) {
+  if (!token) {
     return json(401, { error: "UNAUTHENTICATED" });
   }
-  const intervalRaw =
-    Deno.env.get("NEWS_TICKER_INTERVAL_SECONDS") ?? Deno.env.get("MARKET_TICK_INTERVAL_SECONDS");
-  const intervalSeconds = intervalRaw === void 0 ? 60 : Number(intervalRaw);
-  if (!Number.isFinite(intervalSeconds) || intervalSeconds <= 0) {
-    return json(500, { error: "INTERVAL_INVALID" });
+  const baseUrl = Deno.env.get("INSFORGE_INTERNAL_URL") ?? Deno.env.get("INSFORGE_BASE_URL");
+  if (!baseUrl) {
+    return json(500, { error: "INSFORGE_URL_MISSING" });
   }
-  const admin = createAdminClient({
-    baseUrl: Deno.env.get("INSFORGE_INTERNAL_URL") ?? Deno.env.get("INSFORGE_BASE_URL"),
-    apiKey: expected,
+  let body = {};
+  try {
+    body = await req.json();
+  } catch {
+    body = {};
+  }
+  const parsed = newsSearchRequestSchema.safeParse(body);
+  if (!parsed.success) {
+    return json(400, { error: "INVALID_BODY" });
+  }
+  const userClient = createClient({ baseUrl, accessToken: token });
+  const { data: userData } = await userClient.auth.getCurrentUser();
+  const userId = userData?.user?.id;
+  const gate = authorize({ userId, action: "news:search" });
+  if (!gate.allowed || !userId) {
+    return json(401, { error: gate.reason ?? "UNAUTHENTICATED" });
+  }
+  const apiKey = resolveRulesServiceApiKey({
+    API_KEY: Deno.env.get("API_KEY"),
+    INSFORGE_API_KEY: Deno.env.get("INSFORGE_API_KEY"),
   });
-  const templates = parseNewsTemplatesJson(news_templates_default);
-  const { data: flagData, error: flagErr } = await admin.database
-    .from("feature_flags")
-    .select("id,key,value")
-    .is("user_id", null);
-  if (flagErr) {
-    return json(500, { error: flagErr.message });
+  if (!apiKey) {
+    return json(500, { error: "API_KEY_MISSING" });
   }
-  const flagRows = asRows(flagData)
-    .map(flagValue)
-    .filter((row) => row !== null);
-  const flags = parseFeedControls(flagRows);
-  const elapsedRow = flagRows.find((row) => row.key === "news.sim_elapsed_sec");
-  const simElapsedSec = readElapsed(elapsedRow?.value);
-  const { data: instData, error: instErr } = await admin.database
-    .from("instruments")
-    .select(
-      "symbol,name,exchange,sector,industry,status,currency,tick_size,lot_size,base_price,market_cap_band,beta_class,avg_volume,avg_volume_band",
-    )
-    .eq("status", "active");
-  if (instErr) {
-    return json(500, { error: instErr.message });
+  const mode = (Deno.env.get("MERIDIAN_EMBEDDING_MODE") ?? "").trim().toLowerCase();
+  const openRouterKey = Deno.env.get("OPENROUTER_API_KEY");
+  const model = Deno.env.get("OPENROUTER_EMBEDDING_MODEL") ?? DEFAULT_EMBEDDING_MODEL;
+  const useHash = mode === "hash" || (!openRouterKey && mode !== "openrouter");
+  let queryVector;
+  if (useHash) {
+    queryVector = hashEmbed(parsed.data.query);
+  } else if (!openRouterKey) {
+    return json(503, { error: "SEARCH_UNAVAILABLE" });
+  } else {
+    let embedded;
+    try {
+      embedded = await requestOpenRouterEmbedding({
+        apiKey: openRouterKey,
+        model,
+        text: parsed.data.query,
+        url: Deno.env.get("OPENROUTER_EMBEDDINGS_URL") ?? DEFAULT_OPENROUTER_EMBEDDINGS_URL,
+      });
+    } catch {
+      return json(503, { error: "SEARCH_UNAVAILABLE" });
+    }
+    if (!embedded.ok) {
+      return json(503, { error: "SEARCH_UNAVAILABLE" });
+    }
+    queryVector = embedded.vector;
   }
-  const universe = asRows(instData)
-    .filter(
-      (row) =>
-        row.market_cap_band !== null &&
-        row.beta_class !== null &&
-        row.avg_volume_band !== null &&
-        row.sector !== null &&
-        row.industry !== null &&
-        row.base_price !== null,
-    )
-    .map((row) => ({
-      symbol: row.symbol,
-      name: row.name,
-      exchange: row.exchange,
-      sector: row.sector ?? "Unknown",
-      industry: row.industry ?? "Unknown",
-      status: row.status,
-      currency: row.currency,
-      tick_size: Number(row.tick_size),
-      lot_size: Number(row.lot_size),
-      base_price: Number(row.base_price),
-      market_cap_band: row.market_cap_band,
-      beta_class: row.beta_class,
-      avg_volume: Number(row.avg_volume ?? 1),
-      avg_volume_band: row.avg_volume_band,
-    }));
-  const plan = planNewsTickerInvocation({
-    intervalSeconds,
-    speed: flags.speed,
-    paused: flags.paused,
-    simElapsedSec,
-    universe,
-    templates,
-    nowIso: /* @__PURE__ */ new Date().toISOString(),
+  const admin = createAdminClient({ baseUrl, apiKey });
+  const limit = parsed.data.limit ?? 10;
+  const rpc = await admin.database.rpc("search_news_hybrid", {
+    query_embedding: formatVectorLiteral(queryVector),
+    p_symbols: parsed.data.symbols ?? null,
+    p_since: parsed.data.since ?? null,
+    p_limit: Math.min(limit, NEWS_SEARCH_LIMIT),
   });
-  let alerting = { ok: true };
-  if (plan.items.length > 0) {
-    const { error } = await admin.database.from("news_items").upsert(
-      plan.items.map((item) => ({
-        id: item.id,
-        ts: item.ts,
-        headline: item.headline,
-        body: item.body,
-        source: item.source,
-        symbols: item.symbols,
-        sector: item.sector,
-        sentiment: item.sentiment,
-        event_type: item.event_type,
-      })),
-      { onConflict: "id" },
-    );
-    if (error) {
-      return json(500, { error: error.message });
-    }
-    const payload = { ts: plan.items[0]?.ts, items: plan.items };
-    const published = await admin.database.rpc("publish_news_batch", { payload });
-    if (published.error) {
-      return json(500, { error: published.error.message });
-    }
-    const origin = (
-      Deno.env.get("INSFORGE_INTERNAL_URL") ??
-      Deno.env.get("INSFORGE_BASE_URL") ??
-      ""
-    ).replace(/\/+$/, "");
-    try {
-      const alertRes = await fetch(`${origin}/functions/alert-runner`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${expected}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ news: plan.items }),
-      });
-      if (!alertRes.ok) {
-        alerting = { ok: false, error: `ALERT_RUNNER_${alertRes.status}` };
-      }
-    } catch (error2) {
-      alerting = {
-        ok: false,
-        error: error2 instanceof Error ? error2.message : "ALERT_RUNNER_UNAVAILABLE",
-      };
-    }
-    try {
-      await fetch(`${origin}/functions/embed-worker`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${expected}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          op: "cycle",
-          news_ids: plan.items.map((item) => item.id),
-        }),
-      });
-    } catch {}
-  }
-  if (elapsedRow) {
-    const { error } = await admin.database
-      .from("feature_flags")
-      .update({ value: plan.nextSimElapsedSec })
-      .eq("key", "news.sim_elapsed_sec")
-      .is("user_id", null);
-    if (error) {
-      return json(500, { error: error.message });
-    }
+  if (rpc.error) {
+    return json(500, { error: rpc.error.message });
   }
   await admin.database.from("audit_log").insert([
     {
-      action: "news-ticker",
+      user_id: userId,
+      action: "news:search",
       entity_type: "news_items",
-      payload: {
-        published: plan.items.length,
-        bursts: plan.bursts,
-        paused: flags.paused,
-        nextSimElapsedSec: plan.nextSimElapsedSec,
-        alerting,
-      },
+      payload: { query: parsed.data.query, symbols: parsed.data.symbols ?? null },
     },
   ]);
-  return json(200, {
-    published: plan.items.length,
-    bursts: plan.bursts,
-    paused: flags.paused,
-    nextSimElapsedSec: plan.nextSimElapsedSec,
-    alerting,
-  });
+  return json(
+    200,
+    newsSearchResponseSchema.parse({
+      items: asRows(rpc.data),
+    }),
+  );
 }
-export { news_ticker_src_default as default };
+export { search_news_src_default as default };

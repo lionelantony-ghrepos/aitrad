@@ -33,6 +33,7 @@ export { createExecutionsRepository } from "./executions";
 export { createRuleAuditRepository } from "./rule-audit";
 export { createPositionsRepository, createPortfolioSnapshotsRepository } from "./positions";
 export { createNewsItemsRepository } from "./news-items";
+export { searchNewsServiceUrl, invokeSearchNews } from "./search-news";
 export { createFundamentalsRepository } from "./fundamentals";
 export { createScreensRepository } from "./screens";
 export { createAlertRulesRepository, createAlertsRepository } from "./alerts";
