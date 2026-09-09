@@ -15,6 +15,9 @@ import type {
   PortfolioSnapshot,
   QuotesLatest,
   NewsItem,
+  FundamentalsMetrics,
+  FundamentalsRecord,
+  DesProfile,
   RuleAuditView,
   Watchlist,
   WatchlistItem,
@@ -215,8 +218,58 @@ function marketInstrument(id: string, symbol: string, name: string): Instrument 
     currency: "USD",
     tick_size: 0.01,
     lot_size: 1,
+    market_cap_band: "mega",
     created_at: STUB_TS,
     updated_at: STUB_TS,
+  };
+}
+
+function stubMetrics(partial: {
+  pe: number;
+  eps: number;
+  revenue: number;
+  growth: number;
+  gross: number;
+  net: number;
+  yield: number;
+  shares: number;
+  mcap: number;
+  low: number;
+  high: number;
+  buy: number;
+  hold: number;
+  sell: number;
+}): FundamentalsMetrics {
+  return {
+    valuation: { pe: partial.pe, shares_out_m: partial.shares, market_cap_b: partial.mcap },
+    income: {
+      eps_ttm: partial.eps,
+      revenue_b: partial.revenue,
+      revenue_growth_pct: partial.growth,
+      next_earnings: "2026-08-26",
+      revenue_periods: {
+        labels: ["FY23", "FY24", "FY25", "TTM"],
+        values: [
+          Math.round(partial.revenue * 0.82 * 10) / 10,
+          Math.round(partial.revenue * 0.9 * 10) / 10,
+          Math.round(partial.revenue * 0.97 * 10) / 10,
+          partial.revenue,
+        ],
+      },
+      eps_periods: {
+        labels: ["FY23", "FY24", "FY25", "TTM"],
+        values: [
+          Math.round(partial.eps * 0.7 * 100) / 100,
+          Math.round(partial.eps * 0.82 * 100) / 100,
+          Math.round(partial.eps * 0.93 * 100) / 100,
+          partial.eps,
+        ],
+      },
+    },
+    margins: { gross_margin_pct: partial.gross, net_margin_pct: partial.net },
+    dividends: { dividend_yield: partial.yield },
+    ranges: { week52_low: partial.low, week52_high: partial.high },
+    analyst: { buy: partial.buy, hold: partial.hold, sell: partial.sell },
   };
 }
 
@@ -225,6 +278,89 @@ export const STUB_INSTRUMENTS: Instrument[] = [
   marketInstrument(STUB_MSFT_INSTRUMENT_ID, "MSFT", "Microsoft Corporation"),
   marketInstrument(STUB_NVDA_INSTRUMENT_ID, "NVDA", "NVIDIA Corporation"),
   marketInstrument(STUB_TSLA_INSTRUMENT_ID, "TSLA", "Tesla, Inc."),
+];
+
+export const STUB_FUNDAMENTALS: FundamentalsRecord[] = [
+  {
+    instrument_id: STUB_AAPL_INSTRUMENT_ID,
+    updated_at: STUB_TS,
+    metrics: stubMetrics({
+      pe: 44.9,
+      eps: 4.72,
+      revenue: 260.7,
+      growth: 12.5,
+      gross: 51.1,
+      net: 6,
+      yield: 1.37,
+      shares: 4789,
+      mcap: 3200,
+      low: 131.24,
+      high: 243.61,
+      buy: 7,
+      hold: 13,
+      sell: 5,
+    }),
+  },
+  {
+    instrument_id: STUB_MSFT_INSTRUMENT_ID,
+    updated_at: STUB_TS,
+    metrics: stubMetrics({
+      pe: 23.6,
+      eps: 19.83,
+      revenue: 14.5,
+      growth: 8.2,
+      gross: 50.8,
+      net: 11.2,
+      yield: 2.28,
+      shares: 3986,
+      mcap: 2800,
+      low: 333.11,
+      high: 643.74,
+      buy: 23,
+      hold: 11,
+      sell: 3,
+    }),
+  },
+  {
+    instrument_id: STUB_NVDA_INSTRUMENT_ID,
+    updated_at: STUB_TS,
+    metrics: stubMetrics({
+      pe: 32.9,
+      eps: 4.8,
+      revenue: 164,
+      growth: -1.2,
+      gross: 59.5,
+      net: 13.7,
+      yield: 0,
+      shares: 623,
+      mcap: 2500,
+      low: 117.87,
+      high: 211.84,
+      buy: 6,
+      hold: 8,
+      sell: 5,
+    }),
+  },
+  {
+    instrument_id: STUB_TSLA_INSTRUMENT_ID,
+    updated_at: STUB_TS,
+    metrics: stubMetrics({
+      pe: 40,
+      eps: 2.1,
+      revenue: 90,
+      growth: 5,
+      gross: 18,
+      net: 8,
+      yield: 0,
+      shares: 3100,
+      mcap: 800,
+      low: 180,
+      high: 280,
+      buy: 10,
+      hold: 9,
+      sell: 6,
+    }),
+  },
 ];
 
 export const STUB_QUOTES: QuotesLatest[] = [
@@ -531,6 +667,37 @@ export function stubGetRuleAudit(id: string): RuleAuditView | null {
 export function stubInstrumentBySymbol(symbol: string): Instrument | null {
   const key = symbol.trim().toUpperCase();
   return STUB_INSTRUMENTS.find((row) => row.symbol === key) ?? null;
+}
+
+export function stubGetDesProfile(symbol: string): DesProfile | null {
+  const instrument = stubInstrumentBySymbol(symbol);
+  if (!instrument) {
+    return null;
+  }
+  const fundamentals = STUB_FUNDAMENTALS.find((row) => row.instrument_id === instrument.id);
+  if (!fundamentals) {
+    return null;
+  }
+  const quote = STUB_QUOTES.find((row) => row.instrument_id === instrument.id) ?? null;
+  const peers = STUB_INSTRUMENTS.filter(
+    (row) => row.industry === instrument.industry && row.symbol !== instrument.symbol,
+  )
+    .map((row) => {
+      const cap =
+        STUB_FUNDAMENTALS.find((item) => item.instrument_id === row.id)?.metrics.valuation
+          .market_cap_b ?? 0;
+      return { row, cap };
+    })
+    .sort((a, b) => b.cap - a.cap)
+    .slice(0, 6)
+    .map(({ row, cap }) => ({
+      symbol: row.symbol,
+      name: row.name,
+      instrument_id: row.id,
+      last: STUB_QUOTES.find((item) => item.instrument_id === row.id)?.last ?? null,
+      market_cap_b: cap,
+    }));
+  return { instrument, quote, fundamentals, peers };
 }
 
 export function stubMarketBars(

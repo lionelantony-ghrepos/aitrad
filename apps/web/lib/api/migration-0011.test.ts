@@ -16,8 +16,11 @@ const cliTwinSql = readFileSync(
 
 describe("PBI-019 migration 0011 news_items", () => {
   it("lists 0011 after 0010", () => {
-    expect(LOCAL_MIGRATION_IDS[LOCAL_MIGRATION_IDS.length - 1]).toBe("0011");
+    expect(LOCAL_MIGRATION_IDS).toContain("0011");
     expect(LOCAL_MIGRATION_IDS).toContain("0010");
+    expect(LOCAL_MIGRATION_IDS.indexOf("0011")).toBeGreaterThan(
+      LOCAL_MIGRATION_IDS.indexOf("0010"),
+    );
   });
 
   it("creates news_items, public SELECT, and news realtime publish", () => {

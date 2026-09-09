@@ -112,4 +112,10 @@ See the 0010 file (advanced orders). Trailing / group columns; writes via matchi
 | realtime channel `news` | `publish_news_batch(payload jsonb)` event `news_batch`; EXECUTE `project_admin` only                                          |
 | `news.sim_elapsed_sec`  | Global feature flag cursor for simulated 5-minute bursts                                                                      |
 
+## 0012 contents
+
+| Table / object | Access                                                                                                                                                                                                                   |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `fundamentals` | RLS SELECT for `anon` + `authenticated` (app JWT-gates `getDesProfileAction`); writes `project_admin` / seed. PK `instrument_id`. Nested jsonb `metrics` groups: valuation, income, margins, dividends, ranges, analyst. |
+
 UUID primary keys, `created_at` / `updated_at` (except `audit_log` and `executions`, which are insert-only), and `updated_at` triggers on mutable tables.

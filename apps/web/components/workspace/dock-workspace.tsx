@@ -14,6 +14,7 @@ import { PANEL_IDS } from "@/lib/panel-registry";
 import { ChartPanel } from "./chart-panel";
 import { CopilotPanel } from "./copilot-panel";
 import { BlotterPanel } from "./blotter-panel";
+import { DesPanel } from "./des-panel";
 import { OrderTicketPanel } from "./order-ticket-panel";
 import { PlaceholderPanel } from "./placeholder-panel";
 import { NewsPanel } from "./news-panel";
@@ -30,7 +31,8 @@ const components = {
         id !== "orderTicket" &&
         id !== "blotter" &&
         id !== "portfolio" &&
-        id !== "news",
+        id !== "news" &&
+        id !== "des",
     ).map((id) => [id, PlaceholderPanel]),
   ),
   watchlist: WatchlistPanel,
@@ -40,6 +42,7 @@ const components = {
   blotter: BlotterPanel,
   portfolio: PortfolioPanel,
   news: NewsPanel,
+  des: DesPanel,
 };
 
 function snapshot(api: DockviewApi): Record<string, unknown> {

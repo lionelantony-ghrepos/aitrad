@@ -30,3 +30,4 @@ export * from "./rules-admin";
 export * from "./orders";
 export * from "./analytics";
 export * from "./news";
+export * from "./fundamentals";
