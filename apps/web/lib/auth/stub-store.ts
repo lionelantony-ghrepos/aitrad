@@ -4,6 +4,7 @@ import {
   type RulesAdminMemory,
 } from "@meridian/rules-engine";
 import { tryReserveBuyingPower, releaseBuyingPower } from "@meridian/paper-engine";
+import { evaluateScreener } from "@meridian/schemas";
 import type {
   Account,
   Instrument,
@@ -21,6 +22,11 @@ import type {
   RuleAuditView,
   Watchlist,
   WatchlistItem,
+  ScreenRecord,
+  ScreenerCriteria,
+  ScreenerFact,
+  ScreenerRunRequest,
+  ScreenerRunResponse,
 } from "@meridian/schemas";
 
 export type StubUser = {
@@ -36,6 +42,7 @@ type StubState = {
   accounts: Map<string, Account>;
   watchlists: Watchlist[];
   watchlistItems: WatchlistItem[];
+  screens: ScreenRecord[];
   orders: OrderRecord[];
   executions: ExecutionRecord[];
   positions: PositionRecord[];
@@ -53,6 +60,7 @@ function createState(): StubState {
     accounts: new Map(),
     watchlists: [],
     watchlistItems: [],
+    screens: [],
     orders: [],
     executions: [],
     positions: [],
@@ -362,6 +370,13 @@ export const STUB_FUNDAMENTALS: FundamentalsRecord[] = [
     }),
   },
 ];
+
+export const STUB_RSI: Record<string, number> = {
+  [STUB_AAPL_INSTRUMENT_ID]: 55,
+  [STUB_MSFT_INSTRUMENT_ID]: 42,
+  [STUB_NVDA_INSTRUMENT_ID]: 72,
+  [STUB_TSLA_INSTRUMENT_ID]: 28,
+};
 
 export const STUB_QUOTES: QuotesLatest[] = [
   {
@@ -698,6 +713,76 @@ export function stubGetDesProfile(symbol: string): DesProfile | null {
       market_cap_b: cap,
     }));
   return { instrument, quote, fundamentals, peers };
+}
+
+export function stubScreenerFacts(): ScreenerFact[] {
+  return STUB_INSTRUMENTS.map((instrument) => {
+    const quote = STUB_QUOTES.find((row) => row.instrument_id === instrument.id);
+    const fundamentals = STUB_FUNDAMENTALS.find((row) => row.instrument_id === instrument.id);
+    return {
+      instrument_id: instrument.id,
+      symbol: instrument.symbol,
+      name: instrument.name,
+      sector: instrument.sector,
+      market_cap_band: instrument.market_cap_band ?? null,
+      pe: fundamentals?.metrics.valuation.pe ?? null,
+      dividend_yield: fundamentals?.metrics.dividends.dividend_yield ?? null,
+      last: quote?.last ?? null,
+      prev_close: quote?.prev_close ?? null,
+      volume: quote?.volume ?? null,
+      rsi_14: STUB_RSI[instrument.id] ?? null,
+      week52_low: fundamentals?.metrics.ranges.week52_low ?? null,
+      week52_high: fundamentals?.metrics.ranges.week52_high ?? null,
+    };
+  });
+}
+
+export function stubRunScreener(request: ScreenerRunRequest): ScreenerRunResponse {
+  return evaluateScreener(stubScreenerFacts(), { ...request, op: "run" });
+}
+
+export function stubListScreens(userId: string): ScreenRecord[] {
+  return getStubState().screens.filter((row) => row.user_id === userId);
+}
+
+export function stubSaveScreen(
+  userId: string,
+  name: string,
+  criteria: ScreenerCriteria,
+  id?: string,
+): ScreenRecord {
+  const state = getStubState();
+  const ts = nowIso();
+  if (id) {
+    const existing = state.screens.find((row) => row.id === id && row.user_id === userId);
+    if (!existing) {
+      throw new Error("SCREEN_NOT_FOUND");
+    }
+    existing.name = name;
+    existing.criteria = criteria;
+    existing.updated_at = ts;
+    return existing;
+  }
+  const row: ScreenRecord = {
+    id: crypto.randomUUID(),
+    user_id: userId,
+    name,
+    criteria,
+    created_at: ts,
+    updated_at: ts,
+  };
+  state.screens.push(row);
+  return row;
+}
+
+export function stubDeleteScreen(userId: string, id: string): boolean {
+  const state = getStubState();
+  const index = state.screens.findIndex((row) => row.id === id && row.user_id === userId);
+  if (index < 0) {
+    return false;
+  }
+  state.screens.splice(index, 1);
+  return true;
 }
 
 export function stubMarketBars(

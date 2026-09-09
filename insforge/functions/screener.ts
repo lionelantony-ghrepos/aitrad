@@ -1,270 +1,12 @@
-// bundled from insforge/functions/analytics-service-src.ts
+// bundled from insforge/functions/screener-src.ts
 
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all) __defProp(target, name, { get: all[name], enumerable: true });
 };
 
-// insforge/functions/analytics-service-src.ts
+// insforge/functions/screener-src.ts
 import { createAdminClient, createClient } from "npm:@insforge/sdk";
-
-// packages/indicators/src/index.ts
-function rsi(closes, period) {
-  if (period < 1) {
-    return closes.map(() => null);
-  }
-  const out = [];
-  let avgGain = 0;
-  let avgLoss = 0;
-  for (let i = 0; i < closes.length; i += 1) {
-    if (i === 0) {
-      out.push(null);
-      continue;
-    }
-    const prevClose = closes[i - 1];
-    const close = closes[i];
-    if (prevClose === void 0 || close === void 0) {
-      out.push(null);
-      continue;
-    }
-    const change = close - prevClose;
-    const gain = change > 0 ? change : 0;
-    const loss = change < 0 ? -change : 0;
-    if (i < period) {
-      avgGain += gain;
-      avgLoss += loss;
-      out.push(null);
-      continue;
-    }
-    if (i === period) {
-      avgGain = (avgGain + gain) / period;
-      avgLoss = (avgLoss + loss) / period;
-    } else {
-      avgGain = (avgGain * (period - 1) + gain) / period;
-      avgLoss = (avgLoss * (period - 1) + loss) / period;
-    }
-    if (avgLoss === 0) {
-      out.push(avgGain === 0 ? 50 : 100);
-    } else {
-      const rs = avgGain / avgLoss;
-      out.push(100 - 100 / (1 + rs));
-    }
-  }
-  return out;
-}
-function latestDefined(values) {
-  for (let i = values.length - 1; i >= 0; i -= 1) {
-    const value = values[i];
-    if (value != null) {
-      return value;
-    }
-  }
-  return null;
-}
-function rsi14Last(closes) {
-  return latestDefined(rsi(closes, 14));
-}
-
-// packages/mock-data/src/calendar.ts
-function pad2(n) {
-  return String(n).padStart(2, "0");
-}
-function formatYmd(year, month, day) {
-  return `${year}-${pad2(month)}-${pad2(day)}`;
-}
-function parseYmd(isoDate) {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate);
-  if (!match) {
-    throw new Error(`INVALID_DATE:${isoDate}`);
-  }
-  const year = Number(match[1]);
-  const month = Number(match[2]);
-  const day = Number(match[3]);
-  return { year, month, day };
-}
-function utcWeekday(year, month, day) {
-  return new Date(Date.UTC(year, month - 1, day)).getUTCDay();
-}
-function addUtcDays(year, month, day, delta) {
-  const dt = new Date(Date.UTC(year, month - 1, day + delta));
-  return { year: dt.getUTCFullYear(), month: dt.getUTCMonth() + 1, day: dt.getUTCDate() };
-}
-function easterSunday(year) {
-  const a = year % 19;
-  const b = Math.floor(year / 100);
-  const c = year % 100;
-  const d = Math.floor(b / 4);
-  const e = b % 4;
-  const f = Math.floor((b + 8) / 25);
-  const g = Math.floor((b - f + 1) / 3);
-  const h = (19 * a + b - d - g + 15) % 30;
-  const i = Math.floor(c / 4);
-  const k = c % 4;
-  const l = (32 + 2 * e + 2 * i - h - k) % 7;
-  const m = Math.floor((a + 11 * h + 22 * l) / 451);
-  const month = Math.floor((h + l - 7 * m + 114) / 31);
-  const day = ((h + l - 7 * m + 114) % 31) + 1;
-  return { year, month, day };
-}
-function nthWeekday(year, month, weekday, nth) {
-  const first = utcWeekday(year, month, 1);
-  const offset = (weekday - first + 7) % 7;
-  const day = 1 + offset + (nth - 1) * 7;
-  return { year, month, day };
-}
-function lastWeekday(year, month, weekday) {
-  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
-  const lastWd = utcWeekday(year, month, lastDay);
-  const delta = (lastWd - weekday + 7) % 7;
-  return { year, month, day: lastDay - delta };
-}
-function observed(year, month, day) {
-  const wd = utcWeekday(year, month, day);
-  if (wd === 6) {
-    const prev = addUtcDays(year, month, day, -1);
-    return formatYmd(prev.year, prev.month, prev.day);
-  }
-  if (wd === 0) {
-    const next = addUtcDays(year, month, day, 1);
-    return formatYmd(next.year, next.month, next.day);
-  }
-  return formatYmd(year, month, day);
-}
-var holidayCache = /* @__PURE__ */ new Map();
-function nyseHolidays(year) {
-  const cached = holidayCache.get(year);
-  if (cached) {
-    return cached;
-  }
-  const easter = easterSunday(year);
-  const goodFriday = addUtcDays(easter.year, easter.month, easter.day, -2);
-  const mlk = nthWeekday(year, 1, 1, 3);
-  const presidents = nthWeekday(year, 2, 1, 3);
-  const memorial = lastWeekday(year, 5, 1);
-  const labor = nthWeekday(year, 9, 1, 1);
-  const thanksgiving = nthWeekday(year, 11, 4, 4);
-  const set = /* @__PURE__ */ new Set([
-    observed(year, 1, 1),
-    formatYmd(mlk.year, mlk.month, mlk.day),
-    formatYmd(presidents.year, presidents.month, presidents.day),
-    formatYmd(goodFriday.year, goodFriday.month, goodFriday.day),
-    formatYmd(memorial.year, memorial.month, memorial.day),
-    observed(year, 6, 19),
-    observed(year, 7, 4),
-    formatYmd(labor.year, labor.month, labor.day),
-    formatYmd(thanksgiving.year, thanksgiving.month, thanksgiving.day),
-    observed(year, 12, 25),
-  ]);
-  holidayCache.set(year, set);
-  return set;
-}
-var NY_TZ = "America/New_York";
-var REGULAR_OPEN_MINUTE = 9 * 60 + 30;
-var REGULAR_CLOSE_MINUTE = 16 * 60;
-var HALF_CLOSE_MINUTE = 13 * 60;
-function nyClockParts(now) {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: NY_TZ,
-    weekday: "short",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hourCycle: "h23",
-  }).formatToParts(now);
-  const get = (type) => parts.find((p) => p.type === type)?.value ?? "";
-  return {
-    weekday: get("weekday"),
-    dateKey: `${get("year")}-${get("month")}-${get("day")}`,
-    hour: Number(get("hour")),
-    minute: Number(get("minute")),
-    second: Number(get("second")),
-  };
-}
-function nyseHalfDays(year) {
-  const thanksgiving = nthWeekday(year, 11, 4, 4);
-  const friday = addUtcDays(thanksgiving.year, thanksgiving.month, thanksgiving.day, 1);
-  const fridayIso = formatYmd(friday.year, friday.month, friday.day);
-  const eve = formatYmd(year, 12, 24);
-  const set = /* @__PURE__ */ new Set();
-  if (isNyseSession(fridayIso)) {
-    set.add(fridayIso);
-  }
-  if (isNyseSession(eve)) {
-    set.add(eve);
-  }
-  return set;
-}
-function nyseTradingSessions(year) {
-  const half = nyseHalfDays(year);
-  const rows = [];
-  const cursor = { year, month: 1, day: 1 };
-  const end = new Date(Date.UTC(year + 1, 0, 1)).getTime();
-  while (Date.UTC(cursor.year, cursor.month - 1, cursor.day) < end) {
-    const iso = formatYmd(cursor.year, cursor.month, cursor.day);
-    if (isNyseSession(iso)) {
-      const kind = half.has(iso) ? "half" : "regular";
-      rows.push({
-        session_date: iso,
-        venue: "NYSE",
-        session_kind: kind,
-        open_minute: REGULAR_OPEN_MINUTE,
-        close_minute: kind === "half" ? HALF_CLOSE_MINUTE : REGULAR_CLOSE_MINUTE,
-      });
-    }
-    const next = addUtcDays(cursor.year, cursor.month, cursor.day, 1);
-    cursor.year = next.year;
-    cursor.month = next.month;
-    cursor.day = next.day;
-  }
-  return rows;
-}
-function lookupSession(isoDate, sessions) {
-  return sessions.find((row) => row.session_date === isoDate);
-}
-function nyseSessionState(now, sessions) {
-  const p = nyClockParts(now);
-  const rows = sessions ?? nyseTradingSessions(Number.parseInt(p.dateKey.slice(0, 4), 10));
-  const row = lookupSession(p.dateKey, rows);
-  if (!row) {
-    return "CLOSED";
-  }
-  const minutes = p.hour * 60 + p.minute;
-  if (minutes >= row.open_minute && minutes < row.close_minute) {
-    return "OPEN";
-  }
-  return "CLOSED";
-}
-function isNyseSession(isoDate) {
-  const { year, month, day } = parseYmd(isoDate);
-  const wd = utcWeekday(year, month, day);
-  if (wd === 0 || wd === 6) {
-    return false;
-  }
-  return !nyseHolidays(year).has(isoDate);
-}
-
-// packages/mock-data/src/expected-counts.ts
-var EXPECTED_INSTRUMENTS = 150;
-var MINUTE_BARS_PER_INSTRUMENT = 1950;
-var EXPECTED_MINUTE_BARS_TOTAL = EXPECTED_INSTRUMENTS * MINUTE_BARS_PER_INSTRUMENT;
-var SEED_COUNT_SQL = `
-SELECT
-  (SELECT COUNT(*)::int FROM public.instruments) AS instruments,
-  (SELECT COUNT(*)::int FROM public.market_bars WHERE timeframe = '1d') AS daily_bars,
-  (SELECT COUNT(*)::int FROM public.market_bars WHERE timeframe = '1m') AS minute_bars,
-  (SELECT COUNT(*)::int FROM public.quotes_latest) AS quotes,
-  COALESCE((SELECT MIN(cnt)::int FROM (
-    SELECT COUNT(*) AS cnt FROM public.market_bars WHERE timeframe = '1d' GROUP BY instrument_id
-  ) d), 0) AS min_daily_per_instrument,
-  COALESCE((SELECT MIN(cnt)::int FROM (
-    SELECT COUNT(*) AS cnt FROM public.market_bars WHERE timeframe = '1m' GROUP BY instrument_id
-  ) m), 0) AS min_minute_per_instrument,
-  (SELECT COUNT(*)::int FROM public.news_items) AS news_items,
-  (SELECT COUNT(*)::int FROM public.fundamentals) AS fundamentals
-`.trim();
 
 // node_modules/.pnpm/zod@3.25.76/node_modules/zod/v3/external.js
 var external_exports = {};
@@ -5057,44 +4799,6 @@ var matchingRunnerResponseSchema = external_exports.object({
 
 // packages/schemas/src/analytics.ts
 var equityCurveRangeSchema = external_exports.enum(["1M", "3M", "1Y"]);
-function marketValue(qty, last) {
-  return qty * last;
-}
-function unrealizedPnl(qty, avgCost, last) {
-  return qty * (last - avgCost);
-}
-function dayPnl(qty, last, prevClose) {
-  return qty * (last - prevClose);
-}
-function costBasis(qty, avgCost) {
-  return Math.abs(qty) * avgCost;
-}
-function unrealizedPnlPct(qty, avgCost, last) {
-  const basis = costBasis(qty, avgCost);
-  if (basis === 0) {
-    return 0;
-  }
-  return (unrealizedPnl(qty, avgCost, last) / basis) * 100;
-}
-function buyingPowerFromCash(cash, reservedCash) {
-  return cash - reservedCash;
-}
-function markEquityFromPositions(cash, positions) {
-  let equity = cash;
-  for (const row of positions) {
-    if (!Number.isFinite(row.last)) {
-      continue;
-    }
-    equity += marketValue(row.qty, row.last);
-  }
-  return equity;
-}
-function weightPct(part, whole) {
-  if (whole === 0) {
-    return 0;
-  }
-  return (part / whole) * 100;
-}
 var portfolioPositionViewSchema = external_exports.object({
   id: uuidSchema,
   instrument_id: uuidSchema,
@@ -5163,95 +4867,6 @@ var analyticsRsiRequestSchema = external_exports
 var analyticsRsiResponseSchema = external_exports.object({
   written: external_exports.number().int().nonnegative(),
 });
-function assemblePortfolio(input) {
-  const open = input.positions.filter((row) => row.qty !== 0);
-  const equity = markEquityFromPositions(
-    input.account.cash,
-    open.map((row) => ({ qty: row.qty, last: row.last })),
-  );
-  const buyingPower = buyingPowerFromCash(input.account.cash, input.account.reserved_cash);
-  const positions = open.map((row) => {
-    const mkt = marketValue(row.qty, row.last);
-    return {
-      id: row.id,
-      instrument_id: row.instrument_id,
-      symbol: row.symbol,
-      sector: row.sector,
-      qty: row.qty,
-      avg_cost: row.avg_cost,
-      last: row.last,
-      prev_close: row.prev_close,
-      market_value: mkt,
-      unrealized_pnl: unrealizedPnl(row.qty, row.avg_cost, row.last),
-      realized_pnl: row.realized_pnl,
-      day_pnl: dayPnl(row.qty, row.last, row.prev_close),
-      weight_pct: weightPct(mkt, equity),
-      unrealized_pnl_pct: unrealizedPnlPct(row.qty, row.avg_cost, row.last),
-    };
-  });
-  const dayTotal = positions.reduce((sum, row) => sum + row.day_pnl, 0);
-  const byPosition = positions.map((row) => ({
-    key: row.symbol,
-    market_value: row.market_value,
-    weight_pct: row.weight_pct,
-  }));
-  const sectorMap = /* @__PURE__ */ new Map();
-  for (const row of positions) {
-    const key = row.sector && row.sector.length > 0 ? row.sector : "Unknown";
-    sectorMap.set(key, (sectorMap.get(key) ?? 0) + row.market_value);
-  }
-  const bySector = [...sectorMap.entries()].map(([key, value]) => ({
-    key,
-    market_value: value,
-    weight_pct: weightPct(value, equity),
-  }));
-  return {
-    account: {
-      account_id: input.account.id,
-      cash: input.account.cash,
-      reserved_cash: input.account.reserved_cash,
-      buying_power: buyingPower,
-      equity,
-      day_pnl: dayTotal,
-      currency: input.account.currency,
-    },
-    positions,
-    allocations: { by_position: byPosition, by_sector: bySector },
-    snapshots: input.snapshots ?? [],
-  };
-}
-function equityCurveWindowDays(range) {
-  if (range === "1M") {
-    return 31;
-  }
-  if (range === "3M") {
-    return 92;
-  }
-  return 366;
-}
-function filterEquityCurve(rows, range, now) {
-  const cutoff = new Date(now.getTime() - equityCurveWindowDays(range) * 24 * 60 * 60 * 1e3);
-  const cutoffKey = cutoff.toISOString().slice(0, 10);
-  return rows
-    .filter((row) => row.as_of_date >= cutoffKey)
-    .slice()
-    .sort((a, b) => a.as_of_date.localeCompare(b.as_of_date));
-}
-function dailySnapshotDate(input) {
-  if (input.force && input.sessionDate) {
-    return input.sessionDate;
-  }
-  if (!input.sessionDate || input.closeMinute == null) {
-    return null;
-  }
-  if (input.session === "OPEN") {
-    return null;
-  }
-  if (input.minutes < input.closeMinute) {
-    return null;
-  }
-  return input.sessionDate;
-}
 
 // packages/schemas/src/news.ts
 var newsEventTypeSchema = external_exports.enum([
@@ -5400,6 +5015,7 @@ var desProfileSchema = external_exports.object({
 });
 
 // packages/schemas/src/screener.ts
+var SCREENER_RESULT_LIMIT = 500;
 var screenerCombinatorSchema = external_exports.enum(["and", "or"]);
 var screenerFieldIdSchema = external_exports.enum([
   "sector",
@@ -5488,6 +5104,21 @@ var SCREENER_FIELD_REGISTRY = {
       "CASE WHEN NULLIF((f.metrics->'ranges'->>'week52_high')::numeric - (f.metrics->'ranges'->>'week52_low')::numeric, 0) IS NULL THEN NULL ELSE (q.last - (f.metrics->'ranges'->>'week52_low')::numeric) / ((f.metrics->'ranges'->>'week52_high')::numeric - (f.metrics->'ranges'->>'week52_low')::numeric) END",
   },
 };
+var SORT_SQL = {
+  symbol: "i.symbol",
+  name: "i.name",
+  sector: "i.sector",
+  market_cap_band: "i.market_cap_band",
+  pe: "(f.metrics->'valuation'->>'pe')::numeric",
+  dividend_yield: "(f.metrics->'dividends'->>'dividend_yield')::numeric",
+  pct_chg:
+    "CASE WHEN q.prev_close IS NULL OR q.prev_close = 0 THEN NULL ELSE (q.last - q.prev_close) / q.prev_close * 100 END",
+  volume: "q.volume",
+  rsi_14: "r.rsi_14",
+  week52_proximity:
+    "CASE WHEN NULLIF((f.metrics->'ranges'->>'week52_high')::numeric - (f.metrics->'ranges'->>'week52_low')::numeric, 0) IS NULL THEN NULL ELSE (q.last - (f.metrics->'ranges'->>'week52_low')::numeric) / ((f.metrics->'ranges'->>'week52_high')::numeric - (f.metrics->'ranges'->>'week52_low')::numeric) END",
+  last: "q.last",
+};
 var screenerValueSchema = external_exports.union([
   external_exports.string(),
   external_exports.number(),
@@ -5565,6 +5196,7 @@ var screenerSortSchema = external_exports.object({
   column: screenerSortColumnSchema,
   dir: screenerSortDirSchema,
 });
+var defaultScreenerSort = { column: "symbol", dir: "asc" };
 var screenerRunRequestSchema = external_exports
   .object({
     op: external_exports.enum(["run", "count"]).optional(),
@@ -5620,6 +5252,113 @@ var instrumentDailyRsiSchema = external_exports.object({
   as_of_date: external_exports.string().min(10),
   updated_at: timestamptzSchema,
 });
+var SELECT_LIST = `SELECT i.id AS instrument_id, i.symbol AS symbol, i.name AS name, i.sector AS sector, i.market_cap_band AS market_cap_band, (f.metrics->'valuation'->>'pe')::numeric AS pe, (f.metrics->'dividends'->>'dividend_yield')::numeric AS dividend_yield, CASE WHEN q.prev_close IS NULL OR q.prev_close = 0 THEN NULL ELSE (q.last - q.prev_close) / q.prev_close * 100 END AS pct_chg, q.volume AS volume, q.last AS last, r.rsi_14 AS rsi_14, CASE WHEN NULLIF((f.metrics->'ranges'->>'week52_high')::numeric - (f.metrics->'ranges'->>'week52_low')::numeric, 0) IS NULL THEN NULL ELSE (q.last - (f.metrics->'ranges'->>'week52_low')::numeric) / ((f.metrics->'ranges'->>'week52_high')::numeric - (f.metrics->'ranges'->>'week52_low')::numeric) END AS week52_proximity`;
+var FROM_JOIN = `FROM public.instruments i LEFT JOIN public.fundamentals f ON f.instrument_id = i.id LEFT JOIN public.quotes_latest q ON q.instrument_id = i.id LEFT JOIN public.instrument_daily_rsi r ON r.instrument_id = i.id`;
+function sqlCombinator(value) {
+  return value === "or" ? "OR" : "AND";
+}
+function bind(params, value, cast) {
+  const index = params.length;
+  params.push(value);
+  if (cast === "numeric") {
+    return `($1->>${index})::numeric`;
+  }
+  return `($1->>${index})`;
+}
+function valueCast(field) {
+  return field.type === "number" ? "numeric" : "text";
+}
+function compileCondition(condition, params) {
+  const field = SCREENER_FIELD_REGISTRY[condition.field];
+  const expr = field.sqlExpr;
+  const op = condition.op;
+  if (op === "any") {
+    return "TRUE";
+  }
+  if (op === "is_null") {
+    return `(${expr}) IS NULL`;
+  }
+  const cast = valueCast(field);
+  if (op === "in" || op === "not_in") {
+    const list = condition.value;
+    if (!Array.isArray(list) || list.length === 0) {
+      throw new Error("VALUE_LIST_REQUIRED");
+    }
+    const parts = list.map((item) => bind(params, item, cast));
+    const inn = `(${expr}) IN (${parts.join(", ")})`;
+    return op === "not_in" ? `(NOT ${inn})` : inn;
+  }
+  if (op === "between") {
+    const pair = condition.value;
+    if (!Array.isArray(pair) || pair.length !== 2) {
+      throw new Error("BETWEEN_PAIR_REQUIRED");
+    }
+    const lo = bind(params, pair[0], "numeric");
+    const hi = bind(params, pair[1], "numeric");
+    return `(${expr}) BETWEEN ${lo} AND ${hi}`;
+  }
+  if (op === "regex") {
+    return `(${expr}) ~ ${bind(params, condition.value, "text")}`;
+  }
+  const rhs = bind(params, condition.value, cast);
+  if (op === "eq") {
+    return `(${expr}) = ${rhs}`;
+  }
+  if (op === "neq") {
+    return `(${expr}) IS DISTINCT FROM ${rhs}`;
+  }
+  if (op === "lt") {
+    return `(${expr}) < ${rhs}`;
+  }
+  if (op === "lte") {
+    return `(${expr}) <= ${rhs}`;
+  }
+  if (op === "gt") {
+    return `(${expr}) > ${rhs}`;
+  }
+  if (op === "gte") {
+    return `(${expr}) >= ${rhs}`;
+  }
+  throw new Error("OPERATOR_NOT_ALLOWED");
+}
+function compileWhere(criteria, params) {
+  const groupSql = criteria.groups.map((group) => {
+    const parts = group.conditions.map((condition) => compileCondition(condition, params));
+    return `(${parts.join(` ${sqlCombinator(group.combinator)} `)})`;
+  });
+  return groupSql.join(` ${sqlCombinator(criteria.combinator)} `);
+}
+var FORBIDDEN_SQL =
+  /\m(drop|insert|update|delete|alter|truncate|create|grant|revoke|copy|execute|into|union|pg_sleep|set|reset)\M/i;
+function assertSafeScreenerSql(sql) {
+  if (!sql.startsWith("SELECT ")) {
+    throw new Error("SCREENER_SQL_REJECTED");
+  }
+  if (sql.includes(";")) {
+    throw new Error("SCREENER_SQL_REJECTED");
+  }
+  if (FORBIDDEN_SQL.test(sql)) {
+    throw new Error("SCREENER_SQL_REJECTED");
+  }
+  if (!sql.includes("FROM public.instruments i")) {
+    throw new Error("SCREENER_SQL_REJECTED");
+  }
+}
+function compileScreenerSql(input) {
+  const criteria = screenerCriteriaSchema.parse(input.criteria);
+  const sort = screenerSortSchema.parse(input.sort ?? defaultScreenerSort);
+  const params = [];
+  const where = compileWhere(criteria, params);
+  const orderExpr = SORT_SQL[sort.column];
+  const dir = sort.dir === "desc" ? "DESC" : "ASC";
+  const mode = input.mode ?? "run";
+  const sql =
+    mode === "count"
+      ? `SELECT COUNT(*)::int AS match_count ${FROM_JOIN} WHERE ${where}`
+      : `${SELECT_LIST} ${FROM_JOIN} WHERE ${where} ORDER BY ${orderExpr} ${dir} NULLS LAST, i.symbol ASC LIMIT ${SCREENER_RESULT_LIMIT}`;
+  assertSafeScreenerSql(sql);
+  return { sql, params, paramsJson: params };
+}
 
 // packages/schemas/src/index.ts
 var publicInsforgeEnvSchema = external_exports.object({
@@ -5651,7 +5390,7 @@ function resolveRulesServiceApiKey(env) {
   return key;
 }
 
-// insforge/functions/analytics-service-src.ts
+// insforge/functions/screener-src.ts
 var corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -5663,81 +5402,10 @@ function json(status, body) {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }
-function pathOp(req) {
-  const pathname = new URL(req.url).pathname.replace(/\/+$/, "");
-  if (pathname.endsWith("/portfolio")) {
-    return "portfolio";
-  }
-  if (pathname.endsWith("/snapshot")) {
-    return "snapshot";
-  }
-  if (pathname.endsWith("/rsi")) {
-    return "rsi";
-  }
-  return null;
-}
 function asRows(data) {
   return Array.isArray(data) ? data : [];
 }
-function num(value, fallback = 0) {
-  const n = Number(value);
-  return Number.isFinite(n) ? n : fallback;
-}
-async function loadCalendar(client) {
-  const { data, error } = await client.database
-    .from("market_calendar")
-    .select("session_date,venue,session_kind,open_minute,close_minute");
-  if (error) {
-    throw new Error(error.message);
-  }
-  return asRows(data).map((row) => ({
-    session_date: String(row.session_date).slice(0, 10),
-    venue: "NYSE",
-    session_kind: row.session_kind ?? "regular",
-    open_minute: num(row.open_minute),
-    close_minute: num(row.close_minute),
-  }));
-}
-async function precomputeDailyRsi(admin) {
-  const barsRes = await admin.database
-    .from("market_bars")
-    .select("instrument_id,ts,c")
-    .eq("timeframe", "1d");
-  if (barsRes.error) {
-    throw new Error(barsRes.error.message);
-  }
-  const byInstrument = /* @__PURE__ */ new Map();
-  for (const row of asRows(barsRes.data)) {
-    const id = String(row.instrument_id);
-    const list = byInstrument.get(id) ?? [];
-    list.push({ ts: String(row.ts), c: num(row.c) });
-    byInstrument.set(id, list);
-  }
-  const upserts = [];
-  for (const [instrumentId, bars] of byInstrument) {
-    bars.sort((a, b) => a.ts.localeCompare(b.ts));
-    const closes = bars.map((bar) => bar.c);
-    const lastBar = bars[bars.length - 1];
-    if (!lastBar) {
-      continue;
-    }
-    upserts.push({
-      instrument_id: instrumentId,
-      rsi_14: rsi14Last(closes),
-      as_of_date: lastBar.ts.slice(0, 10),
-    });
-  }
-  if (upserts.length > 0) {
-    const { error } = await admin.database
-      .from("instrument_daily_rsi")
-      .upsert(upserts, { onConflict: "instrument_id" });
-    if (error) {
-      throw new Error(error.message);
-    }
-  }
-  return upserts.length;
-}
-async function analytics_service_src_default(req) {
+async function screener_src_default(req) {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
@@ -5759,259 +5427,92 @@ async function analytics_service_src_default(req) {
   } catch {
     body = {};
   }
-  const fromPath = pathOp(req);
-  const opRaw = body && typeof body === "object" && "op" in body ? body.op : fromPath;
-  const op =
-    opRaw === "portfolio" || opRaw === "snapshot" || opRaw === "rsi" ? opRaw : (fromPath ?? void 0);
-  if (!op) {
-    return json(400, { error: "UNKNOWN_OP" });
-  }
-  if (op === "rsi") {
-    const expected = resolveRulesServiceApiKey({
-      API_KEY: Deno.env.get("API_KEY"),
-      INSFORGE_API_KEY: Deno.env.get("INSFORGE_API_KEY"),
-    });
-    if (!expected || token !== expected) {
-      return json(401, { error: "UNAUTHENTICATED" });
-    }
-    const parsed2 = analyticsRsiRequestSchema.safeParse({
-      ...(body && typeof body === "object" ? body : {}),
-      op: "rsi",
-    });
-    if (!parsed2.success) {
-      return json(400, { error: "INVALID_BODY" });
-    }
-    const admin = createAdminClient({ baseUrl, apiKey: expected });
-    try {
-      const written = await precomputeDailyRsi(admin);
-      await admin.database.from("audit_log").insert([
-        {
-          user_id: null,
-          action: "analytics:rsi",
-          entity_type: "instrument_daily_rsi",
-          payload: { written },
-        },
-      ]);
-      return json(200, analyticsRsiResponseSchema.parse({ written }));
-    } catch (error) {
-      return json(500, { error: error instanceof Error ? error.message : "RSI_FAILED" });
-    }
-  }
-  if (op === "snapshot") {
-    const expected = resolveRulesServiceApiKey({
-      API_KEY: Deno.env.get("API_KEY"),
-      INSFORGE_API_KEY: Deno.env.get("INSFORGE_API_KEY"),
-    });
-    if (!expected || token !== expected) {
-      return json(401, { error: "UNAUTHENTICATED" });
-    }
-    const parsed2 = analyticsSnapshotRequestSchema.safeParse({
-      ...(body && typeof body === "object" ? body : {}),
-      op: "snapshot",
-    });
-    if (!parsed2.success) {
-      return json(400, { error: "INVALID_BODY" });
-    }
-    const admin = createAdminClient({ baseUrl, apiKey: expected });
-    const now = /* @__PURE__ */ new Date();
-    const parts = nyClockParts(now);
-    const calendar = await loadCalendar(admin);
-    const session = nyseSessionState(now, calendar);
-    const todayRow = calendar.find((row) => row.session_date === parts.dateKey) ?? null;
-    const asOf =
-      parsed2.data.as_of_date ??
-      dailySnapshotDate({
-        sessionDate: todayRow?.session_date ?? null,
-        session,
-        minutes: parts.hour * 60 + parts.minute,
-        closeMinute: todayRow?.close_minute ?? null,
-        force: parsed2.data.force,
-      });
-    if (!asOf) {
-      return json(
-        200,
-        analyticsSnapshotResponseSchema.parse({ written: 0, skipped: true, as_of_date: null }),
-      );
-    }
-    const [accountsRes2, positionsRes2, quotesRes2, instrumentsRes2, existingRes] =
-      await Promise.all([
-        admin.database.from("accounts").select("id,user_id,cash_balance,reserved_cash,currency"),
-        admin.database
-          .from("positions")
-          .select("id,user_id,account_id,instrument_id,symbol,qty,avg_cost,realized_pnl"),
-        admin.database.from("quotes_latest").select("instrument_id,last,prev_close"),
-        admin.database.from("instruments").select("id,sector"),
-        admin.database.from("portfolio_snapshots").select("account_id").eq("as_of_date", asOf),
-      ]);
-    for (const res of [accountsRes2, positionsRes2, quotesRes2, instrumentsRes2, existingRes]) {
-      if (res.error) {
-        return json(500, { error: res.error.message });
-      }
-    }
-    const quotes2 = /* @__PURE__ */ new Map();
-    for (const row of asRows(quotesRes2.data)) {
-      quotes2.set(String(row.instrument_id), {
-        last: num(row.last),
-        prev_close: num(row.prev_close),
-      });
-    }
-    const sectors2 = /* @__PURE__ */ new Map();
-    for (const row of asRows(instrumentsRes2.data)) {
-      sectors2.set(String(row.id), row.sector == null ? null : String(row.sector));
-    }
-    const already = new Set(asRows(existingRes.data).map((row) => String(row.account_id)));
-    const positionsByAccount = /* @__PURE__ */ new Map();
-    for (const row of asRows(positionsRes2.data)) {
-      const accountId = String(row.account_id);
-      const instrumentId = String(row.instrument_id);
-      const quote = quotes2.get(instrumentId);
-      const list = positionsByAccount.get(accountId) ?? [];
-      list.push({
-        id: String(row.id),
-        instrument_id: instrumentId,
-        symbol: String(row.symbol),
-        sector: sectors2.get(instrumentId) ?? null,
-        qty: num(row.qty),
-        avg_cost: num(row.avg_cost),
-        realized_pnl: num(row.realized_pnl),
-        last: quote?.last ?? 0,
-        prev_close: quote?.prev_close ?? 0,
-      });
-      positionsByAccount.set(accountId, list);
-    }
-    let written = 0;
-    for (const account2 of asRows(accountsRes2.data)) {
-      const accountId = String(account2.id);
-      if (already.has(accountId)) {
-        continue;
-      }
-      const marked2 = assemblePortfolio({
-        account: {
-          id: accountId,
-          cash: num(account2.cash_balance),
-          reserved_cash: num(account2.reserved_cash),
-          currency: String(account2.currency ?? "USD"),
-        },
-        positions: positionsByAccount.get(accountId) ?? [],
-      });
-      const insert = await admin.database.from("portfolio_snapshots").insert([
-        {
-          user_id: String(account2.user_id),
-          account_id: accountId,
-          as_of_date: asOf,
-          equity: marked2.account.equity,
-          cash: marked2.account.cash,
-          buying_power: marked2.account.buying_power,
-        },
-      ]);
-      if (insert.error) {
-        return json(500, { error: insert.error.message });
-      }
-      written += 1;
-    }
-    await admin.database.from("audit_log").insert([
-      {
-        user_id: asRows(accountsRes2.data)[0]
-          ? String(asRows(accountsRes2.data)[0]?.user_id)
-          : null,
-        action: "portfolio:snapshot",
-        entity_type: "portfolio_snapshots",
-        payload: { written, as_of_date: asOf, ts: now.toISOString() },
-      },
-    ]);
-    try {
-      await precomputeDailyRsi(admin);
-    } catch {}
-    return json(
-      200,
-      analyticsSnapshotResponseSchema.parse({ written, skipped: written === 0, as_of_date: asOf }),
-    );
-  }
-  const client = createClient({
-    baseUrl,
-    accessToken: token,
-  });
-  const { data: userData } = await client.auth.getCurrentUser();
-  const userId = userData?.user?.id;
-  const gate = authorize({ userId, action: "portfolio:read" });
-  if (!gate.allowed || !userId) {
-    return json(401, { error: gate.reason ?? "UNAUTHENTICATED" });
-  }
-  const parsed = analyticsPortfolioRequestSchema.safeParse({
+  const parsed = screenerRunRequestSchema.safeParse({
     ...(body && typeof body === "object" ? body : {}),
-    op: "portfolio",
+    op: body && typeof body === "object" && "op" in body && body.op === "count" ? "count" : "run",
   });
   if (!parsed.success) {
     return json(400, { error: "INVALID_BODY" });
   }
-  const [accountsRes, positionsRes, quotesRes, instrumentsRes, snapshotsRes] = await Promise.all([
-    client.database.from("accounts").select("id,user_id,cash_balance,reserved_cash,currency"),
-    client.database
-      .from("positions")
-      .select("id,user_id,account_id,instrument_id,symbol,qty,avg_cost,realized_pnl"),
-    client.database.from("quotes_latest").select("instrument_id,last,prev_close"),
-    client.database.from("instruments").select("id,sector"),
-    client.database
-      .from("portfolio_snapshots")
-      .select("id,user_id,account_id,as_of_date,equity,cash,buying_power,created_at"),
-  ]);
-  for (const res of [accountsRes, positionsRes, quotesRes, instrumentsRes, snapshotsRes]) {
-    if (res.error) {
-      return json(500, { error: res.error.message });
+  const userClient = createClient({ baseUrl, accessToken: token });
+  const { data: userData } = await userClient.auth.getCurrentUser();
+  const userId = userData?.user?.id;
+  const gate = authorize({ userId, action: "screener:run" });
+  if (!gate.allowed || !userId) {
+    return json(401, { error: gate.reason ?? "UNAUTHENTICATED" });
+  }
+  const apiKey = resolveRulesServiceApiKey({
+    API_KEY: Deno.env.get("API_KEY"),
+    INSFORGE_API_KEY: Deno.env.get("INSFORGE_API_KEY"),
+  });
+  if (!apiKey) {
+    return json(500, { error: "API_KEY_MISSING" });
+  }
+  const mode = parsed.data.op === "count" ? "count" : "run";
+  let compiled;
+  let countCompiled;
+  try {
+    compiled = compileScreenerSql({
+      criteria: parsed.data.criteria,
+      sort: parsed.data.sort,
+      mode,
+    });
+    countCompiled = compileScreenerSql({
+      criteria: parsed.data.criteria,
+      sort: parsed.data.sort,
+      mode: "count",
+    });
+  } catch {
+    return json(400, { error: "CRITERIA_COMPILE_FAILED" });
+  }
+  const admin = createAdminClient({ baseUrl, apiKey });
+  const rpc = await admin.database.rpc("exec_screener", {
+    p_sql: compiled.sql,
+    p_params: compiled.params,
+  });
+  if (rpc.error) {
+    return json(500, { error: rpc.error.message });
+  }
+  const raw = asRows(rpc.data);
+  let matchCount = raw.length;
+  if (mode === "run") {
+    const countRpc = await admin.database.rpc("exec_screener", {
+      p_sql: countCompiled.sql,
+      p_params: countCompiled.params,
+    });
+    if (countRpc.error) {
+      return json(500, { error: countRpc.error.message });
     }
+    const countRows = asRows(countRpc.data);
+    matchCount = Number(countRows[0]?.match_count ?? raw.length);
+  } else {
+    matchCount = Number(raw[0]?.match_count ?? 0);
   }
-  const account = asRows(accountsRes.data)[0];
-  if (!account) {
-    return json(404, { error: "ACCOUNT_MISSING" });
-  }
-  const quotes = /* @__PURE__ */ new Map();
-  for (const row of asRows(quotesRes.data)) {
-    quotes.set(String(row.instrument_id), { last: num(row.last), prev_close: num(row.prev_close) });
-  }
-  const sectors = /* @__PURE__ */ new Map();
-  for (const row of asRows(instrumentsRes.data)) {
-    sectors.set(String(row.id), row.sector == null ? null : String(row.sector));
-  }
-  const marked = asRows(positionsRes.data).map((row) => {
-    const instrumentId = String(row.instrument_id);
-    const quote = quotes.get(instrumentId);
-    return {
-      id: String(row.id),
-      instrument_id: instrumentId,
-      symbol: String(row.symbol),
-      sector: sectors.get(instrumentId) ?? null,
-      qty: num(row.qty),
-      avg_cost: num(row.avg_cost),
-      realized_pnl: num(row.realized_pnl),
-      last: quote?.last ?? 0,
-      prev_close: quote?.prev_close ?? 0,
-    };
-  });
-  const range = parsed.data.range ?? "1Y";
-  const snapshots = filterEquityCurve(
-    asRows(snapshotsRes.data).map((row) => ({
-      id: String(row.id),
-      user_id: String(row.user_id),
-      account_id: String(row.account_id),
-      as_of_date: String(row.as_of_date).slice(0, 10),
-      equity: num(row.equity),
-      cash: num(row.cash),
-      buying_power: num(row.buying_power),
-      created_at: String(row.created_at),
-    })),
-    range,
-    /* @__PURE__ */ new Date(),
-  );
-  const payload = assemblePortfolio({
-    account: {
-      id: String(account.id),
-      cash: num(account.cash_balance),
-      reserved_cash: num(account.reserved_cash),
-      currency: String(account.currency ?? "USD"),
+  await admin.database.from("audit_log").insert([
+    {
+      user_id: userId,
+      action: "screener:run",
+      entity_type: "screens",
+      payload: { mode, count: matchCount },
     },
-    positions: marked,
-    snapshots,
-  });
-  return json(200, portfolioResponseSchema.parse(payload));
+  ]);
+  if (mode === "count") {
+    return json(
+      200,
+      screenerCountResponseSchema.parse({
+        count: Number.isFinite(matchCount) ? matchCount : 0,
+        truncated: matchCount > SCREENER_RESULT_LIMIT,
+      }),
+    );
+  }
+  const rows = raw.map((row) => screenerRowSchema.parse(row));
+  return json(
+    200,
+    screenerRunResponseSchema.parse({
+      rows,
+      count: Number.isFinite(matchCount) ? matchCount : rows.length,
+      truncated: matchCount > SCREENER_RESULT_LIMIT,
+    }),
+  );
 }
-export { analytics_service_src_default as default };
+export { screener_src_default as default };

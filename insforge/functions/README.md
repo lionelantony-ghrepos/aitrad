@@ -36,7 +36,14 @@ pnpm functions:bundle:analytics-service
 npx -y @insforge/cli functions deploy analytics-service --file insforge/functions/analytics-service.ts --name "Analytics service"
 ```
 
-`analytics-service` accepts `POST` `{ op: "portfolio" | "snapshot" }` (paths `/portfolio`, `/snapshot`). `/portfolio` is a user JWT read (`authorize` `portfolio:read`) that marks positions against `quotes_latest` with P&L from `@meridian/schemas/analytics`. `/snapshot` is service-key only: after the NYSE close minute it inserts one `portfolio_snapshots` row per account (idempotent on `account_id + as_of_date`) and writes `audit_log`. Schedule the snapshot op at or after the close (interval syntax; the handler no-ops while the session is OPEN).
+`analytics-service` accepts `POST` `{ op: "portfolio" | "snapshot" | "rsi" }` (paths `/portfolio`, `/snapshot`, `/rsi`). `/portfolio` is a user JWT read (`authorize` `portfolio:read`) that marks positions against `quotes_latest` with P&L from `@meridian/schemas/analytics`. `/snapshot` is service-key only: after the NYSE close minute it inserts one `portfolio_snapshots` row per account (idempotent on `account_id + as_of_date`) and writes `audit_log`. Schedule the snapshot op at or after the close (interval syntax; the handler no-ops while the session is OPEN). `/rsi` (service-key) precomputes Wilder RSI(14) from daily `market_bars` into `instrument_daily_rsi` via `@meridian/indicators` (`rsi14Last`); the snapshot job also refreshes RSI after a successful close write.
+
+```bash
+pnpm functions:bundle:screener
+npx -y @insforge/cli functions deploy screener --file insforge/functions/screener.ts --name "Screener"
+```
+
+`screener` accepts `POST` `{ op: "run" | "count", criteria, sort? }`. User JWT + `authorize` `screener:run`. Criteria are Zod-validated and compiled to parameterized SQL (`($1->>n)` binds only). The compiled query is executed with `exec_screener(p_sql, p_params)` (project_admin). Result rows are capped by the compiler LIMIT guard. Writes `audit_log` on each run.
 
 ```bash
 pnpm functions:bundle:news-ticker

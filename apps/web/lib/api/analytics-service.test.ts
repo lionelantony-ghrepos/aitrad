@@ -20,6 +20,9 @@ describe("analyticsServiceUrl", () => {
     expect(analyticsServiceUrl("https://app.insforge.app", "snapshot")).toBe(
       "https://app.insforge.app/functions/analytics-service/snapshot",
     );
+    expect(analyticsServiceUrl("https://app.insforge.app", "rsi")).toBe(
+      "https://app.insforge.app/functions/analytics-service/rsi",
+    );
   });
 });
 
@@ -32,5 +35,8 @@ describe("analytics-service orchestration", () => {
     expect(analyticsSrc).toContain('action: "portfolio:snapshot"');
     expect(analyticsSrc).toContain("dailySnapshotDate");
     expect(analyticsSrc).toContain("audit_log");
+    expect(analyticsSrc).toContain("rsi14Last");
+    expect(analyticsSrc).toContain("instrument_daily_rsi");
+    expect(analyticsSrc).toContain('op: "rsi"');
   });
 });

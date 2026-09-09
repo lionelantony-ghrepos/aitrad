@@ -219,6 +219,20 @@ export const analyticsSnapshotResponseSchema = z.object({
 
 export type AnalyticsSnapshotResponse = z.infer<typeof analyticsSnapshotResponseSchema>;
 
+export const analyticsRsiRequestSchema = z
+  .object({
+    op: z.literal("rsi").optional(),
+  })
+  .strict();
+
+export type AnalyticsRsiRequest = z.infer<typeof analyticsRsiRequestSchema>;
+
+export const analyticsRsiResponseSchema = z.object({
+  written: z.number().int().nonnegative(),
+});
+
+export type AnalyticsRsiResponse = z.infer<typeof analyticsRsiResponseSchema>;
+
 export function assemblePortfolio(input: {
   account: { id: string; cash: number; reserved_cash: number; currency: string };
   positions: readonly MarkedPositionInput[];
