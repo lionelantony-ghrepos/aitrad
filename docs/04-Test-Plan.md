@@ -188,12 +188,12 @@ Seeded via `scripts/seed-all.ts` (see doc 06): 150 instruments, 5y daily + 5d 1m
 ### PBI-018 Portfolio & P&L
 | ID | Criterion / Test | Pri | Status |
 |---|---|---|---|
-| AC-018-01 | Position rows & header KPIs revalue on ticks | P0 | ☑ |
-| AC-018-02 | P&L math matches fixtures (unrealized, day, realized) | P0 | ☑ |
-| AC-018-03 | Close action prefills opposite order; snapshot cron writes daily row | P1 | ☑ |
-| TC-018-01 | Unit: P&L fixtures incl. partial-fill lots (AC-018-02) | P0 | ☑ |
-| TC-018-02 | E2E: fill buy, force +5% → unrealized ≈ +5% (AC-018-01) | P0 | ☑ |
-| TC-018-03 | Close 10-share position → ticket prefilled SELL 10 MKT (AC-018-03) | P1 | ☑ |
+| AC-018-01 | Position rows & header KPIs revalue on ticks | P0 | ☐ |
+| AC-018-02 | P&L math matches fixtures (unrealized, day, realized) | P0 | ☐ |
+| AC-018-03 | Close action prefills opposite order; snapshot cron writes daily row | P1 | ☐ |
+| TC-018-01 | Unit: P&L fixtures incl. partial-fill lots (AC-018-02) | P0 | ☐ |
+| TC-018-02 | E2E: fill buy, force +5% → unrealized ≈ +5% (AC-018-01) | P0 | ☐ |
+| TC-018-03 | Close 10-share position → ticket prefilled SELL 10 MKT (AC-018-03) | P1 | ☐ |
 
 ### PBI-019 News
 | ID | Criterion / Test | Pri | Status |
