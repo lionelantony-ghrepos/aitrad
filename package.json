@@ -20,6 +20,8 @@
     "seed:rules": "node --import tsx --env-file=.env scripts/seed-rules.ts",
     "functions:bundle:rules-service": "node scripts/bundle-rules-service.mjs",
     "functions:bundle:order-service": "node scripts/bundle-order-service.mjs",
+    "functions:bundle:matching-runner": "node scripts/bundle-matching-runner.mjs",
+    "functions:bundle:market-tick": "node scripts/bundle-market-tick.mjs",
     "prepare": "husky"
   },
   "dependencies": {

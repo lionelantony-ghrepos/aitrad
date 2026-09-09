@@ -245,6 +245,38 @@ export default async function (req: Request): Promise<Response> {
       .is("user_id", null);
   }
 
+  const matchTicks = result.publishes.flat().map((q) => ({
+    ...q,
+    symbol: symbolById.get(q.instrument_id),
+  }));
+  let matching: { ok: boolean; fills?: number } | { ok: false; error: string } = { ok: true };
+  if (matchTicks.length > 0) {
+    try {
+      const matchRes = await fetch(
+        `${(Deno.env.get("INSFORGE_INTERNAL_URL") ?? Deno.env.get("INSFORGE_BASE_URL") ?? "").replace(/\/+$/, "")}/functions/matching-runner`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${expected}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ ticks: matchTicks }),
+        },
+      );
+      const matchBody: unknown = await matchRes.json();
+      if (!matchRes.ok) {
+        matching = { ok: false, error: `MATCHING_${matchRes.status}` };
+      } else if (matchBody && typeof matchBody === "object" && "fills" in matchBody) {
+        matching = { ok: true, fills: Number((matchBody as { fills: unknown }).fills) };
+      }
+    } catch (error) {
+      matching = {
+        ok: false,
+        error: error instanceof Error ? error.message : "MATCHING_UNAVAILABLE",
+      };
+    }
+  }
+
   await admin.database.from("audit_log").insert([
     {
       action: "market-tick",
@@ -255,6 +287,7 @@ export default async function (req: Request): Promise<Response> {
         published: result.publishes.length,
         paused: flags.paused,
         consumeForcePrice: result.consumeForcePrice,
+        matching,
       },
     },
   ]);
@@ -264,5 +297,6 @@ export default async function (req: Request): Promise<Response> {
     ticksApplied: result.ticksApplied,
     published: result.publishes.length,
     paused: flags.paused,
+    matching,
   });
 }

@@ -23,3 +23,10 @@ npx -y @insforge/cli functions deploy order-service --file insforge/functions/or
 ```
 
 `order-service` accepts `POST` `{ op: "preview" | "create" | "cancel", … }` (paths `/preview`, `/orders`, `/orders/:id/cancel`). Rule facts use `quotes_latest.last` via `lastPriceForRuleFacts` (client `last_price` is ignored). Preview evaluates DT-VAL-01, DT-RISK-01, DT-HRS-01, and DT-FEE-01 via `rules-service` and writes only `rule_audit`. Create evaluates those domains in order, then uses `createAdminClient` (`API_KEY` / `INSFORGE_API_KEY`) to reserve buying power (`reserve_buying_power` row lock + `p_user_id`), insert `accepted` or `rejected`, and publish `orders:{userId}`. Authenticated JWTs cannot EXECUTE reserve/release/publish. Cancel is FSM-guarded (`accepted` / `working` / `partially_filled`) and also uses the admin writer.
+
+```bash
+pnpm functions:bundle:matching-runner
+npx -y @insforge/cli functions deploy matching-runner --file insforge/functions/matching-runner.ts --name "Matching runner"
+```
+
+`matching-runner` is service-key only. On each tick batch it promotes `accepted` → `working`, evaluates `execution_sim` (DT-EXEC-01), and applies fills through `apply_paper_fill` (executions, positions, cash, reserve release). It publishes `orders:{userId}` and `positions:{userId}` and writes `audit_log` per fill. `market-tick` invokes it after publishing quotes; feed test mode (`feed.paused` + `feed.force_price`) is the integration path for a limit cross.

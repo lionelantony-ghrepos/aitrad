@@ -1,4 +1,6 @@
 // insforge/functions/market-tick-src.ts
+
+// insforge/functions/market-tick-src.ts
 import { createAdminClient } from "npm:@insforge/sdk";
 
 // packages/mock-data/src/calendar.ts
@@ -778,6 +780,37 @@ async function market_tick_src_default(req) {
       .eq("key", "feed.force_price")
       .is("user_id", null);
   }
+  const matchTicks = result.publishes.flat().map((q) => ({
+    ...q,
+    symbol: symbolById.get(q.instrument_id),
+  }));
+  let matching = { ok: true };
+  if (matchTicks.length > 0) {
+    try {
+      const matchRes = await fetch(
+        `${(Deno.env.get("INSFORGE_INTERNAL_URL") ?? Deno.env.get("INSFORGE_BASE_URL") ?? "").replace(/\/+$/, "")}/functions/matching-runner`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${expected}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ ticks: matchTicks }),
+        },
+      );
+      const matchBody = await matchRes.json();
+      if (!matchRes.ok) {
+        matching = { ok: false, error: `MATCHING_${matchRes.status}` };
+      } else if (matchBody && typeof matchBody === "object" && "fills" in matchBody) {
+        matching = { ok: true, fills: Number(matchBody.fills) };
+      }
+    } catch (error) {
+      matching = {
+        ok: false,
+        error: error instanceof Error ? error.message : "MATCHING_UNAVAILABLE",
+      };
+    }
+  }
   await admin.database.from("audit_log").insert([
     {
       action: "market-tick",
@@ -788,6 +821,7 @@ async function market_tick_src_default(req) {
         published: result.publishes.length,
         paused: flags.paused,
         consumeForcePrice: result.consumeForcePrice,
+        matching,
       },
     },
   ]);
@@ -796,6 +830,7 @@ async function market_tick_src_default(req) {
     ticksApplied: result.ticksApplied,
     published: result.publishes.length,
     paused: flags.paused,
+    matching,
   });
 }
 export { market_tick_src_default as default };
