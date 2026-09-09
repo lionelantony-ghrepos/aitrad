@@ -3,6 +3,7 @@
  * bundle to `analytics-service.ts` with esbuild (`--external:npm:@insforge/sdk`).
  */
 import { createAdminClient, createClient } from "npm:@insforge/sdk";
+import { rsi14Last } from "../../packages/indicators/src/index.ts";
 import {
   nyClockParts,
   nyseSessionState,
@@ -10,6 +11,8 @@ import {
 } from "../../packages/mock-data/src/index.ts";
 import {
   analyticsPortfolioRequestSchema,
+  analyticsRsiRequestSchema,
+  analyticsRsiResponseSchema,
   analyticsSnapshotRequestSchema,
   analyticsSnapshotResponseSchema,
   assemblePortfolio,
@@ -34,7 +37,7 @@ function json(status: number, body: unknown): Response {
   });
 }
 
-type Op = "portfolio" | "snapshot";
+type Op = "portfolio" | "snapshot" | "rsi";
 
 function pathOp(req: Request): Op | null {
   const pathname = new URL(req.url).pathname.replace(/\/+$/, "");
@@ -43,6 +46,9 @@ function pathOp(req: Request): Op | null {
   }
   if (pathname.endsWith("/snapshot")) {
     return "snapshot";
+  }
+  if (pathname.endsWith("/rsi")) {
+    return "rsi";
   }
   return null;
 }
@@ -72,6 +78,50 @@ async function loadCalendar(client: DbClient): Promise<MarketCalendarRow[]> {
     open_minute: num(row.open_minute),
     close_minute: num(row.close_minute),
   }));
+}
+
+async function precomputeDailyRsi(admin: DbClient): Promise<number> {
+  const barsRes = await admin.database
+    .from("market_bars")
+    .select("instrument_id,ts,c")
+    .eq("timeframe", "1d");
+  if (barsRes.error) {
+    throw new Error(barsRes.error.message);
+  }
+  const byInstrument = new Map<string, Array<{ ts: string; c: number }>>();
+  for (const row of asRows<Record<string, unknown>>(barsRes.data)) {
+    const id = String(row.instrument_id);
+    const list = byInstrument.get(id) ?? [];
+    list.push({ ts: String(row.ts), c: num(row.c) });
+    byInstrument.set(id, list);
+  }
+  const upserts: Array<{
+    instrument_id: string;
+    rsi_14: number | null;
+    as_of_date: string;
+  }> = [];
+  for (const [instrumentId, bars] of byInstrument) {
+    bars.sort((a, b) => a.ts.localeCompare(b.ts));
+    const closes = bars.map((bar) => bar.c);
+    const lastBar = bars[bars.length - 1];
+    if (!lastBar) {
+      continue;
+    }
+    upserts.push({
+      instrument_id: instrumentId,
+      rsi_14: rsi14Last(closes),
+      as_of_date: lastBar.ts.slice(0, 10),
+    });
+  }
+  if (upserts.length > 0) {
+    const { error } = await admin.database
+      .from("instrument_daily_rsi")
+      .upsert(upserts, { onConflict: "instrument_id" });
+    if (error) {
+      throw new Error(error.message);
+    }
+  }
+  return upserts.length;
 }
 
 export default async function (req: Request): Promise<Response> {
@@ -104,9 +154,43 @@ export default async function (req: Request): Promise<Response> {
   const opRaw =
     body && typeof body === "object" && "op" in body ? (body as { op?: unknown }).op : fromPath;
   const op: Op | undefined =
-    opRaw === "portfolio" || opRaw === "snapshot" ? opRaw : (fromPath ?? undefined);
+    opRaw === "portfolio" || opRaw === "snapshot" || opRaw === "rsi"
+      ? opRaw
+      : (fromPath ?? undefined);
   if (!op) {
     return json(400, { error: "UNKNOWN_OP" });
+  }
+
+  if (op === "rsi") {
+    const expected = resolveRulesServiceApiKey({
+      API_KEY: Deno.env.get("API_KEY"),
+      INSFORGE_API_KEY: Deno.env.get("INSFORGE_API_KEY"),
+    });
+    if (!expected || token !== expected) {
+      return json(401, { error: "UNAUTHENTICATED" });
+    }
+    const parsed = analyticsRsiRequestSchema.safeParse({
+      ...(body && typeof body === "object" ? body : {}),
+      op: "rsi",
+    });
+    if (!parsed.success) {
+      return json(400, { error: "INVALID_BODY" });
+    }
+    const admin = createAdminClient({ baseUrl, apiKey: expected });
+    try {
+      const written = await precomputeDailyRsi(admin);
+      await admin.database.from("audit_log").insert([
+        {
+          user_id: null,
+          action: "analytics:rsi",
+          entity_type: "instrument_daily_rsi",
+          payload: { written },
+        },
+      ]);
+      return json(200, analyticsRsiResponseSchema.parse({ written }));
+    } catch (error) {
+      return json(500, { error: error instanceof Error ? error.message : "RSI_FAILED" });
+    }
   }
 
   if (op === "snapshot") {
@@ -235,6 +319,11 @@ export default async function (req: Request): Promise<Response> {
         payload: { written, as_of_date: asOf, ts: now.toISOString() },
       },
     ]);
+    try {
+      await precomputeDailyRsi(admin);
+    } catch {
+      // Snapshot already persisted; RSI refresh is best-effort on the close job.
+    }
     return json(
       200,
       analyticsSnapshotResponseSchema.parse({ written, skipped: written === 0, as_of_date: asOf }),

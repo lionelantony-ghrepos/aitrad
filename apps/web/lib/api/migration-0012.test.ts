@@ -16,8 +16,10 @@ const cliTwinSql = readFileSync(
 
 describe("PBI-020 migration 0012 fundamentals", () => {
   it("lists 0012 after 0011", () => {
-    expect(LOCAL_MIGRATION_IDS[LOCAL_MIGRATION_IDS.length - 1]).toBe("0012");
-    expect(LOCAL_MIGRATION_IDS).toContain("0011");
+    expect(LOCAL_MIGRATION_IDS).toContain("0012");
+    expect(LOCAL_MIGRATION_IDS.indexOf("0012")).toBeGreaterThan(
+      LOCAL_MIGRATION_IDS.indexOf("0011"),
+    );
   });
 
   it("creates fundamentals with public SELECT and admin writes", () => {

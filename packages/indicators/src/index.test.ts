@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ema, packageName, rsi, sma, vwap } from "./index";
+import { ema, latestDefined, packageName, rsi, rsi14Last, sma, vwap } from "./index";
 
 describe("TC-008-02 indicators vs known vectors", () => {
   it("exports the package name", () => {
@@ -42,5 +42,14 @@ describe("TC-008-02 indicators vs known vectors", () => {
     expect(ema([], 12)).toEqual([]);
     expect(rsi([], 14)).toEqual([]);
     expect(vwap([])).toEqual([]);
+    expect(rsi14Last([])).toBeNull();
+    expect(latestDefined([null, undefined])).toBeNull();
+  });
+
+  it("returns the last defined RSI(14) point", () => {
+    const closes = Array.from({ length: 20 }, (_, i) => 100 + i);
+    const series = rsi(closes, 14);
+    expect(rsi14Last(closes)).toBe(latestDefined(series));
+    expect(rsi14Last(closes)).not.toBeNull();
   });
 });

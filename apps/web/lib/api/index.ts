@@ -34,6 +34,8 @@ export { createRuleAuditRepository } from "./rule-audit";
 export { createPositionsRepository, createPortfolioSnapshotsRepository } from "./positions";
 export { createNewsItemsRepository } from "./news-items";
 export { createFundamentalsRepository } from "./fundamentals";
+export { createScreensRepository } from "./screens";
+export { screenerServiceUrl, invokeScreenerRun } from "./screener";
 export {
   analyticsServiceUrl,
   invokeAnalyticsPortfolio,

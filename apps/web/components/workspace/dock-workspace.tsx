@@ -19,6 +19,7 @@ import { OrderTicketPanel } from "./order-ticket-panel";
 import { PlaceholderPanel } from "./placeholder-panel";
 import { NewsPanel } from "./news-panel";
 import { PortfolioPanel } from "./portfolio-panel";
+import { ScreenerPanel } from "./screener-panel";
 import { WatchlistPanel } from "./watchlist-panel";
 
 const components = {
@@ -32,7 +33,8 @@ const components = {
         id !== "blotter" &&
         id !== "portfolio" &&
         id !== "news" &&
-        id !== "des",
+        id !== "des" &&
+        id !== "screener",
     ).map((id) => [id, PlaceholderPanel]),
   ),
   watchlist: WatchlistPanel,
@@ -43,6 +45,7 @@ const components = {
   portfolio: PortfolioPanel,
   news: NewsPanel,
   des: DesPanel,
+  screener: ScreenerPanel,
 };
 
 function snapshot(api: DockviewApi): Record<string, unknown> {

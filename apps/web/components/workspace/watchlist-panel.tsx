@@ -15,6 +15,7 @@ import {
   searchInstrumentsAction,
 } from "@/app/actions/watchlists";
 import { loadStoredLayout, persistSelectedWatchlistId } from "@/lib/layout-storage";
+import { WATCHLIST_CHANGED_EVENT } from "@/lib/watchlist/changed";
 import { useQuotes } from "@/lib/quotes/use-quotes";
 import { createInsforgeQuotesTransport, createWindowQuotesTransport } from "@/lib/quotes/transport";
 import { useSymbolContext } from "@/lib/symbol-context";
@@ -86,6 +87,30 @@ export function WatchlistPanel(props: IDockviewPanelProps): React.JSX.Element {
     void loadLists();
   }, [loadLists]);
 
+  const loadItems = useCallback(async (watchlistId: string) => {
+    const result = await listWatchlistItemsAction(watchlistId);
+    if (!result.ok) {
+      setError(result.message);
+      return;
+    }
+    setItems(result.data);
+    const ids = result.data.map((row) => row.instrument_id);
+    const [inst, quotes] = await Promise.all([
+      resolveInstrumentsAction(ids),
+      listQuotesAction(ids),
+    ]);
+    if (inst.ok) {
+      const map: Record<string, Instrument> = {};
+      for (const row of inst.data) {
+        map[row.id] = row;
+      }
+      setInstruments(map);
+    }
+    if (quotes.ok) {
+      setSeedQuotes(quotes.data);
+    }
+  }, []);
+
   useEffect(() => {
     if (!selectedId) {
       setItems([]);
@@ -94,30 +119,18 @@ export function WatchlistPanel(props: IDockviewPanelProps): React.JSX.Element {
     if (typeof window !== "undefined") {
       persistSelectedWatchlistId(window.localStorage, selectedId);
     }
-    void (async () => {
-      const result = await listWatchlistItemsAction(selectedId);
-      if (!result.ok) {
-        setError(result.message);
-        return;
+    void loadItems(selectedId);
+  }, [selectedId, loadItems]);
+
+  useEffect(() => {
+    const onChanged = () => {
+      if (selectedId) {
+        void loadItems(selectedId);
       }
-      setItems(result.data);
-      const ids = result.data.map((row) => row.instrument_id);
-      const [inst, quotes] = await Promise.all([
-        resolveInstrumentsAction(ids),
-        listQuotesAction(ids),
-      ]);
-      if (inst.ok) {
-        const map: Record<string, Instrument> = {};
-        for (const row of inst.data) {
-          map[row.id] = row;
-        }
-        setInstruments(map);
-      }
-      if (quotes.ok) {
-        setSeedQuotes(quotes.data);
-      }
-    })();
-  }, [selectedId]);
+    };
+    window.addEventListener(WATCHLIST_CHANGED_EVENT, onChanged);
+    return () => window.removeEventListener(WATCHLIST_CHANGED_EVENT, onChanged);
+  }, [loadItems, selectedId]);
 
   const symbols = useMemo(() => {
     return items

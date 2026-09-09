@@ -10,7 +10,10 @@ import {
 } from "@meridian/schemas";
 import { functionsUrl } from "./functions";
 
-export function analyticsServiceUrl(baseUrl: string, path?: "portfolio" | "snapshot"): string {
+export function analyticsServiceUrl(
+  baseUrl: string,
+  path?: "portfolio" | "snapshot" | "rsi",
+): string {
   const root = functionsUrl(baseUrl, "analytics-service");
   return path ? `${root}/${path}` : root;
 }

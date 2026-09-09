@@ -4,6 +4,8 @@ Exported `*Schema` bindings discovered by static scan. Full OpenAPI from Zod is 
 
 - analytics.ts: allocationSliceSchema
 - analytics.ts: analyticsPortfolioRequestSchema
+- analytics.ts: analyticsRsiRequestSchema
+- analytics.ts: analyticsRsiResponseSchema
 - analytics.ts: analyticsSnapshotRequestSchema
 - analytics.ts: analyticsSnapshotResponseSchema
 - analytics.ts: equityCurveRangeSchema
@@ -138,4 +140,20 @@ Exported `*Schema` bindings discovered by static scan. Full OpenAPI from Zod is 
 - rules-service.ts: ruleDomainSchema
 - rules-service.ts: tableStatusSchema
 - rules-service.ts: tableVersionRefSchema
+- screener.ts: instrumentDailyRsiSchema
+- screener.ts: screenInsertSchema
+- screener.ts: screenPatchSchema
+- screener.ts: screenRecordSchema
+- screener.ts: screenerCombinatorSchema
+- screener.ts: screenerConditionSchema
+- screener.ts: screenerCountResponseSchema
+- screener.ts: screenerCriteriaSchema
+- screener.ts: screenerFieldIdSchema
+- screener.ts: screenerGroupSchema
+- screener.ts: screenerRowSchema
+- screener.ts: screenerRunRequestSchema
+- screener.ts: screenerRunResponseSchema
+- screener.ts: screenerSortColumnSchema
+- screener.ts: screenerSortDirSchema
+- screener.ts: screenerSortSchema
 - workspace-layout.ts: workspaceLayoutV1Schema
