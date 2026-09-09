@@ -8,10 +8,19 @@ import {
   type WorkingOrderMatch,
 } from "@meridian/schemas";
 import { resolveExecConfig, type ExecConfigResolver } from "./exec-config";
+import { resolveSameTickGroupFills } from "./groups";
+import { isTrailingStop, ratchetTrailingStop } from "./trailing";
+
+export type TrailingUpdate = {
+  orderId: string;
+  high_water_mark: number;
+  stop_price: number;
+};
 
 export type MatchResult = {
   fills: MatchFill[];
   triggeredOrderIds: string[];
+  trailingUpdates: TrailingUpdate[];
 };
 
 function marketPrice(last: number, side: "buy" | "sell", slippageBps: number): number {
@@ -92,6 +101,7 @@ export function matchOrders(
   const last = parsedTick.last;
   const fills: MatchFill[] = [];
   const triggeredOrderIds: string[] = [];
+  const trailingUpdates: TrailingUpdate[] = [];
 
   const orders = workingOrders.map((row) => workingOrderMatchSchema.parse(row)).sort(compareOrders);
 
@@ -102,28 +112,49 @@ export function matchOrders(
     }
 
     const config = resolveExecConfig(execConfig, order.id);
-    let triggered = Boolean(order.stop_triggered);
-    let effectiveType = order.order_type;
+    let working = order;
+    if (isTrailingStop(order)) {
+      const ratchet = ratchetTrailingStop(order, last);
+      if (ratchet) {
+        working = {
+          ...order,
+          high_water_mark: ratchet.high_water_mark,
+          stop_price: ratchet.stop_price,
+        };
+        trailingUpdates.push({
+          orderId: order.id,
+          high_water_mark: ratchet.high_water_mark,
+          stop_price: ratchet.stop_price,
+        });
+      }
+    }
 
-    if (order.order_type === "stop" || order.order_type === "stop_limit") {
-      if (!triggered && isStopTriggered(order, last)) {
+    let triggered = Boolean(working.stop_triggered);
+    let effectiveType = working.order_type;
+
+    if (
+      working.order_type === "stop" ||
+      working.order_type === "stop_limit" ||
+      isTrailingStop(working)
+    ) {
+      if (!triggered && isStopTriggered(working, last)) {
         triggered = true;
-        triggeredOrderIds.push(order.id);
+        triggeredOrderIds.push(working.id);
       }
       if (!triggered) {
         continue;
       }
-      effectiveType = order.order_type === "stop" ? "market" : "limit";
+      effectiveType = working.order_type === "stop_limit" ? "limit" : "market";
     }
 
     let price: number | null = null;
     if (effectiveType === "market") {
       price = marketPrice(last, order.side, config.slippage_bps);
     } else if (effectiveType === "limit") {
-      if (!isLimitMarketable(order, last)) {
+      if (!isLimitMarketable(working, last)) {
         continue;
       }
-      price = limitFillPrice(order, last);
+      price = limitFillPrice(working, last);
     } else {
       continue;
     }
@@ -135,15 +166,19 @@ export function matchOrders(
 
     fills.push(
       matchFillSchema.parse({
-        order_id: order.id,
-        side: order.side,
+        order_id: working.id,
+        side: working.side,
         qty,
         price: applyTickSize(price, config.tick_size),
       }),
     );
   }
 
-  return { fills, triggeredOrderIds };
+  return {
+    fills: resolveSameTickGroupFills(fills, orders),
+    triggeredOrderIds,
+    trailingUpdates,
+  };
 }
 
 export function match(

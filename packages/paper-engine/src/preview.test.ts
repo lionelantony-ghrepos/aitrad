@@ -55,6 +55,7 @@ describe("buildOrderFacts", () => {
     expect(facts.order_notional).toBe(qty * quoteLast);
     expect(facts.order_notional).toBeGreaterThan(ifClientTrusted.order_notional as number);
     expect(facts.last_price).toBe(quoteLast);
+    expect(facts.group_type).toBeNull();
 
     const preview = assemblePreview({
       draft: { ...draft, qty },

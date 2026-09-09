@@ -18,13 +18,17 @@ import {
   applyFillToLedger,
   applyFillToPosition,
   assertTransition,
+  canCancel,
   canTransition,
   cashDeltaForFill,
   emptyPosition,
+  groupActionsAfterFills,
   liquidityCapShares,
   matchOrders,
   parseExecConfig,
+  shouldPromoteAccepted,
 } from "../../packages/paper-engine/src/index.ts";
+import type { OrderLegRole, OrderGroupType, TrailType } from "../../packages/schemas/src/index.ts";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
 
@@ -61,6 +65,13 @@ type OrderRow = {
   reserved_amount: number;
   stop_triggered: boolean;
   created_at: string;
+  group_id: string | null;
+  group_type: OrderGroupType | null;
+  leg_role: OrderLegRole | null;
+  group_activated: boolean;
+  trail_type: TrailType | null;
+  trail_value: number | null;
+  high_water_mark: number | null;
 };
 
 type InstrumentRow = {
@@ -98,6 +109,20 @@ function mapOrder(row: Record<string, unknown>): OrderRow {
     reserved_amount: num(row.reserved_amount),
     stop_triggered: Boolean(row.stop_triggered),
     created_at: String(row.created_at),
+    group_id: row.group_id == null ? null : String(row.group_id),
+    group_type: row.group_type === "bracket" || row.group_type === "oco" ? row.group_type : null,
+    leg_role:
+      row.leg_role === "entry" ||
+      row.leg_role === "take_profit" ||
+      row.leg_role === "stop_loss" ||
+      row.leg_role === "oco_a" ||
+      row.leg_role === "oco_b"
+        ? row.leg_role
+        : null,
+    group_activated: row.group_activated !== false,
+    trail_type: row.trail_type === "percent" || row.trail_type === "amount" ? row.trail_type : null,
+    trail_value: row.trail_value == null ? null : num(row.trail_value),
+    high_water_mark: row.high_water_mark == null ? null : num(row.high_water_mark),
   };
 }
 
@@ -274,7 +299,7 @@ export default async function (req: Request): Promise<Response> {
   let promoted = 0;
   const now = new Date().toISOString();
   for (const order of orders) {
-    if (order.status !== "accepted") {
+    if (!shouldPromoteAccepted(order)) {
       continue;
     }
     if (!canTransition(order.status, "working")) {
@@ -405,6 +430,22 @@ export default async function (req: Request): Promise<Response> {
       (orderId) => configs.get(orderId) as ExecConfig,
     );
 
+    for (const update of result.trailingUpdates) {
+      const order = orders.find((row) => row.id === update.orderId);
+      if (!order) {
+        continue;
+      }
+      order.high_water_mark = update.high_water_mark;
+      order.stop_price = update.stop_price;
+      await admin.database
+        .from("orders")
+        .update({
+          high_water_mark: update.high_water_mark,
+          stop_price: update.stop_price,
+        })
+        .eq("id", order.id);
+    }
+
     for (const orderId of result.triggeredOrderIds) {
       const order = orders.find((row) => row.id === orderId);
       if (!order || order.stop_triggered) {
@@ -499,6 +540,77 @@ export default async function (req: Request): Promise<Response> {
       ]);
       await publishOrder(admin, order);
       await publishPosition(admin, order.user_id, storedPos);
+    }
+
+    const filledIds = result.fills
+      .map((fill) => orders.find((row) => row.id === fill.order_id))
+      .filter((order): order is OrderRow => Boolean(order) && order.status === "filled")
+      .map((order) => order.id);
+    const effects = groupActionsAfterFills(orders, filledIds);
+    for (const id of effects.activateIds) {
+      const order = orders.find((row) => row.id === id);
+      if (!order) {
+        continue;
+      }
+      order.group_activated = true;
+      if (shouldPromoteAccepted(order) && canTransition(order.status, "working")) {
+        assertTransition(order.status, "working");
+        const update = await admin.database
+          .from("orders")
+          .update({ group_activated: true, status: "working" })
+          .eq("id", order.id);
+        if (update.error) {
+          return json(500, { error: update.error.message });
+        }
+        order.status = "working";
+        promoted += 1;
+        await admin.database.from("audit_log").insert([
+          {
+            user_id: order.user_id,
+            action: "trade:promote",
+            entity_type: "orders",
+            entity_id: order.id,
+            payload: { from: "accepted", to: "working", reason: "group_activate" },
+          },
+        ]);
+        await publishOrder(admin, order);
+      } else {
+        await admin.database.from("orders").update({ group_activated: true }).eq("id", order.id);
+      }
+    }
+    for (const id of effects.cancelIds) {
+      const order = orders.find((row) => row.id === id);
+      if (!order || !canCancel(order.status)) {
+        continue;
+      }
+      const from = order.status;
+      assertTransition(order.status, "cancelled");
+      if (order.reserved_amount > 0) {
+        await admin.database.rpc("release_buying_power", {
+          p_account_id: order.account_id,
+          p_amount: order.reserved_amount,
+          p_user_id: order.user_id,
+        });
+        order.reserved_amount = 0;
+      }
+      const update = await admin.database
+        .from("orders")
+        .update({ status: "cancelled", reserved_amount: 0 })
+        .eq("id", order.id);
+      if (update.error) {
+        return json(500, { error: update.error.message });
+      }
+      order.status = "cancelled";
+      await admin.database.from("audit_log").insert([
+        {
+          user_id: order.user_id,
+          action: "trade:cancel",
+          entity_type: "orders",
+          entity_id: order.id,
+          payload: { from, to: "cancelled", reason: "group_oco" },
+        },
+      ]);
+      await publishOrder(admin, order);
     }
   }
 

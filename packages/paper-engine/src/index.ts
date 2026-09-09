@@ -43,7 +43,28 @@ export {
   type DomainEval,
   type PlacementDecision,
 } from "./order-pipeline";
-export { match, matchOrders, type MatchResult } from "./match";
+export { match, matchOrders, type MatchResult, type TrailingUpdate } from "./match";
+export {
+  expandOrderGroup,
+  groupActionsAfterFills,
+  isChildProtectionLeg,
+  isOcoLeg,
+  isStopPriority,
+  oppositeSide,
+  resolveSameTickGroupFills,
+  shouldPromoteAccepted,
+  type ExpandedGroupLeg,
+  type GroupOrderRef,
+  type GroupSideEffect,
+} from "./groups";
+export {
+  initialTrailMark,
+  isTrailingStop,
+  ratchetTrailingStop,
+  seedTrailingOnCreate,
+  type TrailingFields,
+  type TrailingRatchet,
+} from "./trailing";
 export {
   liquidityCapShares,
   parseExecConfig,

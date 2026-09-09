@@ -1,7 +1,8 @@
 "use server";
 
 import { authorize } from "@meridian/rules-engine";
-import { canCancel } from "@meridian/paper-engine";
+import { canCancel, expandOrderGroup, seedTrailingOnCreate } from "@meridian/paper-engine";
+import type { MatchTick, OrderLegRole } from "@meridian/schemas";
 import {
   orderCancelResponseSchema,
   orderCreateResponseSchema,
@@ -19,7 +20,9 @@ import {
 } from "@meridian/schemas";
 import { createAccountsRepository } from "@/lib/api/accounts";
 import { createRecordsClient } from "@/lib/api/client";
+import { createOrdersRepository } from "@/lib/api/orders";
 import { createInstrumentsRepository } from "@/lib/api/instruments";
+import { stubApplyTicks } from "@/lib/orders/stub-matching";
 import { invokeOrderCancel, invokeOrderCreate, invokeOrderPreview } from "@/lib/api/order-service";
 import { createProfilesRepository } from "@/lib/api/profiles";
 import { createQuotesLatestRepository } from "@/lib/api/quotes-latest";
@@ -29,6 +32,7 @@ import {
   stubConsumeForceOrderReject,
   stubGetOrder,
   stubInsertOrder,
+  stubListOrders,
   stubInstrumentBySymbol,
   stubLoadProvision,
   stubQuotesFor,
@@ -195,28 +199,57 @@ export async function submitOrderAction(input: {
       },
     });
     const now = new Date().toISOString();
-    const order: OrderRecord = {
-      id: crypto.randomUUID(),
-      user_id: session.userId,
-      account_id: provision.account.id,
-      instrument_id: instrument.id,
-      symbol: draft.symbol,
-      side: draft.side,
-      qty: draft.qty,
-      filled_qty: 0,
-      order_type: draft.order_type,
-      limit_price: draft.limit_price ?? null,
-      stop_price: draft.stop_price ?? null,
-      tif: draft.tif,
-      status: placement.status,
-      reject_reason: placement.rejectReason,
-      rule_audit_id: placement.ruleAuditId,
-      parent_order_id: null,
-      reserved_amount: placement.reserved,
-      created_at: now,
-      updated_at: now,
-    };
-    stubInsertOrder(order);
+    const legs = expandOrderGroup(draft);
+    const groupId = legs.length > 1 ? crypto.randomUUID() : null;
+    const parentId = crypto.randomUUID();
+    const created: OrderRecord[] = [];
+    for (const [index, leg] of legs.entries()) {
+      const trailSeed = seedTrailingOnCreate(
+        {
+          side: leg.draft.side,
+          trail_type: leg.trail_type,
+          trail_value: leg.trail_value,
+          high_water_mark: null,
+          stop_price: leg.draft.stop_price ?? null,
+        },
+        input.last_price,
+      );
+      const isParent = index === 0;
+      const order: OrderRecord = {
+        id: isParent ? parentId : crypto.randomUUID(),
+        user_id: session.userId,
+        account_id: provision.account.id,
+        instrument_id: instrument.id,
+        symbol: leg.draft.symbol,
+        side: leg.draft.side,
+        qty: leg.draft.qty,
+        filled_qty: 0,
+        order_type: leg.draft.order_type,
+        limit_price: leg.draft.limit_price ?? null,
+        stop_price: trailSeed.stop_price,
+        tif: leg.draft.tif,
+        status: placement.status,
+        reject_reason: isParent ? placement.rejectReason : null,
+        rule_audit_id: placement.ruleAuditId,
+        parent_order_id: isParent ? null : parentId,
+        group_id: groupId,
+        group_type: draft.group_type ?? null,
+        leg_role: (leg.leg_role ?? null) as OrderLegRole | null,
+        group_activated: placement.status === "accepted" ? leg.group_activated : false,
+        trail_type: leg.trail_type ?? null,
+        trail_value: leg.trail_value ?? null,
+        high_water_mark: trailSeed.high_water_mark,
+        reserved_amount: isParent ? placement.reserved : 0,
+        created_at: now,
+        updated_at: now,
+      };
+      stubInsertOrder(order);
+      created.push(order);
+    }
+    const order = created[0];
+    if (!order) {
+      return { ok: false, message: "Order create failed." };
+    }
     return { ok: true, data: orderCreateResponseSchema.parse({ order, preview }) };
   }
   const env = readPublicInsforgeEnv();
@@ -274,4 +307,30 @@ export async function cancelOrderAction(
     orderId,
   });
   return { ok: true, data: cancelled };
+}
+
+export async function listOrdersAction(): Promise<ActionResult<OrderRecord[]>> {
+  const session = await requireUser();
+  if (!session.ok) {
+    return session;
+  }
+  if (isAuthStub()) {
+    return { ok: true, data: stubListOrders(session.userId) };
+  }
+  const client = records(session.token);
+  const rows = await createOrdersRepository(client).listMine();
+  return { ok: true, data: rows };
+}
+
+export async function applyPaperTicksAction(
+  ticks: MatchTick[],
+): Promise<ActionResult<OrderRecord[]>> {
+  const session = await requireUser();
+  if (!session.ok) {
+    return session;
+  }
+  if (isAuthStub()) {
+    return { ok: true, data: stubApplyTicks(session.userId, ticks) };
+  }
+  return listOrdersAction();
 }

@@ -19,6 +19,23 @@ describe("orderDraftSchema", () => {
     expect(parsed.qty).toBe(5);
   });
 
+  it("accepts bracket and trailing fields", () => {
+    const parsed = orderDraftSchema.parse({
+      symbol: "AAPL",
+      side: "buy",
+      qty: 2,
+      order_type: "market",
+      tif: "DAY",
+      group_type: "bracket",
+      tp_price: 210,
+      sl_price: 190,
+      trail_type: "percent",
+      trail_value: 5,
+    });
+    expect(parsed.group_type).toBe("bracket");
+    expect(parsed.trail_type).toBe("percent");
+  });
+
   it("rejects unknown fields and invalid enums", () => {
     expect(
       orderDraftSchema.safeParse({

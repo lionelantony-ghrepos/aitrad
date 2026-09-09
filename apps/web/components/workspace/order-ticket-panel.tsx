@@ -13,6 +13,7 @@ import {
   type TimeInForce,
 } from "@meridian/schemas";
 import {
+  applyPaperTicksAction,
   loadOrderTicketContextAction,
   previewOrderAction,
   submitOrderAction,
@@ -54,9 +55,14 @@ export function OrderTicketPanel(props: IDockviewPanelProps): React.JSX.Element 
   const [qtyMode, setQtyMode] = useState<QtyMode>("shares");
   const [qtyInput, setQtyInput] = useState("1");
   const [notionalInput, setNotionalInput] = useState("");
-  const [orderType, setOrderType] = useState<OrderType>("market");
+  const [ticketTab, setTicketTab] = useState<"single" | "bracket">("single");
+  const [orderType, setOrderType] = useState<OrderType | "trailing_stop">("market");
   const [limitPrice, setLimitPrice] = useState("");
   const [stopPrice, setStopPrice] = useState("");
+  const [tpOffset, setTpOffset] = useState("5");
+  const [slOffset, setSlOffset] = useState("5");
+  const [trailType, setTrailType] = useState<"percent" | "amount">("percent");
+  const [trailValue, setTrailValue] = useState("");
   const [tif, setTif] = useState<TimeInForce>("DAY");
   const [preview, setPreview] = useState<OrderPreviewResponse | null>(null);
   const [previewing, setPreviewing] = useState(false);
@@ -113,21 +119,48 @@ export function OrderTicketPanel(props: IDockviewPanelProps): React.JSX.Element 
     return Number(qtyInput);
   }, [qtyMode, qtyInput, notionalInput, liveLast]);
 
+  const last = liveLast;
+  const tpLive =
+    last != null ? (side === "buy" ? last + Number(tpOffset) : last - Number(tpOffset)) : null;
+  const slLive =
+    last != null ? (side === "buy" ? last - Number(slOffset) : last + Number(slOffset)) : null;
+
   const draft: OrderDraft | null = useMemo(() => {
     if (!activeSymbol) {
       return null;
     }
+    const trailing = ticketTab === "single" && orderType === "trailing_stop";
     const parsed = orderDraftSchema.safeParse({
       symbol: activeSymbol,
       side,
       qty: qtyShares,
-      order_type: orderType,
+      order_type: ticketTab === "bracket" ? "market" : trailing ? "stop" : orderType,
       limit_price: limitPrice === "" ? null : Number(limitPrice),
       stop_price: stopPrice === "" ? null : Number(stopPrice),
       tif,
+      group_type: ticketTab === "bracket" ? "bracket" : null,
+      tp_price:
+        ticketTab === "bracket" && tpLive != null && Number.isFinite(tpLive) ? tpLive : null,
+      sl_price:
+        ticketTab === "bracket" && slLive != null && Number.isFinite(slLive) ? slLive : null,
+      trail_type: trailing ? trailType : null,
+      trail_value: trailing && trailValue !== "" ? Number(trailValue) : null,
     });
     return parsed.success ? parsed.data : null;
-  }, [activeSymbol, side, qtyShares, orderType, limitPrice, stopPrice, tif]);
+  }, [
+    activeSymbol,
+    side,
+    qtyShares,
+    orderType,
+    limitPrice,
+    stopPrice,
+    tif,
+    ticketTab,
+    tpLive,
+    slLive,
+    trailType,
+    trailValue,
+  ]);
 
   useEffect(() => {
     if (!draft || liveLast == null || status !== "ready") {
@@ -175,8 +208,10 @@ export function OrderTicketPanel(props: IDockviewPanelProps): React.JSX.Element 
     [liveLast, qtyInput, notionalInput],
   );
 
-  const needsLimit = orderType === "limit" || orderType === "stop_limit";
-  const needsStop = orderType === "stop" || orderType === "stop_limit";
+  const needsLimit =
+    ticketTab === "single" && (orderType === "limit" || orderType === "stop_limit");
+  const needsStop = ticketTab === "single" && (orderType === "stop" || orderType === "stop_limit");
+  const needsTrail = ticketTab === "single" && orderType === "trailing_stop";
   const canSubmit = preview?.passed === true && !previewing;
 
   function clearSubmitFeedback(): void {
@@ -195,6 +230,15 @@ export function OrderTicketPanel(props: IDockviewPanelProps): React.JSX.Element 
       const ui = interpretOrderCreateResult(result);
       if (ui.kind === "accepted") {
         setConfirmOpen(false);
+        if (instrumentId && liveLast != null) {
+          await applyPaperTicksAction([
+            {
+              instrument_id: instrumentId,
+              symbol: activeSymbol ?? undefined,
+              last: liveLast,
+            },
+          ]);
+        }
         return;
       }
       if (ui.kind === "error") {
@@ -314,20 +358,45 @@ export function OrderTicketPanel(props: IDockviewPanelProps): React.JSX.Element 
             {Number.isFinite(qtyShares) ? qtyShares : "—"} shares
           </p>
 
+          <div className="flex gap-1">
+            <button
+              type="button"
+              className={`h-7 flex-1 border ${ticketTab === "single" ? "border-primary text-primary" : "border-border text-muted-foreground"}`}
+              data-testid="order-tab-single"
+              onClick={() => {
+                setTicketTab("single");
+              }}
+            >
+              Single
+            </button>
+            <button
+              type="button"
+              className={`h-7 flex-1 border ${ticketTab === "bracket" ? "border-primary text-primary" : "border-border text-muted-foreground"}`}
+              data-testid="order-tab-bracket"
+              onClick={() => {
+                setTicketTab("bracket");
+              }}
+            >
+              Bracket
+            </button>
+          </div>
+
           <label className="flex flex-col gap-1 text-muted-foreground">
             Type
             <select
               className="h-7 border border-input bg-background px-1 text-foreground"
               data-testid="order-type"
-              value={orderType}
+              value={ticketTab === "bracket" ? "market" : orderType}
+              disabled={ticketTab === "bracket"}
               onChange={(event) => {
-                setOrderType(event.target.value as OrderType);
+                setOrderType(event.target.value as OrderType | "trailing_stop");
               }}
             >
               <option value="market">Market</option>
               <option value="limit">Limit</option>
               <option value="stop">Stop</option>
               <option value="stop_limit">Stop-limit</option>
+              <option value="trailing_stop">Trailing stop</option>
             </select>
           </label>
 
@@ -356,6 +425,75 @@ export function OrderTicketPanel(props: IDockviewPanelProps): React.JSX.Element 
                 }}
               />
             </label>
+          ) : null}
+
+          {needsTrail ? (
+            <>
+              <label className="flex flex-col gap-1 text-muted-foreground">
+                Trail type
+                <select
+                  className="h-7 border border-input bg-background px-1 text-foreground"
+                  data-testid="order-trail-type"
+                  value={trailType}
+                  onChange={(event) => {
+                    setTrailType(event.target.value as "percent" | "amount");
+                  }}
+                >
+                  <option value="percent">Percent</option>
+                  <option value="amount">Amount</option>
+                </select>
+              </label>
+              <label className="flex flex-col gap-1 text-muted-foreground">
+                Trail value
+                <input
+                  className="h-7 border border-input bg-background px-1 font-mono tabular-nums"
+                  data-testid="order-trail-value"
+                  value={trailValue}
+                  onChange={(event) => {
+                    setTrailValue(event.target.value);
+                  }}
+                />
+              </label>
+            </>
+          ) : null}
+
+          {ticketTab === "bracket" ? (
+            <>
+              <label className="flex flex-col gap-1 text-muted-foreground">
+                Take-profit offset
+                <input
+                  className="h-7 border border-input bg-background px-1 font-mono tabular-nums"
+                  data-testid="order-tp-offset"
+                  value={tpOffset}
+                  onChange={(event) => {
+                    setTpOffset(event.target.value);
+                  }}
+                />
+              </label>
+              <p
+                className="font-mono tabular-nums text-muted-foreground"
+                data-testid="order-tp-live"
+              >
+                TP {tpLive != null && Number.isFinite(tpLive) ? formatMoney(tpLive) : "—"}
+              </p>
+              <label className="flex flex-col gap-1 text-muted-foreground">
+                Stop-loss offset
+                <input
+                  className="h-7 border border-input bg-background px-1 font-mono tabular-nums"
+                  data-testid="order-sl-offset"
+                  value={slOffset}
+                  onChange={(event) => {
+                    setSlOffset(event.target.value);
+                  }}
+                />
+              </label>
+              <p
+                className="font-mono tabular-nums text-muted-foreground"
+                data-testid="order-sl-live"
+              >
+                SL {slLive != null && Number.isFinite(slLive) ? formatMoney(slLive) : "—"}
+              </p>
+            </>
           ) : null}
 
           <label className="flex flex-col gap-1 text-muted-foreground">

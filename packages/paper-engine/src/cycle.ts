@@ -2,14 +2,17 @@ import type {
   ExecConfig,
   MatchFill,
   MatchTick,
+  OrderLegRole,
   OrderStatus,
   WorkingOrderMatch,
 } from "@meridian/schemas";
-import { assertTransition } from "./fsm";
+import type { CashLedger } from "./buying-power";
+import { releaseBuyingPower } from "./buying-power";
+import { assertTransition, canCancel } from "./fsm";
+import { groupActionsAfterFills, shouldPromoteAccepted } from "./groups";
 import { matchOrders } from "./match";
 import { applyFillToPosition, emptyPosition, markEquity, type PositionBook } from "./positions";
 import { applyFillToLedger, type ReservedOrder } from "./settle";
-import type { CashLedger } from "./buying-power";
 import type { ExecConfigResolver } from "./exec-config";
 
 export type CycleOrder = WorkingOrderMatch &
@@ -17,6 +20,9 @@ export type CycleOrder = WorkingOrderMatch &
     status: OrderStatus;
     symbol: string;
     reserved_amount: number;
+    group_id?: string | null;
+    leg_role?: OrderLegRole | null;
+    group_activated?: boolean;
   };
 
 export type CyclePosition = PositionBook & { symbol: string };
@@ -31,7 +37,10 @@ export type PaperCycleState = {
 export type PaperCycleEvent =
   | { kind: "promoted"; orderId: string }
   | { kind: "fill"; fill: MatchFill; status: OrderStatus }
-  | { kind: "triggered"; orderId: string };
+  | { kind: "triggered"; orderId: string }
+  | { kind: "activated"; orderId: string }
+  | { kind: "cancelled"; orderId: string }
+  | { kind: "trailing"; orderId: string };
 
 export type PaperCycleResult = {
   state: PaperCycleState;
@@ -47,7 +56,7 @@ function nextStatus(from: OrderStatus, filledQty: number, qty: number): OrderSta
 
 function promoteAccepted(orders: CycleOrder[], events: PaperCycleEvent[]): CycleOrder[] {
   return orders.map((order) => {
-    if (order.status !== "accepted") {
+    if (!shouldPromoteAccepted(order)) {
       return order;
     }
     assertTransition("accepted", "working");
@@ -91,6 +100,18 @@ export function applyTickToBook(
   );
 
   const matched = matchOrders(tick, working, execConfig);
+  for (const update of matched.trailingUpdates) {
+    events.push({ kind: "trailing", orderId: update.orderId });
+    orders = orders.map((order) =>
+      order.id === update.orderId
+        ? {
+            ...order,
+            high_water_mark: update.high_water_mark,
+            stop_price: update.stop_price,
+          }
+        : order,
+    );
+  }
   for (const id of matched.triggeredOrderIds) {
     events.push({ kind: "triggered", orderId: id });
     orders = orders.map((order) => (order.id === id ? { ...order, stop_triggered: true } : order));
@@ -131,6 +152,46 @@ export function applyTickToBook(
     );
     fills.push(fill);
     events.push({ kind: "fill", fill, status });
+  }
+
+  const effects = groupActionsAfterFills(
+    orders,
+    fills
+      .filter((row) => {
+        const current = orders.find((order) => order.id === row.order_id);
+        return current?.status === "filled";
+      })
+      .map((row) => row.order_id),
+  );
+  for (const id of effects.activateIds) {
+    orders = orders.map((order) => {
+      if (order.id !== id) {
+        return order;
+      }
+      const activated = { ...order, group_activated: true };
+      if (activated.status === "accepted" && shouldPromoteAccepted(activated)) {
+        assertTransition("accepted", "working");
+        events.push({ kind: "activated", orderId: id });
+        events.push({ kind: "promoted", orderId: id });
+        return { ...activated, status: "working" as const };
+      }
+      events.push({ kind: "activated", orderId: id });
+      return activated;
+    });
+  }
+  for (const id of effects.cancelIds) {
+    const current = orders.find((order) => order.id === id);
+    if (!current || !canCancel(current.status)) {
+      continue;
+    }
+    if (current.reserved_amount > 0) {
+      ledger = releaseBuyingPower(ledger, current.reserved_amount);
+    }
+    assertTransition(current.status, "cancelled");
+    events.push({ kind: "cancelled", orderId: id });
+    orders = orders.map((order) =>
+      order.id === id ? { ...order, status: "cancelled" as const, reserved_amount: 0 } : order,
+    );
   }
 
   return {
