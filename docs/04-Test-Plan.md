@@ -155,15 +155,15 @@ Seeded via `scripts/seed-all.ts` (see doc 06): 150 instruments, 5y daily + 5d 1m
 ### PBI-015 Paper matching engine
 | ID | Criterion / Test | Pri | Status |
 |---|---|---|---|
-| AC-015-01 | Market fills at tick ± slippage per DT-EXEC-01 | P0 | ☑ |
-| AC-015-02 | Limit fills only when marketable, never through limit | P0 | ☑ |
-| AC-015-03 | Stops trigger correctly incl. gap-through | P0 | ☑ |
-| AC-015-04 | Partial fills respect liquidity band; position avg cost & realized P&L correct | P0 | ☑ |
-| AC-015-05 | Cash/positions/executions consistent after every fill (invariant) | P0 | ☑ |
-| TC-015-01 | Unit suite: each order type × price paths (AC-015-01..03) | P0 | ☑ |
-| TC-015-02 | Unit: buy 100@10, buy 100@20 → avg 15; sell 100@25 → realized +1000 (AC-015-04) | P0 | ☑ |
-| TC-015-03 | Integration: limit buy below market, force cross → fills (AC-015-02) | P0 | ☑ |
-| TC-015-04 | Invariant check: equity = cash + Σ(qty×last) after fill storm (AC-015-05) | P0 | ☑ |
+| AC-015-01 | Market fills at tick ± slippage per DT-EXEC-01 | P0 | ☐ |
+| AC-015-02 | Limit fills only when marketable, never through limit | P0 | ☐ |
+| AC-015-03 | Stops trigger correctly incl. gap-through | P0 | ☐ |
+| AC-015-04 | Partial fills respect liquidity band; position avg cost & realized P&L correct | P0 | ☐ |
+| AC-015-05 | Cash/positions/executions consistent after every fill (invariant) | P0 | ☐ |
+| TC-015-01 | Unit suite: each order type × price paths (AC-015-01..03) | P0 | ☐ |
+| TC-015-02 | Unit: buy 100@10, buy 100@20 → avg 15; sell 100@25 → realized +1000 (AC-015-04) | P0 | ☐ |
+| TC-015-03 | Integration: limit buy below market, force cross → fills (AC-015-02) | P0 | ☐ |
+| TC-015-04 | Invariant check: equity = cash + Σ(qty×last) after fill storm (AC-015-05) | P0 | ☐ |
 
 ### PBI-016 Advanced orders
 | ID | Criterion / Test | Pri | Status |
