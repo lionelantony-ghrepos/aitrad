@@ -6,7 +6,9 @@ import { createAdminClient } from "@insforge/sdk";
 import {
   generateInstrumentHistory,
   generateNewsBackfill,
+  hydrateFundamentalsUniverse,
   marketCalendarSeedRows,
+  parseFundamentalsJson,
   parseInstrumentsJson,
   parseNewsTemplatesJson,
   quoteFromHistory,
@@ -66,6 +68,7 @@ function querySeedCounts(): SeedCounts {
     minDailyPerInstrument: Number(row.min_daily_per_instrument),
     minMinutePerInstrument: Number(row.min_minute_per_instrument),
     newsItems: Number(row.news_items),
+    fundamentals: Number(row.fundamentals),
   };
 }
 
@@ -182,6 +185,25 @@ export async function runUniverseSeed(): Promise<void> {
     sentiment: row.sentiment,
     event_type: row.event_type,
   }));
+  const fundamentalsFile = parseFundamentalsJson(
+    JSON.parse(
+      readFileSync(path.join(repoRoot, "mock_data", "fundamentals.json"), "utf8"),
+    ) as unknown,
+  );
+  const fundamentalsRows = hydrateFundamentalsUniverse(universe, fundamentalsFile).map((row) => {
+    const id = idBySymbol.get(row.symbol);
+    if (!id) {
+      throw new Error(`MISSING_INSTRUMENT_ID:${row.symbol}`);
+    }
+    return {
+      instrument_id: id,
+      metrics: row.metrics,
+      updated_at: new Date().toISOString(),
+    };
+  });
+  process.stdout.write(`Upserting ${fundamentalsRows.length} fundamentals…\n`);
+  await upsertBatch(admin.database, "fundamentals", fundamentalsRows, "instrument_id");
+
   process.stdout.write(`Upserting ${newsRows.length} news_items…\n`);
   await upsertBatch(admin.database, "news_items", newsRows, "id");
 

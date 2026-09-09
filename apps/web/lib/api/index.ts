@@ -33,6 +33,7 @@ export { createExecutionsRepository } from "./executions";
 export { createRuleAuditRepository } from "./rule-audit";
 export { createPositionsRepository, createPortfolioSnapshotsRepository } from "./positions";
 export { createNewsItemsRepository } from "./news-items";
+export { createFundamentalsRepository } from "./fundamentals";
 export {
   analyticsServiceUrl,
   invokeAnalyticsPortfolio,

@@ -26,6 +26,7 @@ export {
   EXPECTED_INSTRUMENTS,
   EXPECTED_MINUTE_BARS_TOTAL,
   EXPECTED_NEWS_ITEMS,
+  EXPECTED_FUNDAMENTALS,
   MINUTE_BARS_PER_INSTRUMENT,
   MIN_DAILY_BARS_PER_INSTRUMENT,
   SEED_COUNT_SQL,
@@ -87,3 +88,15 @@ export {
   type NewsTickerPlan,
   type NewsTickerPlanInput,
 } from "./news";
+export {
+  DES_STAT_GROUPS,
+  PERIOD_LABELS,
+  desStatGroupsPresent,
+  generateFundamentalsMetrics,
+  hydrateFundamentalsUniverse,
+  parseFundamentalsJson,
+  rangeSliderPct,
+  rankIndustryPeers,
+  type DesStatGroup,
+  type PeerCandidate,
+} from "./fundamentals";

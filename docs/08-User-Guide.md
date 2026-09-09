@@ -10,9 +10,9 @@ You receive a **paper cash account** on first login (amount comes from the openi
 ## 2. The workspace
 Meridian is a multi-panel terminal. Open **`/workspace`**. Drag panel edges to resize, drag tabs to rearrange, and your layout is saved automatically (**Reset layout** in the top command bar). The status bar shows the market clock (America/New_York, OPEN/CLOSED) and a connection indicator.
 
-Placeholder panels in this build: Screener, Copilot (input only), Description (`DES`). **Watchlist** (PBI-007), **Chart** (PBI-008), **Order ticket** (PBI-013), **Blotter** (PBI-017), **Portfolio** (PBI-018), and **News** (PBI-019) are live. `DES <symbol>` opens the Description placeholder until fundamentals ship.
+Placeholder panels in this build: Screener and Copilot (input only). **Watchlist** (PBI-007), **Chart** (PBI-008), **Order ticket** (PBI-013), **Blotter** (PBI-017), **Portfolio** (PBI-018), **News** (PBI-019), and **Description / DES** (PBI-020) are live. `DES <symbol>` opens the instrument profile (key stats, financials, analyst mix, industry peers).
 
-**Linked symbol.** The workspace exposes a shared symbol context. Clicking a watchlist row sets it (debug readout for tests: `symbol-context-readout`) and retargets the Chart, News, and Order ticket panels.
+**Linked symbol.** The workspace exposes a shared symbol context. Clicking a watchlist row or a DES peer sets it (debug readout for tests: `symbol-context-readout`) and retargets the Chart, News, Description, and Order ticket panels.
 
 **Command palette.** Press **Ctrl+K** (or the command-bar **Ctrl+K** control). Type a function or ticker, then Enter. Recent commands appear when the box is empty. Arrow keys move the highlight. Examples:
 | Command | Action |
@@ -41,7 +41,7 @@ The **Blotter** lists orders in Working / Filled / Rejected / All tabs (virtuali
 
 ## 5. Intelligence
 - **News panel:** reverse-chron headline stream with color-scaled sentiment badges and event-type chips. It follows the linked symbol (`NEWS TSLA`) unless you turn on **All markets**. Click a row for the full body in a detail drawer. Semantic search over embeddings ships later.
-- **DES page:** company profile, key stats, financial charts, analyst ratings, peer quick-switch.
+- **DES page:** `DES NVDA` (or any ticker) opens Description: company header, 52-week range vs last, dense key stats, revenue/EPS bars, stacked analyst ratings, and same-industry peers. Click a peer to retarget the linked symbol.
 - **Screener:** build criteria (sector, P/E, yield, %change, RSI…), save screens, send results to a watchlist.
 - **Alerts:** set price/%change/RSI/news alerts from any watchlist row; the bell in the status bar collects them.
 

@@ -23,6 +23,7 @@ export const recordTables = {
   positions: "positions",
   portfolio_snapshots: "portfolio_snapshots",
   news_items: "news_items",
+  fundamentals: "fundamentals",
 } as const;
 
 export type RecordTable = (typeof recordTables)[keyof typeof recordTables];

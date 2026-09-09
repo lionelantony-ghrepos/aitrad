@@ -4,14 +4,16 @@ import { eqFilter, ilikeContainsFilter, recordTables } from "./rest";
 
 export function createInstrumentsRepository(client: RecordsClient) {
   return {
-    list(options: { symbol?: string; symbolIlike?: string } = {}) {
+    list(options: { symbol?: string; symbolIlike?: string; industry?: string } = {}) {
       return client.list(recordTables.instruments, instrumentSchema, {
         query:
           options.symbol !== undefined
             ? { symbol: eqFilter(options.symbol) }
             : options.symbolIlike !== undefined
               ? { symbol: ilikeContainsFilter(options.symbolIlike), limit: 20 }
-              : undefined,
+              : options.industry !== undefined
+                ? { industry: eqFilter(options.industry), limit: 80 }
+                : undefined,
       });
     },
     getById(id: string) {

@@ -130,6 +130,7 @@ describe("TC-005-01 count gate", () => {
       minDailyPerInstrument: 1255,
       minMinutePerInstrument: 1950,
       newsItems: 500,
+      fundamentals: 150,
     });
     expect(result.ok).toBe(true);
   });
