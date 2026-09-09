@@ -8,9 +8,9 @@ async function addAaplAndForceLast(
   page: import("@playwright/test").Page,
   last: number,
 ): Promise<void> {
-  await page.getByTestId("watchlist-name").fill("Ticket");
+  await page.getByTestId("watchlist-name").fill("Adv016");
   await page.getByTestId("watchlist-create").click();
-  await expect(page.getByTestId("watchlist-tab-Ticket")).toBeVisible();
+  await expect(page.getByTestId("watchlist-tab-Adv016")).toBeVisible();
   await page.getByTestId("watchlist-search").fill("AAPL");
   await page.getByTestId("instrument-option-AAPL").click();
   await page.getByTestId("watchlist-row-AAPL").click();
