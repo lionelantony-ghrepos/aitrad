@@ -32,3 +32,4 @@ export * from "./analytics";
 export * from "./news";
 export * from "./fundamentals";
 export * from "./screener";
+export * from "./alerts";

@@ -2,6 +2,20 @@
 
 Exported `*Schema` bindings discovered by static scan. Full OpenAPI from Zod is deferred until DTO coverage is broader (add `zod-to-openapi` then). Typedoc for packages is deferred until public APIs stabilize.
 
+- alerts.ts: alertConditionListSchema
+- alerts.ts: alertCreateRequestSchema
+- alerts.ts: alertInstanceInsertSchema
+- alerts.ts: alertInstanceSchema
+- alerts.ts: alertKindSchema
+- alerts.ts: alertRealtimeEventSchema
+- alerts.ts: alertRuleConditionSchema
+- alerts.ts: alertRuleInsertSchema
+- alerts.ts: alertRulePatchSchema
+- alerts.ts: alertRuleSchema
+- alerts.ts: alertRunnerRequestSchema
+- alerts.ts: alertRunnerResponseSchema
+- alerts.ts: alertThrottleStateSchema
+- alerts.ts: evaluateAlertsRequestSchema
 - analytics.ts: allocationSliceSchema
 - analytics.ts: analyticsPortfolioRequestSchema
 - analytics.ts: analyticsRsiRequestSchema

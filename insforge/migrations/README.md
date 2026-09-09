@@ -119,3 +119,13 @@ See the 0010 file (advanced orders). Trailing / group columns; writes via matchi
 | `fundamentals` | RLS SELECT for `anon` + `authenticated` (app JWT-gates `getDesProfileAction`); writes `project_admin` / seed. PK `instrument_id`. Nested jsonb `metrics` groups: valuation, income, margins, dividends, ranges, analyst. |
 
 UUID primary keys, `created_at` / `updated_at` (except `audit_log` and `executions`, which are insert-only), and `updated_at` triggers on mutable tables.
+
+## 0014 contents
+
+| Table / object              | Access                                                                              |
+| --------------------------- | ----------------------------------------------------------------------------------- |
+| `alert_rules`               | Owner RLS CRUD (`user_id = auth.uid()`); `project_admin` full                       |
+| `alerts`                    | Owner SELECT + UPDATE (read flag); INSERT via `alert-runner` (`project_admin`)      |
+| realtime channel `alerts:*` | `publish_alert_event(user_id, payload)` event `alert`; EXECUTE `project_admin` only |
+
+PRD named this migration 0009; 0009 is paper-matching.

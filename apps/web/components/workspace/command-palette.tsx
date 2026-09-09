@@ -13,6 +13,7 @@ import { resolveCommand } from "@/lib/command-palette/resolve-command";
 import { useCopilotDraft } from "@/lib/copilot-draft";
 import { useSymbolContext } from "@/lib/symbol-context";
 import { useWorkspaceRuntime } from "@/lib/workspace-runtime";
+import { openWatchlistAlertsTab } from "@/lib/alerts/events";
 
 type CommandPaletteProps = {
   open: boolean;
@@ -109,6 +110,9 @@ export function CommandPalette({
       }
       if (result.copilotQuery) {
         setCopilotQuery(result.copilotQuery);
+      }
+      if (result.recent === "ALRT" || result.recent.startsWith("ALRT ")) {
+        openWatchlistAlertsTab();
       }
       pushCommandRecent(window.localStorage, result.recent);
       onRouted?.(result.panelId);

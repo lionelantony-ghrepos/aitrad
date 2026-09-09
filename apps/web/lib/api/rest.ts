@@ -26,6 +26,8 @@ export const recordTables = {
   fundamentals: "fundamentals",
   screens: "screens",
   instrument_daily_rsi: "instrument_daily_rsi",
+  alert_rules: "alert_rules",
+  alerts: "alerts",
 } as const;
 
 export type RecordTable = (typeof recordTables)[keyof typeof recordTables];

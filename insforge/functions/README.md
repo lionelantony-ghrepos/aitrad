@@ -46,6 +46,13 @@ npx -y @insforge/cli functions deploy screener --file insforge/functions/screene
 `screener` accepts `POST` `{ op: "run" | "count", criteria, sort? }`. User JWT + `authorize` `screener:run`. Criteria are Zod-validated and compiled to parameterized SQL (`($1->>n)` binds only). The compiled query is executed with `exec_screener(p_sql, p_params)` (project_admin). Result rows are capped by the compiler LIMIT guard. Writes `audit_log` on each run.
 
 ```bash
+pnpm functions:bundle:alert-runner
+npx -y @insforge/cli functions deploy alert-runner --file insforge/functions/alert-runner.ts --name "Alert runner"
+```
+
+`alert-runner` is service-key only. It loads active `alert_rules`, builds quote / RSI / news-sentiment facts, evaluates each rule's condition with `@meridian/rules-engine`, then `evaluateDomain('alerting')` (DT-ALRT-01) for delivery. Inserts `alerts`, writes `audit_log`, and publishes `alerts:{userId}`. `market-tick` and `news-ticker` invoke it after their batches.
+
+```bash
 pnpm functions:bundle:news-ticker
 npx -y @insforge/cli functions deploy news-ticker --file insforge/functions/news-ticker.ts --name "News ticker"
 ```

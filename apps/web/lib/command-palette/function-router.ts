@@ -1,6 +1,16 @@
 import type { PanelId } from "../panel-registry";
 
-export const FUNCTION_CODES = ["DES", "GIP", "NEWS", "ORD", "WL", "PORT", "SCR", "AI"] as const;
+export const FUNCTION_CODES = [
+  "DES",
+  "GIP",
+  "NEWS",
+  "ORD",
+  "WL",
+  "PORT",
+  "SCR",
+  "ALRT",
+  "AI",
+] as const;
 
 export type FunctionCode = (typeof FUNCTION_CODES)[number];
 
@@ -21,6 +31,7 @@ const DEFAULT_FUNCTIONS: FunctionDefinition[] = [
   { code: "WL", panelId: "watchlist", arg: "none", title: "Watchlist" },
   { code: "PORT", panelId: "portfolio", arg: "none", title: "Portfolio" },
   { code: "SCR", panelId: "screener", arg: "none", title: "Screener" },
+  { code: "ALRT", panelId: "watchlist", arg: "none", title: "Alerts" },
   { code: "AI", panelId: "copilot", arg: "query", title: "Copilot" },
 ];
 

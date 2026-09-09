@@ -300,6 +300,34 @@ export default async function (req: Request): Promise<Response> {
     }
   }
 
+  let alerting: { ok: boolean; fired?: number } | { ok: false; error: string } = { ok: true };
+  if (matchTicks.length > 0) {
+    try {
+      const alertRes = await fetch(
+        `${(Deno.env.get("INSFORGE_INTERNAL_URL") ?? Deno.env.get("INSFORGE_BASE_URL") ?? "").replace(/\/+$/, "")}/functions/alert-runner`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${expected}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ ticks: matchTicks }),
+        },
+      );
+      const alertBody: unknown = await alertRes.json();
+      if (!alertRes.ok) {
+        alerting = { ok: false, error: `ALERT_RUNNER_${alertRes.status}` };
+      } else if (alertBody && typeof alertBody === "object" && "fired" in alertBody) {
+        alerting = { ok: true, fired: Number((alertBody as { fired: unknown }).fired) };
+      }
+    } catch (error) {
+      alerting = {
+        ok: false,
+        error: error instanceof Error ? error.message : "ALERT_RUNNER_UNAVAILABLE",
+      };
+    }
+  }
+
   await admin.database.from("audit_log").insert([
     {
       action: "market-tick",
@@ -311,6 +339,7 @@ export default async function (req: Request): Promise<Response> {
         paused: flags.paused,
         consumeForcePrice: result.consumeForcePrice,
         matching,
+        alerting,
       },
     },
   ]);
@@ -321,5 +350,6 @@ export default async function (req: Request): Promise<Response> {
     published: result.publishes.length,
     paused: flags.paused,
     matching,
+    alerting,
   });
 }

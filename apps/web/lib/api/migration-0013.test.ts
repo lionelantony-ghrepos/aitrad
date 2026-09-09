@@ -16,8 +16,10 @@ const cliTwinSql = readFileSync(
 
 describe("PBI-021 migration 0013 screener", () => {
   it("lists 0013 after 0012", () => {
-    expect(LOCAL_MIGRATION_IDS[LOCAL_MIGRATION_IDS.length - 1]).toBe("0013");
-    expect(LOCAL_MIGRATION_IDS).toContain("0012");
+    expect(LOCAL_MIGRATION_IDS).toContain("0013");
+    expect(LOCAL_MIGRATION_IDS.indexOf("0013")).toBeGreaterThan(
+      LOCAL_MIGRATION_IDS.indexOf("0012"),
+    );
   });
 
   it("creates owner screens, daily RSI, and parameterized exec_screener", () => {

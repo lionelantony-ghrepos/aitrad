@@ -35,6 +35,7 @@ export { createPositionsRepository, createPortfolioSnapshotsRepository } from ".
 export { createNewsItemsRepository } from "./news-items";
 export { createFundamentalsRepository } from "./fundamentals";
 export { createScreensRepository } from "./screens";
+export { createAlertRulesRepository, createAlertsRepository } from "./alerts";
 export { screenerServiceUrl, invokeScreenerRun } from "./screener";
 export {
   analyticsServiceUrl,
