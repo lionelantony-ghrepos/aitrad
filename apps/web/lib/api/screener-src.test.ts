@@ -16,13 +16,18 @@ describe("screenerServiceUrl", () => {
 });
 
 describe("screener edge function orchestration", () => {
-  it("authorizes, compiles parameterized SQL, and executes via exec_screener", () => {
+  it("authorizes a user JWT then admin-RPCs compiled SQL only", () => {
+    expect(src).toContain("createClient({ baseUrl, accessToken: token })");
+    expect(src).toContain("getCurrentUser");
     expect(src).toContain('authorize({ userId, action: "screener:run" })');
     expect(src).toContain("compileScreenerSql");
+    expect(src).toContain("CRITERIA_COMPILE_FAILED");
     expect(src).toContain('admin.database.rpc("exec_screener"');
     expect(src).toContain("p_params: compiled.params");
     expect(src).toContain("audit_log");
     expect(src).toContain('action: "screener:run"');
     expect(src).not.toContain("${criteria");
+    expect(src.indexOf("compileScreenerSql")).toBeLessThan(src.indexOf('rpc("exec_screener"'));
+    expect(src.indexOf("CRITERIA_COMPILE_FAILED")).toBeLessThan(src.indexOf('rpc("exec_screener"'));
   });
 });

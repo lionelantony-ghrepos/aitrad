@@ -27,8 +27,20 @@ describe("PBI-021 migration 0013 screener", () => {
     expect(migrationSql).toContain("CONSTRAINT screens_user_name_key UNIQUE (user_id, name)");
     expect(migrationSql).toContain("CREATE POLICY screens_select_own");
     expect(migrationSql).toContain("user_id = (SELECT auth.uid())");
+    expect(migrationSql).toContain("FOR SELECT TO authenticated");
+    expect(migrationSql).toContain("FOR INSERT TO authenticated");
+    expect(migrationSql).not.toContain("ON public.screens\n  FOR SELECT TO anon");
     expect(migrationSql).toContain("CREATE TABLE IF NOT EXISTS public.instrument_daily_rsi");
     expect(migrationSql).toContain("rsi_14");
+    expect(migrationSql).toContain("CREATE POLICY instrument_daily_rsi_select_public");
+    expect(migrationSql).toContain("FOR SELECT TO anon, authenticated");
+    expect(migrationSql).toContain(
+      "GRANT SELECT ON TABLE public.instrument_daily_rsi TO anon, authenticated",
+    );
+    expect(migrationSql).toContain(
+      "GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.instrument_daily_rsi TO project_admin",
+    );
+    expect(migrationSql).not.toContain("ON public.instrument_daily_rsi\n  FOR INSERT");
     expect(migrationSql).toContain(
       "CREATE OR REPLACE FUNCTION public.exec_screener(p_sql text, p_params jsonb)",
     );

@@ -38,5 +38,13 @@ describe("analytics-service orchestration", () => {
     expect(analyticsSrc).toContain("rsi14Last");
     expect(analyticsSrc).toContain("instrument_daily_rsi");
     expect(analyticsSrc).toContain('op: "rsi"');
+    expect(analyticsSrc).toContain("token !== expected");
+  });
+
+  it("gates RSI refresh on the service key, not a user JWT", () => {
+    const rsiBlock = analyticsSrc.slice(analyticsSrc.indexOf('if (op === "rsi")'));
+    expect(rsiBlock).toContain("resolveRulesServiceApiKey");
+    expect(rsiBlock).toContain("token !== expected");
+    expect(rsiBlock).toContain("precomputeDailyRsi");
   });
 });
