@@ -36,7 +36,8 @@ PBI-023 embeds **news** (and later filings) for the copilot. It must **not** ing
 | 011 | [PBI-011](as-built/PBI-011.md) | Rules storage 0005, `rules-service`, seed-rules, publish cache |
 | 012 | [PBI-012](as-built/PBI-012.md) | `/admin/rules` draft/diff/simulate/publish, DT-ENT-01 gate |
 | 013 | [PBI-013](as-built/PBI-013.md) | Order ticket, `/preview` + `/orders`, notional↔shares |
-| 014–031 | _pending_ | Copy [`_template-as-built.md`](_template-as-built.md) when the PBI ships |
+| 014 | [PBI-014](as-built/PBI-014.md) | Order-service pipeline, FSM, admin-only BP reserve, DT-HRS-01 |
+| 015–031 | _pending_ | Copy [`_template-as-built.md`](_template-as-built.md) when the PBI ships |
 
 ## Architecture decision records
 

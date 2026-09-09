@@ -70,6 +70,7 @@ export const orderPreviewResponseSchema = z.object({
   validation_outcome: z.union([z.record(z.unknown()), z.array(z.record(z.unknown()))]),
   risk_outcome: z.union([z.record(z.unknown()), z.array(z.record(z.unknown()))]),
   fee_outcome: z.record(z.unknown()),
+  hours_outcome: z.union([z.record(z.unknown()), z.array(z.record(z.unknown()))]).default({}),
 });
 
 export const orderCreateRequestSchema = z
@@ -97,6 +98,7 @@ export const orderRecordSchema = z.object({
   reject_reason: z.string().nullable(),
   rule_audit_id: z.string().nullable(),
   parent_order_id: uuidSchema.nullable().optional(),
+  reserved_amount: numericSchema.optional(),
   created_at: timestamptzSchema,
   updated_at: timestamptzSchema,
 });
@@ -104,6 +106,54 @@ export const orderRecordSchema = z.object({
 export const orderCreateResponseSchema = z.object({
   order: orderRecordSchema,
   preview: orderPreviewResponseSchema,
+});
+
+export const orderCancelRequestSchema = z
+  .object({
+    op: z.literal("cancel").optional(),
+    order_id: uuidSchema.optional(),
+  })
+  .strict();
+
+export const orderCancelResponseSchema = z.object({
+  order: orderRecordSchema,
+});
+
+export const executionRecordSchema = z.object({
+  id: uuidSchema,
+  order_id: uuidSchema,
+  user_id: uuidSchema,
+  account_id: uuidSchema,
+  instrument_id: uuidSchema,
+  symbol: z.string().min(1),
+  side: orderSideSchema,
+  qty: numericSchema,
+  price: numericSchema,
+  created_at: timestamptzSchema,
+});
+
+export const positionRecordSchema = z.object({
+  id: uuidSchema,
+  user_id: uuidSchema,
+  account_id: uuidSchema,
+  instrument_id: uuidSchema,
+  symbol: z.string().min(1),
+  qty: numericSchema,
+  avg_cost: numericSchema,
+  realized_pnl: numericSchema,
+  created_at: timestamptzSchema,
+  updated_at: timestamptzSchema,
+});
+
+export const portfolioSnapshotSchema = z.object({
+  id: uuidSchema,
+  user_id: uuidSchema,
+  account_id: uuidSchema,
+  as_of_date: z.string().min(1),
+  equity: numericSchema,
+  cash: numericSchema,
+  buying_power: numericSchema,
+  created_at: timestamptzSchema,
 });
 
 export type OrderSide = z.infer<typeof orderSideSchema>;
@@ -119,3 +169,8 @@ export type OrderPreviewResponse = z.infer<typeof orderPreviewResponseSchema>;
 export type OrderCreateRequest = z.infer<typeof orderCreateRequestSchema>;
 export type OrderRecord = z.infer<typeof orderRecordSchema>;
 export type OrderCreateResponse = z.infer<typeof orderCreateResponseSchema>;
+export type OrderCancelRequest = z.infer<typeof orderCancelRequestSchema>;
+export type OrderCancelResponse = z.infer<typeof orderCancelResponseSchema>;
+export type ExecutionRecord = z.infer<typeof executionRecordSchema>;
+export type PositionRecord = z.infer<typeof positionRecordSchema>;
+export type PortfolioSnapshot = z.infer<typeof portfolioSnapshotSchema>;

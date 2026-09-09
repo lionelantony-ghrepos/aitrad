@@ -20,6 +20,13 @@ describe("orderServiceUrl", () => {
     expect(orderServiceUrl("https://app.insforge.app", "orders")).toBe(
       "https://app.insforge.app/functions/order-service/orders",
     );
+    expect(
+      orderServiceUrl("https://app.insforge.app", {
+        cancel: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      }),
+    ).toBe(
+      "https://app.insforge.app/functions/order-service/orders/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/cancel",
+    );
   });
 });
 
@@ -37,5 +44,17 @@ describe("order-service security", () => {
     expect(orderServiceSrc).toContain("SERVICE_KEY_UNAVAILABLE");
     expect(orderServiceSrc).toContain('admin.database.from("orders").insert');
     expect(orderServiceSrc).not.toMatch(/client\.database\.from\("orders"\)\.insert/);
+  });
+
+  it("reserves, releases, and publishes through the admin client after JWT ownership", () => {
+    expect(orderServiceSrc).toContain("reserveBuyingPower");
+    expect(orderServiceSrc).toContain("releaseBuyingPower");
+    expect(orderServiceSrc).toContain('admin.database.rpc("reserve_buying_power"');
+    expect(orderServiceSrc).toContain('admin.database.rpc("release_buying_power"');
+    expect(orderServiceSrc).toContain('admin.database.rpc("publish_order_event"');
+    expect(orderServiceSrc).toContain("p_user_id: userId");
+    expect(orderServiceSrc).not.toMatch(/client\.database\.rpc\("reserve_buying_power"/);
+    expect(orderServiceSrc).not.toMatch(/client\.database\.rpc\("release_buying_power"/);
+    expect(orderServiceSrc).not.toMatch(/client\.database\.rpc\("publish_order_event"/);
   });
 });

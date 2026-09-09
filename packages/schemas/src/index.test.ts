@@ -9,6 +9,7 @@ import {
   packageName,
   profilePatchSchema,
   profileInsertSchema,
+  accountPatchSchema,
   profileWizardSchema,
   provisionResultSchema,
   publicInsforgeEnvSchema,
@@ -86,6 +87,12 @@ describe("@meridian/schemas", () => {
       created: { profile: true, account: true },
     });
     expect(parsed.account.cash_balance).toBe(2500);
+  });
+
+  it("rejects client account patches that include cash fields", () => {
+    expect(accountPatchSchema.safeParse({ cash_balance: 1 }).success).toBe(false);
+    expect(accountPatchSchema.safeParse({ reserved_cash: 0 }).success).toBe(false);
+    expect(accountPatchSchema.parse({ currency: "USD" }).currency).toBe("USD");
   });
 
   it("parses mock instrument, bar, and quote DTOs", () => {

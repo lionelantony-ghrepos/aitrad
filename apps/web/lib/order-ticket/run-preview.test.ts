@@ -8,6 +8,7 @@ const account: Account = {
   id: "22222222-2222-4222-8222-222222222222",
   user_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
   cash_balance: 100_000,
+  reserved_cash: 0,
   currency: "USD",
   created_at: "2026-09-08T00:00:00.000Z",
   updated_at: "2026-09-08T00:00:00.000Z",
@@ -92,5 +93,22 @@ describe("TC-013-01 local preview risk reason (AC-013-01)", () => {
     const risk = preview.rules.find((row) => row.table_key === "DT-RISK-01");
     expect(risk?.passed).toBe(false);
     expect(risk?.reason).toBe("RISK_MAX_NOTIONAL");
+  });
+
+  it("rejects a market draft when session is closed (DT-HRS-01)", async () => {
+    const memory = createRulesAdminMemory();
+    const closed = await runLocalOrderPreview({
+      draft: baseDraft,
+      lastPrice: 200,
+      account,
+      profile,
+      instrument,
+      memory,
+      session: "closed",
+    });
+    expect(closed.passed).toBe(false);
+    expect(closed.rules.find((row) => row.table_key === "DT-HRS-01")?.reason_code).toBe(
+      "HRS_MARKET_CLOSED",
+    );
   });
 });

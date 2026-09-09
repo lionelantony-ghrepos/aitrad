@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { STUB_AAPL_INSTRUMENT_ID } from "../lib/auth/stub-store";
 import { TEST_TICK_BATCH_EVENT } from "../lib/quotes/transport";
+import { forceNextStubOrderReject } from "./helpers/force-order-reject";
 import { signUpThroughWizard } from "./helpers/onboard";
 
 async function addAaplAndForceLast(
@@ -84,6 +85,25 @@ test.describe("PBI-013 order ticket", () => {
     await expect(page.getByTestId("order-confirm-modal")).toBeVisible();
     await expect(page.getByTestId("confirm-est-total")).toHaveText(previewTotal);
     await expect(page.getByTestId("confirm-fees")).toHaveText(previewFees);
+  });
+
+  test("rejected create stays on confirm and shows reject_reason plus rule_audit_id", async ({
+    page,
+  }) => {
+    await page.goto("/workspace");
+    await addAaplAndForceLast(page, 200);
+    await page.getByTestId("order-qty").fill("5");
+    await expect(page.getByTestId("order-submit")).toBeEnabled();
+    await page.getByTestId("order-submit").click();
+    await expect(page.getByTestId("order-confirm-modal")).toBeVisible();
+    await forceNextStubOrderReject(page);
+    await page.getByTestId("order-confirm-submit").click();
+    await expect(page.getByTestId("order-confirm-modal")).toBeVisible();
+    await expect(page.getByTestId("order-reject-reason")).toHaveText("RISK_BUYING_POWER");
+    await expect(page.getByTestId("order-rule-audit-id")).toContainText("Rule audit ID:");
+    await expect(page.getByTestId("order-rule-audit-id")).toContainText(
+      /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i,
+    );
   });
 
   test("TC-013-03 1000 notional at 200 last is 5 shares @TC-013-03", async ({ page }) => {

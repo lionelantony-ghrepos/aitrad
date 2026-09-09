@@ -81,4 +81,15 @@ npx -y @insforge/cli db migrations up --all
 | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `orders` | RLS owner SELECT (`user_id = auth.uid()`); authenticated SELECT-only. Writes via `order-service` (`project_admin` / API key). FSM reserve / executions land in PBI-014. |
 
-UUID primary keys, `created_at` / `updated_at` (except `audit_log`, which is insert-only), and `updated_at` triggers on mutable tables.
+## 0008 contents
+
+| Table / object                                  | Access                                                                                                   |
+| ----------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `accounts.cash_balance` / `reserved_cash`       | Client SELECT own row; UPDATE locked (column grants + trigger). Writes via `project_admin` / reserve RPC |
+| `orders.reserved_amount`                        | Owner SELECT; writes via order-service admin                                                             |
+| `executions`                                    | Append-only; authenticated SELECT-only. Writes via `project_admin`                                       |
+| `positions`, `portfolio_snapshots`              | Authenticated SELECT-only. Writes via `project_admin`                                                    |
+| `reserve_buying_power` / `release_buying_power` | `SELECT … FOR UPDATE`; EXECUTE `project_admin` only; `p_user_id` must match `rec.user_id`                |
+| realtime channel `orders:*`                     | `publish_order_event(user_id, payload)` event `order`; EXECUTE `project_admin` only                      |
+
+UUID primary keys, `created_at` / `updated_at` (except `audit_log` and `executions`, which are insert-only), and `updated_at` triggers on mutable tables.

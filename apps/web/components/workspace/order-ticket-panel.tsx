@@ -18,6 +18,7 @@ import {
   submitOrderAction,
 } from "@/app/actions/orders";
 import { useOrderTicketIntent } from "@/lib/order-ticket/intent";
+import { interpretOrderCreateResult } from "@/lib/order-ticket/submit-result";
 import { useQuotes } from "@/lib/quotes/use-quotes";
 import { createInsforgeQuotesTransport, createWindowQuotesTransport } from "@/lib/quotes/transport";
 import { useSymbolContext } from "@/lib/symbol-context";
@@ -61,6 +62,8 @@ export function OrderTicketPanel(props: IDockviewPanelProps): React.JSX.Element 
   const [previewing, setPreviewing] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState<string | null>(null);
+  const [ruleAuditLine, setRuleAuditLine] = useState<string | null>(null);
 
   useEffect(() => {
     setSide(intentSide);
@@ -92,7 +95,7 @@ export function OrderTicketPanel(props: IDockviewPanelProps): React.JSX.Element 
         return;
       }
       setInstrumentId(result.data.instrument.id);
-      setBuyingPower(result.data.account.cash_balance);
+      setBuyingPower(result.data.account.cash_balance - (result.data.account.reserved_cash ?? 0));
       setSeedLast(result.data.quote?.last ?? null);
       setStatus("ready");
     });
@@ -176,17 +179,33 @@ export function OrderTicketPanel(props: IDockviewPanelProps): React.JSX.Element 
   const needsStop = orderType === "stop" || orderType === "stop_limit";
   const canSubmit = preview?.passed === true && !previewing;
 
+  function clearSubmitFeedback(): void {
+    setSubmitError(null);
+    setRejectReason(null);
+    setRuleAuditLine(null);
+  }
+
   async function onConfirmSubmit(): Promise<void> {
     if (!draft || liveLast == null) {
       return;
     }
-    setSubmitError(null);
-    const result = await submitOrderAction({ draft, last_price: liveLast });
-    if (!result.ok) {
-      setSubmitError(result.message);
-      return;
+    clearSubmitFeedback();
+    try {
+      const result = await submitOrderAction({ draft, last_price: liveLast });
+      const ui = interpretOrderCreateResult(result);
+      if (ui.kind === "accepted") {
+        setConfirmOpen(false);
+        return;
+      }
+      if (ui.kind === "error") {
+        setSubmitError(ui.message);
+        return;
+      }
+      setRejectReason(ui.reason);
+      setRuleAuditLine(ui.auditLine);
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : "Order submit failed.");
     }
-    setConfirmOpen(false);
   }
 
   const displayedNotional =
@@ -395,6 +414,7 @@ export function OrderTicketPanel(props: IDockviewPanelProps): React.JSX.Element 
             data-testid="order-submit"
             disabled={!canSubmit}
             onClick={() => {
+              clearSubmitFeedback();
               setConfirmOpen(true);
             }}
           >
@@ -423,9 +443,25 @@ export function OrderTicketPanel(props: IDockviewPanelProps): React.JSX.Element 
               Buying power {formatMoney(preview.buying_power)}
             </p>
             {submitError ? (
-              <p className="text-down" data-testid="order-submit-error">
+              <p className="text-down" data-testid="order-submit-error" role="alert">
                 {submitError}
               </p>
+            ) : null}
+            {rejectReason ? (
+              <div
+                className="mt-1 flex flex-col gap-1"
+                data-testid="order-reject-notice"
+                role="alert"
+              >
+                <p className="text-down" data-testid="order-reject-reason">
+                  {rejectReason}
+                </p>
+                {ruleAuditLine ? (
+                  <p className="font-mono text-muted-foreground" data-testid="order-rule-audit-id">
+                    {ruleAuditLine}
+                  </p>
+                ) : null}
+              </div>
             ) : null}
             <div className="mt-2 flex gap-1">
               <button
@@ -433,6 +469,7 @@ export function OrderTicketPanel(props: IDockviewPanelProps): React.JSX.Element 
                 className="h-7 flex-1 border border-border"
                 data-testid="order-confirm-cancel"
                 onClick={() => {
+                  clearSubmitFeedback();
                   setConfirmOpen(false);
                 }}
               >

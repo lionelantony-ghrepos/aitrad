@@ -13,8 +13,33 @@ export {
   lastPriceForRuleFacts,
   QUOTE_UNAVAILABLE,
   reasonFromOutcome,
+  summarizeHours,
   summarizeRisk,
   summarizeValidation,
   type OrderFactInput,
   type OrderFacts,
 } from "./preview";
+export {
+  CANCEL_FROM,
+  ORDER_STATUSES,
+  OrderFsmError,
+  allowedTransitions,
+  assertTransition,
+  canCancel,
+  canTransition,
+} from "./fsm";
+export {
+  SerializedCashBook,
+  availableBuyingPower,
+  releaseBuyingPower,
+  reserveAmountForSide,
+  tryReserveBuyingPower,
+  type CashLedger,
+} from "./buying-power";
+export {
+  applyReserveFailure,
+  decideOrderPlacement,
+  placeWithReserve,
+  type DomainEval,
+  type PlacementDecision,
+} from "./order-pipeline";

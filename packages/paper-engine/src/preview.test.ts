@@ -30,6 +30,7 @@ function factsFor(qty: number, last = 200, buyingPower = 100_000) {
     instrumentBetaClass: "medium",
     ordersToday: 0,
     accountTier: null,
+    session: "open",
   });
 }
 
@@ -63,6 +64,7 @@ describe("buildOrderFacts", () => {
       validationOutcome: { decision: "valid" },
       riskOutcome: { decision: "reject", reason_code: "RISK_MAX_NOTIONAL" },
       feeOutcome: { commission_usd: 12 },
+      hoursOutcome: { decision: "allow" },
     });
     expect(preview.order_notional).toBe(qty * quoteLast);
     expect(preview.last_price).toBe(quoteLast);
@@ -86,6 +88,7 @@ describe("assemblePreview", () => {
       validationOutcome: { decision: "valid" },
       riskOutcome: { decision: "reject", reason_code: "RISK_MAX_NOTIONAL" },
       feeOutcome: { commission_usd: 0 },
+      hoursOutcome: { decision: "allow" },
     });
     expect(rejected.passed).toBe(false);
     expect(summarizeRisk(rejected.risk_outcome).reason).toBe("RISK_MAX_NOTIONAL");
@@ -98,6 +101,7 @@ describe("assemblePreview", () => {
       validationOutcome: { decision: "valid" },
       riskOutcome: { decision: "allow" },
       feeOutcome: { commission_usd: 0 },
+      hoursOutcome: { decision: "allow" },
     });
     expect(preview.passed).toBe(true);
     expect(preview.est_total).toBe(1000);
