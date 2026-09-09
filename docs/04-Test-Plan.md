@@ -198,10 +198,10 @@ Seeded via `scripts/seed-all.ts` (see doc 06): 150 instruments, 5y daily + 5d 1m
 ### PBI-019 News
 | ID | Criterion / Test | Pri | Status |
 |---|---|---|---|
-| AC-019-01 | Stream renders live items; symbol filter follows context | P0 | ☑ |
-| AC-019-02 | Sentiment badge maps score → color scale; detail drawer opens | P1 | ☑ |
-| TC-019-01 | E2E: NEWS TSLA → only TSLA-tagged items (AC-019-01) | P0 | ☑ |
-| TC-019-02 | Unit: generator determinism + template fill (AC-019-01) | P1 | ☑ |
+| AC-019-01 | Stream renders live items; symbol filter follows context | P0 | ☐ |
+| AC-019-02 | Sentiment badge maps score → color scale; detail drawer opens | P1 | ☐ |
+| TC-019-01 | E2E: NEWS TSLA → only TSLA-tagged items (AC-019-01) | P0 | ☐ |
+| TC-019-02 | Unit: generator determinism + template fill (AC-019-01) | P1 | ☐ |
 
 ### PBI-020 Fundamentals/DES
 | ID | Criterion / Test | Pri | Status |
