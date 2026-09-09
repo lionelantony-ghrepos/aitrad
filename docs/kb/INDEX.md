@@ -38,7 +38,8 @@ PBI-023 embeds **news** (and later filings) for the copilot. It must **not** ing
 | 013 | [PBI-013](as-built/PBI-013.md) | Order ticket, `/preview` + `/orders`, notional↔shares |
 | 014 | [PBI-014](as-built/PBI-014.md) | Order-service pipeline, FSM, admin-only BP reserve, DT-HRS-01 |
 | 015 | [PBI-015](as-built/PBI-015.md) | Paper match(), matching-runner, apply_paper_fill, DT-EXEC-01 |
-| 016–031 | _pending_ | Copy [`_template-as-built.md`](_template-as-built.md) when the PBI ships |
+| 016 | [PBI-016](as-built/PBI-016.md) | Bracket/OCO groups, trailing ratchet, ticket Bracket tab |
+| 017–031 | _pending_ | Copy [`_template-as-built.md`](_template-as-built.md) when the PBI ships |
 
 ## Architecture decision records
 

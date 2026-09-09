@@ -16,13 +16,13 @@ function formatYmd(year, month, day) {
   return `${year}-${pad2(month)}-${pad2(day)}`;
 }
 function parseYmd(isoDate) {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate);
-  if (!match) {
+  const match2 = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate);
+  if (!match2) {
     throw new Error(`INVALID_DATE:${isoDate}`);
   }
-  const year = Number(match[1]);
-  const month = Number(match[2]);
-  const day = Number(match[3]);
+  const year = Number(match2[1]);
+  const month = Number(match2[2]);
+  const day = Number(match2[3]);
   return { year, month, day };
 }
 function utcWeekday(year, month, day) {
@@ -4345,11 +4345,11 @@ var accountInsertSchema = external_exports.object({
   reserved_cash: numericSchema.optional(),
   currency: external_exports.string().min(1).optional(),
 });
-var accountPatchSchema = external_exports.object({
-  cash_balance: numericSchema.optional(),
-  reserved_cash: numericSchema.optional(),
-  currency: external_exports.string().min(1).optional(),
-});
+var accountPatchSchema = external_exports
+  .object({
+    currency: external_exports.string().min(1).optional(),
+  })
+  .strict();
 var instrumentStatusSchema = external_exports.enum(["active", "halted", "delisted"]);
 var marketCapBandSchema = external_exports.enum(["mega", "large", "mid", "small", "micro"]);
 var betaClassSchema = external_exports.enum(["low", "medium", "high"]);
@@ -4762,6 +4762,15 @@ var orderSideSchema = external_exports.enum(["buy", "sell"]);
 var orderTypeSchema = external_exports.enum(["market", "limit", "stop", "stop_limit"]);
 var tifSchema = external_exports.enum(["DAY", "GTC", "IOC"]);
 var qtyModeSchema = external_exports.enum(["shares", "notional"]);
+var orderGroupTypeSchema = external_exports.enum(["bracket", "oco"]);
+var orderLegRoleSchema = external_exports.enum([
+  "entry",
+  "take_profit",
+  "stop_loss",
+  "oco_a",
+  "oco_b",
+]);
+var trailTypeSchema = external_exports.enum(["percent", "amount"]);
 var orderStatusSchema = external_exports.enum([
   "draft",
   "validated",
@@ -4782,6 +4791,11 @@ var orderDraftSchema = external_exports
     limit_price: external_exports.number().finite().nullable().optional(),
     stop_price: external_exports.number().finite().nullable().optional(),
     tif: tifSchema,
+    group_type: orderGroupTypeSchema.nullable().optional(),
+    tp_price: external_exports.number().finite().nullable().optional(),
+    sl_price: external_exports.number().finite().nullable().optional(),
+    trail_type: trailTypeSchema.nullable().optional(),
+    trail_value: external_exports.number().finite().nullable().optional(),
   })
   .strict();
 var orderPreviewRequestSchema = external_exports
@@ -4854,7 +4868,15 @@ var orderRecordSchema = external_exports.object({
   reject_reason: external_exports.string().nullable(),
   rule_audit_id: external_exports.string().nullable(),
   parent_order_id: uuidSchema.nullable().optional(),
+  group_id: uuidSchema.nullable().optional(),
+  group_type: orderGroupTypeSchema.nullable().optional(),
+  leg_role: orderLegRoleSchema.nullable().optional(),
+  group_activated: external_exports.boolean().optional(),
+  trail_type: trailTypeSchema.nullable().optional(),
+  trail_value: numericSchema.nullable().optional(),
+  high_water_mark: numericSchema.nullable().optional(),
   reserved_amount: numericSchema.optional(),
+  stop_triggered: external_exports.boolean().optional(),
   created_at: timestamptzSchema,
   updated_at: timestamptzSchema,
 });
@@ -4904,6 +4926,56 @@ var portfolioSnapshotSchema = external_exports.object({
   cash: numericSchema,
   buying_power: numericSchema,
   created_at: timestamptzSchema,
+});
+var execConfigSchema = external_exports.object({
+  slippage_bps: numericSchema,
+  liquidity_cap: numericSchema.optional(),
+  liquidity_cap_pct_adv: numericSchema.optional(),
+  tick_size: numericSchema.optional(),
+});
+var matchTickSchema = external_exports.object({
+  instrument_id: uuidSchema.optional(),
+  symbol: external_exports.string().min(1).optional(),
+  last: numericSchema,
+  bid: numericSchema.optional(),
+  ask: numericSchema.optional(),
+  ts: timestamptzSchema.optional(),
+});
+var workingOrderMatchSchema = external_exports.object({
+  id: external_exports.string().min(1),
+  side: orderSideSchema,
+  qty: numericSchema,
+  filled_qty: numericSchema,
+  order_type: orderTypeSchema,
+  limit_price: numericSchema.nullable().optional(),
+  stop_price: numericSchema.nullable().optional(),
+  stop_triggered: external_exports.boolean().optional(),
+  tif: tifSchema.optional(),
+  created_at: timestamptzSchema.optional(),
+  group_id: external_exports.string().min(1).nullable().optional(),
+  group_type: orderGroupTypeSchema.nullable().optional(),
+  leg_role: orderLegRoleSchema.nullable().optional(),
+  group_activated: external_exports.boolean().optional(),
+  trail_type: trailTypeSchema.nullable().optional(),
+  trail_value: numericSchema.nullable().optional(),
+  high_water_mark: numericSchema.nullable().optional(),
+});
+var matchFillSchema = external_exports.object({
+  order_id: external_exports.string().min(1),
+  side: orderSideSchema,
+  qty: numericSchema,
+  price: numericSchema,
+});
+var matchingRunnerRequestSchema = external_exports
+  .object({
+    ticks: external_exports.array(quoteTickSchema).optional(),
+  })
+  .strict();
+var matchingRunnerResponseSchema = external_exports.object({
+  ticks: external_exports.number().int().nonnegative(),
+  promoted: external_exports.number().int().nonnegative(),
+  fills: external_exports.number().int().nonnegative(),
+  triggered: external_exports.number().int().nonnegative(),
 });
 
 // packages/schemas/src/index.ts
@@ -4970,6 +5042,24 @@ function buildOrderFacts(input) {
   const equity = input.equity > 0 ? input.equity : input.buyingPower;
   const positionMktPost = postQty * last;
   const positionPctPost = equity > 0 ? (positionMktPost / equity) * 100 : 0;
+  const groupType = draft.group_type ?? null;
+  const entryRef = ref;
+  const tpPrice = draft.tp_price ?? null;
+  const slPrice = draft.sl_price ?? null;
+  const legsCount =
+    groupType === "bracket" ? 3 : groupType === "oco" ? 2 : groupType == null ? null : 1;
+  const tpNotAboveEntry =
+    groupType === "bracket" &&
+    draft.side === "buy" &&
+    tpPrice != null &&
+    Number.isFinite(tpPrice) &&
+    tpPrice <= entryRef;
+  const slNotBelowEntry =
+    groupType === "bracket" &&
+    draft.side === "buy" &&
+    slPrice != null &&
+    Number.isFinite(slPrice) &&
+    slPrice >= entryRef;
   return {
     qty: draft.qty,
     side: draft.side,
@@ -4978,6 +5068,15 @@ function buildOrderFacts(input) {
     limit_price: draft.limit_price ?? null,
     stop_price: draft.stop_price ?? null,
     last_price: last,
+    group_type: groupType,
+    trail_type: draft.trail_type ?? null,
+    trail_value: draft.trail_value ?? null,
+    legs_count: legsCount,
+    entry_ref_price: entryRef,
+    tp_price: tpPrice,
+    sl_price: slPrice,
+    tp_not_above_entry: tpNotAboveEntry,
+    sl_not_below_entry: slNotBelowEntry,
     order_notional: orderNotional,
     buying_power: input.buyingPower,
     exceeds_buying_power: orderNotional > input.buyingPower,
@@ -5049,12 +5148,23 @@ function reasonFromOutcome(row) {
 function decisionOf(row) {
   return typeof row.decision === "string" ? row.decision : "unknown";
 }
+var VAL02_CODES = /* @__PURE__ */ new Set([
+  "VAL_TP_ABOVE_ENTRY",
+  "VAL_SL_BELOW_ENTRY",
+  "VAL_BRACKET_LEGS",
+  "VAL_TRAIL_RANGE",
+  "VAL_OCO_LEGS",
+]);
+function validationTableKey(row) {
+  const code = typeof row.reason_code === "string" ? row.reason_code : "";
+  return VAL02_CODES.has(code) ? "DT-VAL-02" : "DT-VAL-01";
+}
 function summarizeValidation(outcome) {
   const rows = asRecords(outcome);
   const rejects = rows.filter((row) => decisionOf(row) === "reject");
   if (rejects.length > 0) {
     return rejects.map((row) => ({
-      table_key: "DT-VAL-01",
+      table_key: validationTableKey(row),
       passed: false,
       decision: decisionOf(row),
       reason: reasonFromOutcome(row),
@@ -5068,6 +5178,12 @@ function summarizeValidation(outcome) {
       passed: true,
       decision: decisionOf(primary),
       reason: reasonFromOutcome(primary),
+    },
+    {
+      table_key: "DT-VAL-02",
+      passed: true,
+      decision: "valid",
+      reason: "valid",
     },
   ];
 }
@@ -5173,7 +5289,7 @@ function decideOrderPlacement(input) {
       status: "rejected",
       rejectReason: valFail.reason,
       ruleAuditId: input.validation.auditId,
-      blockingTable: "DT-VAL-01",
+      blockingTable: valFail.table_key === "DT-VAL-02" ? "DT-VAL-02" : "DT-VAL-01",
     };
   }
   const risk = summarizeRisk(input.risk.outcome);
@@ -5222,6 +5338,136 @@ async function placeWithReserve(input) {
     }
   }
   return { ...decided, reserved };
+}
+
+// packages/paper-engine/src/groups.ts
+function oppositeSide(side) {
+  return side === "buy" ? "sell" : "buy";
+}
+function expandOrderGroup(draft) {
+  const parsed = orderDraftSchema.parse(draft);
+  if (parsed.group_type === "bracket") {
+    const exitSide = oppositeSide(parsed.side);
+    const entry = {
+      draft: {
+        ...parsed,
+        group_type: "bracket",
+      },
+      leg_role: "entry",
+      group_activated: true,
+      trail_type: parsed.trail_type ?? null,
+      trail_value: parsed.trail_value ?? null,
+    };
+    const takeProfit = {
+      draft: {
+        ...parsed,
+        side: exitSide,
+        order_type: "limit",
+        limit_price: parsed.tp_price ?? null,
+        stop_price: null,
+        trail_type: null,
+        trail_value: null,
+      },
+      leg_role: "take_profit",
+      group_activated: false,
+      trail_type: null,
+      trail_value: null,
+    };
+    const stopLoss = {
+      draft: {
+        ...parsed,
+        side: exitSide,
+        order_type: "stop",
+        limit_price: null,
+        stop_price: parsed.sl_price ?? null,
+        trail_type: null,
+        trail_value: null,
+      },
+      leg_role: "stop_loss",
+      group_activated: false,
+      trail_type: null,
+      trail_value: null,
+    };
+    return [entry, takeProfit, stopLoss];
+  }
+  if (parsed.group_type === "oco") {
+    const limitLeg = {
+      draft: {
+        ...parsed,
+        order_type: "limit",
+        limit_price: parsed.tp_price ?? parsed.limit_price ?? null,
+        stop_price: null,
+        trail_type: null,
+        trail_value: null,
+      },
+      leg_role: "oco_a",
+      group_activated: true,
+      trail_type: null,
+      trail_value: null,
+    };
+    const stopLeg = {
+      draft: {
+        ...parsed,
+        order_type: "stop",
+        limit_price: null,
+        stop_price: parsed.sl_price ?? parsed.stop_price ?? null,
+        trail_type: parsed.trail_type ?? null,
+        trail_value: parsed.trail_value ?? null,
+      },
+      leg_role: "oco_b",
+      group_activated: true,
+      trail_type: parsed.trail_type ?? null,
+      trail_value: parsed.trail_value ?? null,
+    };
+    return [limitLeg, stopLeg];
+  }
+  return [
+    {
+      draft: parsed,
+      leg_role: null,
+      group_activated: true,
+      trail_type: parsed.trail_type ?? null,
+      trail_value: parsed.trail_value ?? null,
+    },
+  ];
+}
+
+// packages/paper-engine/src/trailing.ts
+function trailStopFromMark(input) {
+  if (input.trailType === "percent") {
+    const factor = input.trailValue / 100;
+    return input.side === "sell" ? input.mark * (1 - factor) : input.mark * (1 + factor);
+  }
+  return input.side === "sell" ? input.mark - input.trailValue : input.mark + input.trailValue;
+}
+function ratchetTrailingStop(order, last) {
+  if (order.trail_type !== "percent" && order.trail_type !== "amount") {
+    return null;
+  }
+  const trailValue = order.trail_value;
+  if (trailValue == null || !Number.isFinite(trailValue) || !Number.isFinite(last)) {
+    return null;
+  }
+  const prior = order.high_water_mark;
+  const mark =
+    order.side === "sell"
+      ? Math.max(prior != null && Number.isFinite(prior) ? prior : last, last)
+      : Math.min(prior != null && Number.isFinite(prior) ? prior : last, last);
+  const stop = trailStopFromMark({
+    side: order.side,
+    mark,
+    trailType: order.trail_type,
+    trailValue,
+  });
+  const triggered = order.side === "sell" ? last <= stop : last >= stop;
+  return { high_water_mark: mark, stop_price: stop, triggered };
+}
+function seedTrailingOnCreate(order, last) {
+  const ratchet = ratchetTrailingStop({ ...order, high_water_mark: last }, last);
+  if (!ratchet) {
+    return { high_water_mark: null, stop_price: order.stop_price ?? null };
+  }
+  return { high_water_mark: ratchet.high_water_mark, stop_price: ratchet.stop_price };
 }
 
 // packages/rules-engine/src/authorize.ts
@@ -5293,6 +5539,20 @@ function asRecord(outcome) {
 }
 function buyingPowerOf(account) {
   return Number(account.cash_balance) - Number(account.reserved_cash ?? 0);
+}
+function hydrateOrderRow(existing) {
+  return {
+    ...existing,
+    parent_order_id: existing.parent_order_id ?? null,
+    group_id: existing.group_id ?? null,
+    group_type: existing.group_type ?? null,
+    leg_role: existing.leg_role ?? null,
+    group_activated: existing.group_activated ?? true,
+    trail_type: existing.trail_type ?? null,
+    trail_value: existing.trail_value ?? null,
+    high_water_mark: existing.high_water_mark ?? null,
+    reserved_amount: existing.reserved_amount ?? 0,
+  };
 }
 async function loadCalendar(client) {
   const { data, error } = await client.database
@@ -5466,6 +5726,13 @@ async function insertOrderRow(admin, row) {
       reject_reason: row.reject_reason,
       rule_audit_id: row.rule_audit_id,
       parent_order_id: row.parent_order_id ?? null,
+      group_id: row.group_id ?? null,
+      group_type: row.group_type ?? null,
+      leg_role: row.leg_role ?? null,
+      group_activated: row.group_activated ?? true,
+      trail_type: row.trail_type ?? null,
+      trail_value: row.trail_value ?? null,
+      high_water_mark: row.high_water_mark ?? null,
       reserved_amount: row.reserved_amount,
     },
   ]);
@@ -5600,11 +5867,7 @@ async function order_service_src_default(req) {
       if (!existing) {
         return json(404, { error: "ORDER_NOT_FOUND" });
       }
-      const current = orderRecordSchema.parse({
-        ...existing,
-        parent_order_id: existing.parent_order_id ?? null,
-        reserved_amount: existing.reserved_amount ?? 0,
-      });
+      const current = orderRecordSchema.parse(hydrateOrderRow(existing));
       if (!canCancel(current.status)) {
         return json(409, { error: `FSM_ILLEGAL:${current.status}->cancelled` });
       }
@@ -5679,35 +5942,68 @@ async function order_service_src_default(req) {
       },
     });
     const now = /* @__PURE__ */ new Date().toISOString();
-    const row = {
-      id: crypto.randomUUID(),
-      user_id: userId,
-      account_id: ctx.account.id,
-      instrument_id: ctx.instrument.id,
-      symbol: draft.symbol,
-      side: draft.side,
-      qty: draft.qty,
-      filled_qty: 0,
-      order_type: draft.order_type,
-      limit_price: draft.limit_price ?? null,
-      stop_price: draft.stop_price ?? null,
-      tif: draft.tif,
-      status: placement.status,
-      reject_reason: placement.rejectReason,
-      rule_audit_id: placement.ruleAuditId,
-      parent_order_id: null,
-      reserved_amount: placement.reserved,
-      created_at: now,
-      updated_at: now,
-    };
-    const parsedRow = orderRecordSchema.parse(row);
+    const legs = expandOrderGroup(draft);
+    const groupId = legs.length > 1 ? crypto.randomUUID() : null;
+    const parentId = crypto.randomUUID();
+    const created = [];
     try {
-      await insertOrderRow(admin, parsedRow);
+      for (const [index, leg] of legs.entries()) {
+        const id = index === 0 ? parentId : crypto.randomUUID();
+        const trailSeed = seedTrailingOnCreate(
+          {
+            side: leg.draft.side,
+            trail_type: leg.trail_type,
+            trail_value: leg.trail_value,
+            high_water_mark: null,
+            stop_price: leg.draft.stop_price ?? null,
+          },
+          ctx.lastPrice,
+        );
+        const isParent = index === 0;
+        const row = orderRecordSchema.parse({
+          id,
+          user_id: userId,
+          account_id: ctx.account.id,
+          instrument_id: ctx.instrument.id,
+          symbol: leg.draft.symbol,
+          side: leg.draft.side,
+          qty: leg.draft.qty,
+          filled_qty: 0,
+          order_type: leg.draft.order_type,
+          limit_price: leg.draft.limit_price ?? null,
+          stop_price: trailSeed.stop_price,
+          tif: leg.draft.tif,
+          status: placement.status,
+          reject_reason: isParent
+            ? placement.rejectReason
+            : placement.status === "rejected"
+              ? placement.rejectReason
+              : null,
+          rule_audit_id: placement.ruleAuditId,
+          parent_order_id: isParent ? null : parentId,
+          group_id: groupId,
+          group_type: draft.group_type ?? null,
+          leg_role: leg.leg_role ?? null,
+          group_activated: placement.status === "accepted" ? leg.group_activated : false,
+          trail_type: leg.trail_type ?? null,
+          trail_value: leg.trail_value ?? null,
+          high_water_mark: trailSeed.high_water_mark,
+          reserved_amount: isParent ? placement.reserved : 0,
+          created_at: now,
+          updated_at: now,
+        });
+        await insertOrderRow(admin, row);
+        created.push(row);
+      }
     } catch (error) {
       if (placement.reserved > 0) {
         await releaseBuyingPower2(admin, ctx.account.id, userId, placement.reserved);
       }
       throw error;
+    }
+    const parsedRow = created[0];
+    if (!parsedRow) {
+      throw new Error("ORDER_CREATE_EMPTY");
     }
     await client.database.from("audit_log").insert([
       {
@@ -5720,10 +6016,14 @@ async function order_service_src_default(req) {
           symbol: draft.symbol,
           reject_reason: parsedRow.reject_reason,
           rule_audit_id: parsedRow.rule_audit_id,
+          group_id: groupId,
+          legs: created.length,
         },
       },
     ]);
-    await publishOrder(admin, userId, parsedRow);
+    for (const row of created) {
+      await publishOrder(admin, userId, row);
+    }
     return json(placement.status === "accepted" ? 200 : 422, { order: parsedRow, preview });
   } catch (error) {
     const message = error instanceof Error ? error.message : "ORDER_SERVICE_ERROR";

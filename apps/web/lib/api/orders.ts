@@ -4,6 +4,9 @@ import { recordTables } from "./rest";
 
 export function createOrdersRepository(client: RecordsClient) {
   return {
+    listMine() {
+      return client.list(recordTables.orders, orderRecordSchema);
+    },
     insert(row: OrderRecord) {
       return client.insert(recordTables.orders, orderRecordSchema, [orderRecordSchema.parse(row)]);
     },

@@ -10,6 +10,12 @@ export const tifSchema = z.enum(["DAY", "GTC", "IOC"]);
 
 export const qtyModeSchema = z.enum(["shares", "notional"]);
 
+export const orderGroupTypeSchema = z.enum(["bracket", "oco"]);
+
+export const orderLegRoleSchema = z.enum(["entry", "take_profit", "stop_loss", "oco_a", "oco_b"]);
+
+export const trailTypeSchema = z.enum(["percent", "amount"]);
+
 export const orderStatusSchema = z.enum([
   "draft",
   "validated",
@@ -32,6 +38,11 @@ export const orderDraftSchema = z
     limit_price: z.number().finite().nullable().optional(),
     stop_price: z.number().finite().nullable().optional(),
     tif: tifSchema,
+    group_type: orderGroupTypeSchema.nullable().optional(),
+    tp_price: z.number().finite().nullable().optional(),
+    sl_price: z.number().finite().nullable().optional(),
+    trail_type: trailTypeSchema.nullable().optional(),
+    trail_value: z.number().finite().nullable().optional(),
   })
   .strict();
 
@@ -99,6 +110,13 @@ export const orderRecordSchema = z.object({
   reject_reason: z.string().nullable(),
   rule_audit_id: z.string().nullable(),
   parent_order_id: uuidSchema.nullable().optional(),
+  group_id: uuidSchema.nullable().optional(),
+  group_type: orderGroupTypeSchema.nullable().optional(),
+  leg_role: orderLegRoleSchema.nullable().optional(),
+  group_activated: z.boolean().optional(),
+  trail_type: trailTypeSchema.nullable().optional(),
+  trail_value: numericSchema.nullable().optional(),
+  high_water_mark: numericSchema.nullable().optional(),
   reserved_amount: numericSchema.optional(),
   stop_triggered: z.boolean().optional(),
   created_at: timestamptzSchema,
@@ -186,6 +204,13 @@ export const workingOrderMatchSchema = z.object({
   stop_triggered: z.boolean().optional(),
   tif: tifSchema.optional(),
   created_at: timestamptzSchema.optional(),
+  group_id: z.string().min(1).nullable().optional(),
+  group_type: orderGroupTypeSchema.nullable().optional(),
+  leg_role: orderLegRoleSchema.nullable().optional(),
+  group_activated: z.boolean().optional(),
+  trail_type: trailTypeSchema.nullable().optional(),
+  trail_value: numericSchema.nullable().optional(),
+  high_water_mark: numericSchema.nullable().optional(),
 });
 
 export const matchFillSchema = z.object({
@@ -212,6 +237,9 @@ export type OrderSide = z.infer<typeof orderSideSchema>;
 export type OrderType = z.infer<typeof orderTypeSchema>;
 export type TimeInForce = z.infer<typeof tifSchema>;
 export type QtyMode = z.infer<typeof qtyModeSchema>;
+export type OrderGroupType = z.infer<typeof orderGroupTypeSchema>;
+export type OrderLegRole = z.infer<typeof orderLegRoleSchema>;
+export type TrailType = z.infer<typeof trailTypeSchema>;
 export type OrderStatus = z.infer<typeof orderStatusSchema>;
 export type OrderDraft = z.infer<typeof orderDraftSchema>;
 export type OrderPreviewRequest = z.infer<typeof orderPreviewRequestSchema>;

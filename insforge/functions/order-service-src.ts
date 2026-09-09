@@ -26,10 +26,13 @@ import {
   assemblePreview,
   buildOrderFacts,
   canCancel,
+  expandOrderGroup,
   lastPriceForRuleFacts,
   placeWithReserve,
   reserveAmountForSide,
+  seedTrailingOnCreate,
 } from "../../packages/paper-engine/src/index.ts";
+import type { OrderLegRole } from "../../packages/schemas/src/index.ts";
 import { authorize, resolveRulesServiceApiKey } from "../../packages/rules-engine/src/index.ts";
 
 const corsHeaders = {
@@ -110,6 +113,21 @@ type LoadedCtx = {
 
 function buyingPowerOf(account: LoadedCtx["account"]): number {
   return Number(account.cash_balance) - Number(account.reserved_cash ?? 0);
+}
+
+function hydrateOrderRow(existing: Record<string, unknown>): Record<string, unknown> {
+  return {
+    ...existing,
+    parent_order_id: existing.parent_order_id ?? null,
+    group_id: existing.group_id ?? null,
+    group_type: existing.group_type ?? null,
+    leg_role: existing.leg_role ?? null,
+    group_activated: existing.group_activated ?? true,
+    trail_type: existing.trail_type ?? null,
+    trail_value: existing.trail_value ?? null,
+    high_water_mark: existing.high_water_mark ?? null,
+    reserved_amount: existing.reserved_amount ?? 0,
+  };
 }
 
 async function loadCalendar(client: UserClient): Promise<MarketCalendarRow[]> {
@@ -314,6 +332,13 @@ async function insertOrderRow(admin: AdminClient, row: OrderRecord): Promise<voi
       reject_reason: row.reject_reason,
       rule_audit_id: row.rule_audit_id,
       parent_order_id: row.parent_order_id ?? null,
+      group_id: row.group_id ?? null,
+      group_type: row.group_type ?? null,
+      leg_role: row.leg_role ?? null,
+      group_activated: row.group_activated ?? true,
+      trail_type: row.trail_type ?? null,
+      trail_value: row.trail_value ?? null,
+      high_water_mark: row.high_water_mark ?? null,
       reserved_amount: row.reserved_amount,
     },
   ]);
@@ -473,11 +498,7 @@ export default async function (req: Request): Promise<Response> {
       if (!existing) {
         return json(404, { error: "ORDER_NOT_FOUND" });
       }
-      const current = orderRecordSchema.parse({
-        ...existing,
-        parent_order_id: (existing as { parent_order_id?: string | null }).parent_order_id ?? null,
-        reserved_amount: (existing as { reserved_amount?: number }).reserved_amount ?? 0,
-      });
+      const current = orderRecordSchema.parse(hydrateOrderRow(existing));
       if (!canCancel(current.status as OrderStatus)) {
         return json(409, { error: `FSM_ILLEGAL:${current.status}->cancelled` });
       }
@@ -553,35 +574,68 @@ export default async function (req: Request): Promise<Response> {
       },
     });
     const now = new Date().toISOString();
-    const row: OrderRecord = {
-      id: crypto.randomUUID(),
-      user_id: userId,
-      account_id: ctx.account.id,
-      instrument_id: ctx.instrument.id,
-      symbol: draft.symbol,
-      side: draft.side,
-      qty: draft.qty,
-      filled_qty: 0,
-      order_type: draft.order_type,
-      limit_price: draft.limit_price ?? null,
-      stop_price: draft.stop_price ?? null,
-      tif: draft.tif,
-      status: placement.status,
-      reject_reason: placement.rejectReason,
-      rule_audit_id: placement.ruleAuditId,
-      parent_order_id: null,
-      reserved_amount: placement.reserved,
-      created_at: now,
-      updated_at: now,
-    };
-    const parsedRow = orderRecordSchema.parse(row);
+    const legs = expandOrderGroup(draft);
+    const groupId = legs.length > 1 ? crypto.randomUUID() : null;
+    const parentId = crypto.randomUUID();
+    const created: OrderRecord[] = [];
     try {
-      await insertOrderRow(admin, parsedRow);
+      for (const [index, leg] of legs.entries()) {
+        const id = index === 0 ? parentId : crypto.randomUUID();
+        const trailSeed = seedTrailingOnCreate(
+          {
+            side: leg.draft.side,
+            trail_type: leg.trail_type,
+            trail_value: leg.trail_value,
+            high_water_mark: null,
+            stop_price: leg.draft.stop_price ?? null,
+          },
+          ctx.lastPrice,
+        );
+        const isParent = index === 0;
+        const row = orderRecordSchema.parse({
+          id,
+          user_id: userId,
+          account_id: ctx.account.id,
+          instrument_id: ctx.instrument.id,
+          symbol: leg.draft.symbol,
+          side: leg.draft.side,
+          qty: leg.draft.qty,
+          filled_qty: 0,
+          order_type: leg.draft.order_type,
+          limit_price: leg.draft.limit_price ?? null,
+          stop_price: trailSeed.stop_price,
+          tif: leg.draft.tif,
+          status: placement.status,
+          reject_reason: isParent
+            ? placement.rejectReason
+            : placement.status === "rejected"
+              ? placement.rejectReason
+              : null,
+          rule_audit_id: placement.ruleAuditId,
+          parent_order_id: isParent ? null : parentId,
+          group_id: groupId,
+          group_type: draft.group_type ?? null,
+          leg_role: (leg.leg_role ?? null) as OrderLegRole | null,
+          group_activated: placement.status === "accepted" ? leg.group_activated : false,
+          trail_type: leg.trail_type ?? null,
+          trail_value: leg.trail_value ?? null,
+          high_water_mark: trailSeed.high_water_mark,
+          reserved_amount: isParent ? placement.reserved : 0,
+          created_at: now,
+          updated_at: now,
+        });
+        await insertOrderRow(admin, row);
+        created.push(row);
+      }
     } catch (error) {
       if (placement.reserved > 0) {
         await releaseBuyingPower(admin, ctx.account.id, userId, placement.reserved);
       }
       throw error;
+    }
+    const parsedRow = created[0];
+    if (!parsedRow) {
+      throw new Error("ORDER_CREATE_EMPTY");
     }
     await client.database.from("audit_log").insert([
       {
@@ -594,10 +648,14 @@ export default async function (req: Request): Promise<Response> {
           symbol: draft.symbol,
           reject_reason: parsedRow.reject_reason,
           rule_audit_id: parsedRow.rule_audit_id,
+          group_id: groupId,
+          legs: created.length,
         },
       },
     ]);
-    await publishOrder(admin, userId, parsedRow);
+    for (const row of created) {
+      await publishOrder(admin, userId, row);
+    }
     return json(placement.status === "accepted" ? 200 : 422, { order: parsedRow, preview });
   } catch (error) {
     const message = error instanceof Error ? error.message : "ORDER_SERVICE_ERROR";

@@ -67,6 +67,8 @@ Exported `*Schema` bindings discovered by static scan. Full OpenAPI from Zod is 
 - orders.ts: orderCreateResponseSchema
 - orders.ts: orderDraftSchema
 - orders.ts: orderFeeBreakdownSchema
+- orders.ts: orderGroupTypeSchema
+- orders.ts: orderLegRoleSchema
 - orders.ts: orderPreviewRequestSchema
 - orders.ts: orderPreviewResponseSchema
 - orders.ts: orderPreviewRuleSchema
@@ -78,6 +80,7 @@ Exported `*Schema` bindings discovered by static scan. Full OpenAPI from Zod is 
 - orders.ts: positionRecordSchema
 - orders.ts: qtyModeSchema
 - orders.ts: tifSchema
+- orders.ts: trailTypeSchema
 - orders.ts: workingOrderMatchSchema
 - primitives.ts: numericSchema
 - primitives.ts: timestamptzSchema

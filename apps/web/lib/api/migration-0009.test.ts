@@ -16,8 +16,10 @@ const cliTwinSql = readFileSync(
 
 describe("PBI-015 migration 0009 paper matching", () => {
   it("lists 0009 after 0008", () => {
-    expect(LOCAL_MIGRATION_IDS[LOCAL_MIGRATION_IDS.length - 1]).toBe("0009");
-    expect(LOCAL_MIGRATION_IDS).toContain("0008");
+    expect(LOCAL_MIGRATION_IDS.indexOf("0009")).toBeGreaterThan(
+      LOCAL_MIGRATION_IDS.indexOf("0008"),
+    );
+    expect(LOCAL_MIGRATION_IDS).toContain("0009");
   });
 
   it("adds stop_triggered, apply_paper_fill, and positions channel", () => {

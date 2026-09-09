@@ -12,7 +12,7 @@ export type PlacementDecision = {
   status: Extract<OrderStatus, "accepted" | "rejected">;
   rejectReason: string | null;
   ruleAuditId: string;
-  blockingTable: "DT-VAL-01" | "DT-RISK-01" | "DT-HRS-01" | null;
+  blockingTable: "DT-VAL-01" | "DT-VAL-02" | "DT-RISK-01" | "DT-HRS-01" | null;
 };
 
 export function decideOrderPlacement(input: {
@@ -27,7 +27,7 @@ export function decideOrderPlacement(input: {
       status: "rejected",
       rejectReason: valFail.reason,
       ruleAuditId: input.validation.auditId,
-      blockingTable: "DT-VAL-01",
+      blockingTable: valFail.table_key === "DT-VAL-02" ? "DT-VAL-02" : "DT-VAL-01",
     };
   }
   const risk = summarizeRisk(input.risk.outcome);

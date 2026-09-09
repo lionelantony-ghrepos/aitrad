@@ -13,6 +13,7 @@ import { clearStoredLayout, loadStoredLayout, saveStoredLayout } from "@/lib/lay
 import { PANEL_IDS } from "@/lib/panel-registry";
 import { ChartPanel } from "./chart-panel";
 import { CopilotPanel } from "./copilot-panel";
+import { BlotterPanel } from "./blotter-panel";
 import { OrderTicketPanel } from "./order-ticket-panel";
 import { PlaceholderPanel } from "./placeholder-panel";
 import { WatchlistPanel } from "./watchlist-panel";
@@ -20,13 +21,19 @@ import { WatchlistPanel } from "./watchlist-panel";
 const components = {
   ...Object.fromEntries(
     PANEL_IDS.filter(
-      (id) => id !== "watchlist" && id !== "chart" && id !== "copilot" && id !== "orderTicket",
+      (id) =>
+        id !== "watchlist" &&
+        id !== "chart" &&
+        id !== "copilot" &&
+        id !== "orderTicket" &&
+        id !== "blotter",
     ).map((id) => [id, PlaceholderPanel]),
   ),
   watchlist: WatchlistPanel,
   chart: ChartPanel,
   copilot: CopilotPanel,
   orderTicket: OrderTicketPanel,
+  blotter: BlotterPanel,
 };
 
 function snapshot(api: DockviewApi): Record<string, unknown> {

@@ -4563,6 +4563,15 @@ var orderSideSchema = external_exports.enum(["buy", "sell"]);
 var orderTypeSchema = external_exports.enum(["market", "limit", "stop", "stop_limit"]);
 var tifSchema = external_exports.enum(["DAY", "GTC", "IOC"]);
 var qtyModeSchema = external_exports.enum(["shares", "notional"]);
+var orderGroupTypeSchema = external_exports.enum(["bracket", "oco"]);
+var orderLegRoleSchema = external_exports.enum([
+  "entry",
+  "take_profit",
+  "stop_loss",
+  "oco_a",
+  "oco_b",
+]);
+var trailTypeSchema = external_exports.enum(["percent", "amount"]);
 var orderStatusSchema = external_exports.enum([
   "draft",
   "validated",
@@ -4583,6 +4592,11 @@ var orderDraftSchema = external_exports
     limit_price: external_exports.number().finite().nullable().optional(),
     stop_price: external_exports.number().finite().nullable().optional(),
     tif: tifSchema,
+    group_type: orderGroupTypeSchema.nullable().optional(),
+    tp_price: external_exports.number().finite().nullable().optional(),
+    sl_price: external_exports.number().finite().nullable().optional(),
+    trail_type: trailTypeSchema.nullable().optional(),
+    trail_value: external_exports.number().finite().nullable().optional(),
   })
   .strict();
 var orderPreviewRequestSchema = external_exports
@@ -4655,6 +4669,13 @@ var orderRecordSchema = external_exports.object({
   reject_reason: external_exports.string().nullable(),
   rule_audit_id: external_exports.string().nullable(),
   parent_order_id: uuidSchema.nullable().optional(),
+  group_id: uuidSchema.nullable().optional(),
+  group_type: orderGroupTypeSchema.nullable().optional(),
+  leg_role: orderLegRoleSchema.nullable().optional(),
+  group_activated: external_exports.boolean().optional(),
+  trail_type: trailTypeSchema.nullable().optional(),
+  trail_value: numericSchema.nullable().optional(),
+  high_water_mark: numericSchema.nullable().optional(),
   reserved_amount: numericSchema.optional(),
   stop_triggered: external_exports.boolean().optional(),
   created_at: timestamptzSchema,
@@ -4732,6 +4753,13 @@ var workingOrderMatchSchema = external_exports.object({
   stop_triggered: external_exports.boolean().optional(),
   tif: tifSchema.optional(),
   created_at: timestamptzSchema.optional(),
+  group_id: external_exports.string().min(1).nullable().optional(),
+  group_type: orderGroupTypeSchema.nullable().optional(),
+  leg_role: orderLegRoleSchema.nullable().optional(),
+  group_activated: external_exports.boolean().optional(),
+  trail_type: trailTypeSchema.nullable().optional(),
+  trail_value: numericSchema.nullable().optional(),
+  high_water_mark: numericSchema.nullable().optional(),
 });
 var matchFillSchema = external_exports.object({
   order_id: external_exports.string().min(1),
@@ -4776,6 +4804,9 @@ var LEGAL = {
 };
 function canTransition(from, to) {
   return LEGAL[from].includes(to);
+}
+function canCancel(status) {
+  return canTransition(status, "cancelled");
 }
 var OrderFsmError = class extends Error {
   from;
@@ -4834,6 +4865,152 @@ function outcomeRecord(outcome) {
     return outcome;
   }
   return null;
+}
+
+// packages/paper-engine/src/groups.ts
+function isChildProtectionLeg(role) {
+  return role === "take_profit" || role === "stop_loss";
+}
+function shouldPromoteAccepted(order) {
+  if (order.status !== "accepted") {
+    return false;
+  }
+  if (isChildProtectionLeg(order.leg_role)) {
+    return Boolean(order.group_activated);
+  }
+  return true;
+}
+function isStopPriority(order) {
+  if (order.order_type === "stop" || order.order_type === "stop_limit") {
+    return true;
+  }
+  if (order.leg_role === "stop_loss") {
+    return true;
+  }
+  return order.trail_type === "percent" || order.trail_type === "amount";
+}
+function siblingRole(role) {
+  if (role === "take_profit") {
+    return "stop_loss";
+  }
+  if (role === "stop_loss") {
+    return "take_profit";
+  }
+  if (role === "oco_a") {
+    return "oco_b";
+  }
+  if (role === "oco_b") {
+    return "oco_a";
+  }
+  return null;
+}
+var CANCELABLE = /* @__PURE__ */ new Set(["accepted", "working", "partially_filled"]);
+function groupActionsAfterFills(orders, filledIds) {
+  const filled = new Set(filledIds);
+  const activate = /* @__PURE__ */ new Set();
+  const cancel = /* @__PURE__ */ new Set();
+  for (const id of filledIds) {
+    const order = orders.find((row) => row.id === id);
+    if (!order?.group_id) {
+      continue;
+    }
+    const mates = orders.filter((row) => row.group_id === order.group_id && row.id !== order.id);
+    if (order.leg_role === "entry") {
+      for (const mate of mates) {
+        if (isChildProtectionLeg(mate.leg_role) && CANCELABLE.has(mate.status)) {
+          activate.add(mate.id);
+        }
+      }
+      continue;
+    }
+    const targetRole = siblingRole(order.leg_role);
+    if (!targetRole) {
+      continue;
+    }
+    for (const mate of mates) {
+      if (mate.leg_role === targetRole && CANCELABLE.has(mate.status) && !filled.has(mate.id)) {
+        cancel.add(mate.id);
+      }
+    }
+  }
+  return { activateIds: [...activate], cancelIds: [...cancel] };
+}
+function resolveSameTickGroupFills(fills, orders) {
+  if (fills.length <= 1) {
+    return [...fills];
+  }
+  const byId = new Map(orders.map((row) => [row.id, row]));
+  const grouped = /* @__PURE__ */ new Map();
+  const ungrouped = [];
+  for (const fill of fills) {
+    const order = byId.get(fill.order_id);
+    const key = order?.group_id;
+    if (!key) {
+      ungrouped.push(fill);
+      continue;
+    }
+    const list = grouped.get(key) ?? [];
+    list.push(fill);
+    grouped.set(key, list);
+  }
+  const winners = [...ungrouped];
+  for (const list of grouped.values()) {
+    if (list.length === 1) {
+      winners.push(list[0]);
+      continue;
+    }
+    const ranked = [...list].sort((a, b) => {
+      const oa = byId.get(a.order_id);
+      const ob = byId.get(b.order_id);
+      const sa = oa && isStopPriority(oa) ? 0 : 1;
+      const sb = ob && isStopPriority(ob) ? 0 : 1;
+      if (sa !== sb) {
+        return sa - sb;
+      }
+      return a.order_id < b.order_id ? -1 : 1;
+    });
+    const winner = ranked[0];
+    if (winner) {
+      winners.push(winner);
+    }
+  }
+  return winners;
+}
+
+// packages/paper-engine/src/trailing.ts
+function trailStopFromMark(input) {
+  if (input.trailType === "percent") {
+    const factor = input.trailValue / 100;
+    return input.side === "sell" ? input.mark * (1 - factor) : input.mark * (1 + factor);
+  }
+  return input.side === "sell" ? input.mark - input.trailValue : input.mark + input.trailValue;
+}
+function isTrailingStop(order) {
+  return order.trail_type === "percent" || order.trail_type === "amount"
+    ? order.trail_value != null && Number.isFinite(order.trail_value)
+    : false;
+}
+function ratchetTrailingStop(order, last) {
+  if (order.trail_type !== "percent" && order.trail_type !== "amount") {
+    return null;
+  }
+  const trailValue = order.trail_value;
+  if (trailValue == null || !Number.isFinite(trailValue) || !Number.isFinite(last)) {
+    return null;
+  }
+  const prior = order.high_water_mark;
+  const mark =
+    order.side === "sell"
+      ? Math.max(prior != null && Number.isFinite(prior) ? prior : last, last)
+      : Math.min(prior != null && Number.isFinite(prior) ? prior : last, last);
+  const stop = trailStopFromMark({
+    side: order.side,
+    mark,
+    trailType: order.trail_type,
+    trailValue,
+  });
+  const triggered = order.side === "sell" ? last <= stop : last >= stop;
+  return { high_water_mark: mark, stop_price: stop, triggered };
 }
 
 // packages/paper-engine/src/match.ts
@@ -4899,6 +5076,7 @@ function matchOrders(tick, workingOrders, execConfig) {
   const last = parsedTick.last;
   const fills = [];
   const triggeredOrderIds = [];
+  const trailingUpdates = [];
   const orders = workingOrders.map((row) => workingOrderMatchSchema.parse(row)).sort(compareOrders);
   for (const order of orders) {
     const leftover = remainingQty(order);
@@ -4906,26 +5084,46 @@ function matchOrders(tick, workingOrders, execConfig) {
       continue;
     }
     const config = resolveExecConfig(execConfig, order.id);
-    let triggered = Boolean(order.stop_triggered);
-    let effectiveType = order.order_type;
-    if (order.order_type === "stop" || order.order_type === "stop_limit") {
-      if (!triggered && isStopTriggered(order, last)) {
+    let working = order;
+    if (isTrailingStop(order)) {
+      const ratchet = ratchetTrailingStop(order, last);
+      if (ratchet) {
+        working = {
+          ...order,
+          high_water_mark: ratchet.high_water_mark,
+          stop_price: ratchet.stop_price,
+        };
+        trailingUpdates.push({
+          orderId: order.id,
+          high_water_mark: ratchet.high_water_mark,
+          stop_price: ratchet.stop_price,
+        });
+      }
+    }
+    let triggered = Boolean(working.stop_triggered);
+    let effectiveType = working.order_type;
+    if (
+      working.order_type === "stop" ||
+      working.order_type === "stop_limit" ||
+      isTrailingStop(working)
+    ) {
+      if (!triggered && isStopTriggered(working, last)) {
         triggered = true;
-        triggeredOrderIds.push(order.id);
+        triggeredOrderIds.push(working.id);
       }
       if (!triggered) {
         continue;
       }
-      effectiveType = order.order_type === "stop" ? "market" : "limit";
+      effectiveType = working.order_type === "stop_limit" ? "limit" : "market";
     }
     let price = null;
     if (effectiveType === "market") {
       price = marketPrice(last, order.side, config.slippage_bps);
     } else if (effectiveType === "limit") {
-      if (!isLimitMarketable(order, last)) {
+      if (!isLimitMarketable(working, last)) {
         continue;
       }
-      price = limitFillPrice(order, last);
+      price = limitFillPrice(working, last);
     } else {
       continue;
     }
@@ -4935,14 +5133,18 @@ function matchOrders(tick, workingOrders, execConfig) {
     }
     fills.push(
       matchFillSchema.parse({
-        order_id: order.id,
-        side: order.side,
+        order_id: working.id,
+        side: working.side,
         qty,
         price: applyTickSize(price, config.tick_size),
       }),
     );
   }
-  return { fills, triggeredOrderIds };
+  return {
+    fills: resolveSameTickGroupFills(fills, orders),
+    triggeredOrderIds,
+    trailingUpdates,
+  };
 }
 
 // packages/paper-engine/src/positions.ts
@@ -5066,6 +5268,20 @@ function mapOrder(row) {
     reserved_amount: num(row.reserved_amount),
     stop_triggered: Boolean(row.stop_triggered),
     created_at: String(row.created_at),
+    group_id: row.group_id == null ? null : String(row.group_id),
+    group_type: row.group_type === "bracket" || row.group_type === "oco" ? row.group_type : null,
+    leg_role:
+      row.leg_role === "entry" ||
+      row.leg_role === "take_profit" ||
+      row.leg_role === "stop_loss" ||
+      row.leg_role === "oco_a" ||
+      row.leg_role === "oco_b"
+        ? row.leg_role
+        : null,
+    group_activated: row.group_activated !== false,
+    trail_type: row.trail_type === "percent" || row.trail_type === "amount" ? row.trail_type : null,
+    trail_value: row.trail_value == null ? null : num(row.trail_value),
+    high_water_mark: row.high_water_mark == null ? null : num(row.high_water_mark),
   };
 }
 async function evaluateExecution(input) {
@@ -5217,7 +5433,7 @@ async function matching_runner_src_default(req) {
   let promoted = 0;
   const now = /* @__PURE__ */ new Date().toISOString();
   for (const order of orders) {
-    if (order.status !== "accepted") {
+    if (!shouldPromoteAccepted(order)) {
       continue;
     }
     if (!canTransition(order.status, "working")) {
@@ -5341,6 +5557,21 @@ async function matching_runner_src_default(req) {
       working.filter((order) => configs.has(order.id)),
       (orderId) => configs.get(orderId),
     );
+    for (const update of result.trailingUpdates) {
+      const order = orders.find((row) => row.id === update.orderId);
+      if (!order) {
+        continue;
+      }
+      order.high_water_mark = update.high_water_mark;
+      order.stop_price = update.stop_price;
+      await admin.database
+        .from("orders")
+        .update({
+          high_water_mark: update.high_water_mark,
+          stop_price: update.stop_price,
+        })
+        .eq("id", order.id);
+    }
     for (const orderId of result.triggeredOrderIds) {
       const order = orders.find((row) => row.id === orderId);
       if (!order || order.stop_triggered) {
@@ -5432,6 +5663,76 @@ async function matching_runner_src_default(req) {
       ]);
       await publishOrder(admin, order);
       await publishPosition(admin, order.user_id, storedPos);
+    }
+    const filledIds = result.fills
+      .map((fill) => orders.find((row) => row.id === fill.order_id))
+      .filter((order) => Boolean(order) && order.status === "filled")
+      .map((order) => order.id);
+    const effects = groupActionsAfterFills(orders, filledIds);
+    for (const id of effects.activateIds) {
+      const order = orders.find((row) => row.id === id);
+      if (!order) {
+        continue;
+      }
+      order.group_activated = true;
+      if (shouldPromoteAccepted(order) && canTransition(order.status, "working")) {
+        assertTransition(order.status, "working");
+        const update = await admin.database
+          .from("orders")
+          .update({ group_activated: true, status: "working" })
+          .eq("id", order.id);
+        if (update.error) {
+          return json(500, { error: update.error.message });
+        }
+        order.status = "working";
+        promoted += 1;
+        await admin.database.from("audit_log").insert([
+          {
+            user_id: order.user_id,
+            action: "trade:promote",
+            entity_type: "orders",
+            entity_id: order.id,
+            payload: { from: "accepted", to: "working", reason: "group_activate" },
+          },
+        ]);
+        await publishOrder(admin, order);
+      } else {
+        await admin.database.from("orders").update({ group_activated: true }).eq("id", order.id);
+      }
+    }
+    for (const id of effects.cancelIds) {
+      const order = orders.find((row) => row.id === id);
+      if (!order || !canCancel(order.status)) {
+        continue;
+      }
+      const from = order.status;
+      assertTransition(order.status, "cancelled");
+      if (order.reserved_amount > 0) {
+        await admin.database.rpc("release_buying_power", {
+          p_account_id: order.account_id,
+          p_amount: order.reserved_amount,
+          p_user_id: order.user_id,
+        });
+        order.reserved_amount = 0;
+      }
+      const update = await admin.database
+        .from("orders")
+        .update({ status: "cancelled", reserved_amount: 0 })
+        .eq("id", order.id);
+      if (update.error) {
+        return json(500, { error: update.error.message });
+      }
+      order.status = "cancelled";
+      await admin.database.from("audit_log").insert([
+        {
+          user_id: order.user_id,
+          action: "trade:cancel",
+          entity_type: "orders",
+          entity_id: order.id,
+          payload: { from, to: "cancelled", reason: "group_oco" },
+        },
+      ]);
+      await publishOrder(admin, order);
     }
   }
   return json(

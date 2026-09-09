@@ -407,6 +407,13 @@ export function stubReplaceOrder(row: OrderRecord): void {
   }
 }
 
+export function stubListOrders(userId: string): OrderRecord[] {
+  return getStubState()
+    .orders.filter((row) => row.user_id === userId)
+    .slice()
+    .sort((a, b) => a.created_at.localeCompare(b.created_at));
+}
+
 export function stubInstrumentBySymbol(symbol: string): Instrument | null {
   const key = symbol.trim().toUpperCase();
   return STUB_INSTRUMENTS.find((row) => row.symbol === key) ?? null;

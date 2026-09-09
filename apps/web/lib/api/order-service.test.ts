@@ -46,6 +46,12 @@ describe("order-service security", () => {
     expect(orderServiceSrc).not.toMatch(/client\.database\.from\("orders"\)\.insert/);
   });
 
+  it("expands group legs on create", () => {
+    expect(orderServiceSrc).toContain("expandOrderGroup");
+    expect(orderServiceSrc).toContain("group_id");
+    expect(orderServiceSrc).toContain("leg_role");
+  });
+
   it("reserves, releases, and publishes through the admin client after JWT ownership", () => {
     expect(orderServiceSrc).toContain("reserveBuyingPower");
     expect(orderServiceSrc).toContain("releaseBuyingPower");

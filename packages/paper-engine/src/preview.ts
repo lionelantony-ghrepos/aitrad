@@ -67,6 +67,24 @@ export function buildOrderFacts(input: OrderFactInput): OrderFacts {
   const equity = input.equity > 0 ? input.equity : input.buyingPower;
   const positionMktPost = postQty * last;
   const positionPctPost = equity > 0 ? (positionMktPost / equity) * 100 : 0;
+  const groupType = draft.group_type ?? null;
+  const entryRef = ref;
+  const tpPrice = draft.tp_price ?? null;
+  const slPrice = draft.sl_price ?? null;
+  const legsCount =
+    groupType === "bracket" ? 3 : groupType === "oco" ? 2 : groupType == null ? null : 1;
+  const tpNotAboveEntry =
+    groupType === "bracket" &&
+    draft.side === "buy" &&
+    tpPrice != null &&
+    Number.isFinite(tpPrice) &&
+    tpPrice <= entryRef;
+  const slNotBelowEntry =
+    groupType === "bracket" &&
+    draft.side === "buy" &&
+    slPrice != null &&
+    Number.isFinite(slPrice) &&
+    slPrice >= entryRef;
 
   return {
     qty: draft.qty,
@@ -76,6 +94,15 @@ export function buildOrderFacts(input: OrderFactInput): OrderFacts {
     limit_price: draft.limit_price ?? null,
     stop_price: draft.stop_price ?? null,
     last_price: last,
+    group_type: groupType,
+    trail_type: draft.trail_type ?? null,
+    trail_value: draft.trail_value ?? null,
+    legs_count: legsCount,
+    entry_ref_price: entryRef,
+    tp_price: tpPrice,
+    sl_price: slPrice,
+    tp_not_above_entry: tpNotAboveEntry,
+    sl_not_below_entry: slNotBelowEntry,
     order_notional: orderNotional,
     buying_power: input.buyingPower,
     exceeds_buying_power: orderNotional > input.buyingPower,
@@ -159,12 +186,25 @@ function decisionOf(row: Record<string, unknown>): string {
   return typeof row.decision === "string" ? row.decision : "unknown";
 }
 
+const VAL02_CODES = new Set([
+  "VAL_TP_ABOVE_ENTRY",
+  "VAL_SL_BELOW_ENTRY",
+  "VAL_BRACKET_LEGS",
+  "VAL_TRAIL_RANGE",
+  "VAL_OCO_LEGS",
+]);
+
+function validationTableKey(row: Record<string, unknown>): "DT-VAL-01" | "DT-VAL-02" {
+  const code = typeof row.reason_code === "string" ? row.reason_code : "";
+  return VAL02_CODES.has(code) ? "DT-VAL-02" : "DT-VAL-01";
+}
+
 export function summarizeValidation(outcome: unknown): OrderPreviewRule[] {
   const rows = asRecords(outcome);
   const rejects = rows.filter((row) => decisionOf(row) === "reject");
   if (rejects.length > 0) {
     return rejects.map((row) => ({
-      table_key: "DT-VAL-01",
+      table_key: validationTableKey(row),
       passed: false,
       decision: decisionOf(row),
       reason: reasonFromOutcome(row),
@@ -178,6 +218,12 @@ export function summarizeValidation(outcome: unknown): OrderPreviewRule[] {
       passed: true,
       decision: decisionOf(primary),
       reason: reasonFromOutcome(primary),
+    },
+    {
+      table_key: "DT-VAL-02",
+      passed: true,
+      decision: "valid",
+      reason: "valid",
     },
   ];
 }
