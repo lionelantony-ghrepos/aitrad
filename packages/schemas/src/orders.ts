@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { quoteTickSchema } from "./entities";
 import { numericSchema, timestamptzSchema, uuidSchema } from "./primitives";
 
 export const orderSideSchema = z.enum(["buy", "sell"]);
@@ -99,6 +100,7 @@ export const orderRecordSchema = z.object({
   rule_audit_id: z.string().nullable(),
   parent_order_id: uuidSchema.nullable().optional(),
   reserved_amount: numericSchema.optional(),
+  stop_triggered: z.boolean().optional(),
   created_at: timestamptzSchema,
   updated_at: timestamptzSchema,
 });
@@ -156,6 +158,56 @@ export const portfolioSnapshotSchema = z.object({
   created_at: timestamptzSchema,
 });
 
+/** Resolved DT-EXEC-01 outputs for one match() call. Thresholds stay in the table. */
+export const execConfigSchema = z.object({
+  slippage_bps: numericSchema,
+  liquidity_cap: numericSchema.optional(),
+  liquidity_cap_pct_adv: numericSchema.optional(),
+  tick_size: numericSchema.optional(),
+});
+
+export const matchTickSchema = z.object({
+  instrument_id: uuidSchema.optional(),
+  symbol: z.string().min(1).optional(),
+  last: numericSchema,
+  bid: numericSchema.optional(),
+  ask: numericSchema.optional(),
+  ts: timestamptzSchema.optional(),
+});
+
+export const workingOrderMatchSchema = z.object({
+  id: z.string().min(1),
+  side: orderSideSchema,
+  qty: numericSchema,
+  filled_qty: numericSchema,
+  order_type: orderTypeSchema,
+  limit_price: numericSchema.nullable().optional(),
+  stop_price: numericSchema.nullable().optional(),
+  stop_triggered: z.boolean().optional(),
+  tif: tifSchema.optional(),
+  created_at: timestamptzSchema.optional(),
+});
+
+export const matchFillSchema = z.object({
+  order_id: z.string().min(1),
+  side: orderSideSchema,
+  qty: numericSchema,
+  price: numericSchema,
+});
+
+export const matchingRunnerRequestSchema = z
+  .object({
+    ticks: z.array(quoteTickSchema).optional(),
+  })
+  .strict();
+
+export const matchingRunnerResponseSchema = z.object({
+  ticks: z.number().int().nonnegative(),
+  promoted: z.number().int().nonnegative(),
+  fills: z.number().int().nonnegative(),
+  triggered: z.number().int().nonnegative(),
+});
+
 export type OrderSide = z.infer<typeof orderSideSchema>;
 export type OrderType = z.infer<typeof orderTypeSchema>;
 export type TimeInForce = z.infer<typeof tifSchema>;
@@ -174,3 +226,9 @@ export type OrderCancelResponse = z.infer<typeof orderCancelResponseSchema>;
 export type ExecutionRecord = z.infer<typeof executionRecordSchema>;
 export type PositionRecord = z.infer<typeof positionRecordSchema>;
 export type PortfolioSnapshot = z.infer<typeof portfolioSnapshotSchema>;
+export type ExecConfig = z.infer<typeof execConfigSchema>;
+export type MatchTick = z.infer<typeof matchTickSchema>;
+export type WorkingOrderMatch = z.infer<typeof workingOrderMatchSchema>;
+export type MatchFill = z.infer<typeof matchFillSchema>;
+export type MatchingRunnerRequest = z.infer<typeof matchingRunnerRequestSchema>;
+export type MatchingRunnerResponse = z.infer<typeof matchingRunnerResponseSchema>;

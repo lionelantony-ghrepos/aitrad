@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { orderCancelRequestSchema, orderDraftSchema, orderPreviewResponseSchema } from "./orders";
+import {
+  execConfigSchema,
+  matchingRunnerRequestSchema,
+  orderCancelRequestSchema,
+  orderDraftSchema,
+  orderPreviewResponseSchema,
+} from "./orders";
 
 describe("orderDraftSchema", () => {
   it("accepts a market DAY draft", () => {
@@ -53,6 +59,18 @@ describe("orderPreviewResponseSchema", () => {
       fee_outcome: { commission_usd: 0 },
     });
     expect(parsed.buying_power).toBe(100000);
+  });
+});
+
+describe("execConfigSchema", () => {
+  it("accepts slippage and an optional share cap", () => {
+    expect(execConfigSchema.parse({ slippage_bps: 5, liquidity_cap: 40 }).liquidity_cap).toBe(40);
+  });
+});
+
+describe("matchingRunnerRequestSchema", () => {
+  it("accepts an empty body or ticks", () => {
+    expect(matchingRunnerRequestSchema.parse({}).ticks).toBeUndefined();
   });
 });
 

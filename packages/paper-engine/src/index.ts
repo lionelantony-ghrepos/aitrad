@@ -1,6 +1,6 @@
 export const packageName = "@meridian/paper-engine" as const;
 
-/** Paper matching lives here (pure, no I/O). Placeholder until PBI-015. */
+/** Paper matching lives here (pure, no I/O). */
 export function matcherReady(): boolean {
   return true;
 }
@@ -43,3 +43,22 @@ export {
   type DomainEval,
   type PlacementDecision,
 } from "./order-pipeline";
+export { match, matchOrders, type MatchResult } from "./match";
+export {
+  liquidityCapShares,
+  parseExecConfig,
+  resolveExecConfig,
+  type ExecConfigResolver,
+} from "./exec-config";
+export { applyFillToPosition, emptyPosition, markEquity, type PositionBook } from "./positions";
+export { applyFillToLedger, cashDeltaForFill, reservedReleaseForFill } from "./settle";
+export {
+  applyTickToBook,
+  applyTicks,
+  bookEquity,
+  type CycleOrder,
+  type CyclePosition,
+  type PaperCycleEvent,
+  type PaperCycleResult,
+  type PaperCycleState,
+} from "./cycle";

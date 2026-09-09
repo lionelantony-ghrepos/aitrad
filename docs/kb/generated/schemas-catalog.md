@@ -55,7 +55,12 @@ Exported `*Schema` bindings discovered by static scan. Full OpenAPI from Zod is 
 - entities.ts: watchlistSchema
 - index.ts: publicInsforgeEnvSchema
 - index.ts: seedEnvSchema
+- orders.ts: execConfigSchema
 - orders.ts: executionRecordSchema
+- orders.ts: matchFillSchema
+- orders.ts: matchTickSchema
+- orders.ts: matchingRunnerRequestSchema
+- orders.ts: matchingRunnerResponseSchema
 - orders.ts: orderCancelRequestSchema
 - orders.ts: orderCancelResponseSchema
 - orders.ts: orderCreateRequestSchema
@@ -73,6 +78,7 @@ Exported `*Schema` bindings discovered by static scan. Full OpenAPI from Zod is 
 - orders.ts: positionRecordSchema
 - orders.ts: qtyModeSchema
 - orders.ts: tifSchema
+- orders.ts: workingOrderMatchSchema
 - primitives.ts: numericSchema
 - primitives.ts: timestamptzSchema
 - primitives.ts: uuidSchema
