@@ -32,6 +32,8 @@ DECLARE
   ord public.orders%ROWTYPE;
   acc public.accounts%ROWTYPE;
   next_reserved numeric;
+  computed_filled_qty numeric;
+  expected_cash_delta numeric;
 BEGIN
   IF p_user_id IS NULL THEN
     RAISE EXCEPTION 'FILL_FORBIDDEN';
@@ -61,6 +63,27 @@ BEGIN
     RETURN jsonb_build_object('ok', false, 'reason_code', 'OVERFILL');
   END IF;
 
+  computed_filled_qty := ord.filled_qty + p_qty;
+  IF p_filled_qty IS DISTINCT FROM computed_filled_qty THEN
+    RAISE EXCEPTION
+      'FILLED_QTY_MISMATCH: p_filled_qty (%) must equal ord.filled_qty (%) + p_qty (%)',
+      p_filled_qty, ord.filled_qty, p_qty;
+  END IF;
+
+  IF ord.side = 'buy' THEN
+    expected_cash_delta := -(p_qty * p_price);
+  ELSIF ord.side = 'sell' THEN
+    expected_cash_delta := p_qty * p_price;
+  ELSE
+    RAISE EXCEPTION 'CASH_DELTA_MISMATCH: unsupported order side %', ord.side;
+  END IF;
+  -- NUMERIC(20,8) scale; round so IEEE callers cannot drift past money columns
+  IF round(COALESCE(p_cash_delta, 0), 8) IS DISTINCT FROM round(expected_cash_delta, 8) THEN
+    RAISE EXCEPTION
+      'CASH_DELTA_MISMATCH: p_cash_delta (%) must equal % (% qty % @ %)',
+      p_cash_delta, expected_cash_delta, ord.side, p_qty, p_price;
+  END IF;
+
   SELECT * INTO acc
   FROM public.accounts
   WHERE id = ord.account_id
@@ -73,6 +96,15 @@ BEGIN
     RAISE EXCEPTION 'FILL_FORBIDDEN';
   END IF;
 
+  -- Lock the position row (if any) before upsert so concurrent fills on the
+  -- same (account_id, instrument_id) cannot race avg_cost / qty / realized_pnl.
+  -- First insert is serialized by the account row lock above.
+  PERFORM 1
+  FROM public.positions
+  WHERE account_id = ord.account_id
+    AND instrument_id = ord.instrument_id
+  FOR UPDATE;
+
   INSERT INTO public.executions (
     id, order_id, user_id, account_id, instrument_id, symbol, side, qty, price
   ) VALUES (
@@ -82,7 +114,7 @@ BEGIN
 
   UPDATE public.orders
   SET
-    filled_qty = p_filled_qty,
+    filled_qty = computed_filled_qty,
     status = p_order_status,
     reserved_amount = GREATEST(0, COALESCE(p_reserved_amount, 0)),
     stop_triggered = COALESCE(p_stop_triggered, ord.stop_triggered)
