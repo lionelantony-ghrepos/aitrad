@@ -168,12 +168,12 @@ Seeded via `scripts/seed-all.ts` (see doc 06): 150 instruments, 5y daily + 5d 1m
 ### PBI-016 Advanced orders
 | ID | Criterion / Test | Pri | Status |
 |---|---|---|---|
-| AC-016-01 | Bracket: entry fill activates TP+SL; either child fill cancels sibling | P0 | ☑ |
-| AC-016-02 | Trailing stop ratchets, never loosens, triggers on pullback | P0 | ☑ |
-| AC-016-03 | OCO same-tick race deterministic (stop priority) | P0 | ☑ |
-| TC-016-01 | E2E: bracket → force through TP → TP filled, SL cancelled (AC-016-01) | P0 | ☑ |
-| TC-016-02 | Unit: price path up-down → HWM correct, trigger at trail (AC-016-02) | P0 | ☑ |
-| TC-016-03 | Unit: tick hits both legs → stop wins (AC-016-03) | P0 | ☑ |
+| AC-016-01 | Bracket: entry fill activates TP+SL; either child fill cancels sibling | P0 | ☐ |
+| AC-016-02 | Trailing stop ratchets, never loosens, triggers on pullback | P0 | ☐ |
+| AC-016-03 | OCO same-tick race deterministic (stop priority) | P0 | ☐ |
+| TC-016-01 | E2E: bracket → force through TP → TP filled, SL cancelled (AC-016-01) | P0 | ☐ |
+| TC-016-02 | Unit: price path up-down → HWM correct, trigger at trail (AC-016-02) | P0 | ☐ |
+| TC-016-03 | Unit: tick hits both legs → stop wins (AC-016-03) | P0 | ☐ |
 
 ### PBI-017 Blotter
 | ID | Criterion / Test | Pri | Status |
