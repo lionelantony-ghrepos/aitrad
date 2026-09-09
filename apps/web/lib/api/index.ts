@@ -8,6 +8,7 @@ export { createMarketCalendarRepository } from "./market-calendar";
 export { createAuditLogRepository } from "./audit-log";
 export { createFeatureFlagsRepository } from "./feature-flags";
 export {
+  containsArrayFilter,
   eqFilter,
   inFilter,
   ilikeContainsFilter,
@@ -31,6 +32,7 @@ export { createOrdersRepository } from "./orders";
 export { createExecutionsRepository } from "./executions";
 export { createRuleAuditRepository } from "./rule-audit";
 export { createPositionsRepository, createPortfolioSnapshotsRepository } from "./positions";
+export { createNewsItemsRepository } from "./news-items";
 export {
   analyticsServiceUrl,
   invokeAnalyticsPortfolio,

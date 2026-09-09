@@ -9,6 +9,7 @@ export const LOCAL_MIGRATION_IDS = [
   "0008",
   "0009",
   "0010",
+  "0011",
 ] as const;
 
 export function planMigrationApply(

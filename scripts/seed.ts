@@ -5,8 +5,10 @@ import { fileURLToPath } from "node:url";
 import { createAdminClient } from "@insforge/sdk";
 import {
   generateInstrumentHistory,
+  generateNewsBackfill,
   marketCalendarSeedRows,
   parseInstrumentsJson,
+  parseNewsTemplatesJson,
   quoteFromHistory,
   SEED_COUNT_SQL,
   evaluateSeedCounts,
@@ -63,6 +65,7 @@ function querySeedCounts(): SeedCounts {
     quotes: Number(row.quotes),
     minDailyPerInstrument: Number(row.min_daily_per_instrument),
     minMinutePerInstrument: Number(row.min_minute_per_instrument),
+    newsItems: Number(row.news_items),
   };
 }
 
@@ -162,6 +165,25 @@ export async function runUniverseSeed(): Promise<void> {
   await upsertBatch(admin.database, "market_bars", barRows, "instrument_id,timeframe,ts");
   process.stdout.write(`Upserting ${quoteRows.length} quotes_latest…\n`);
   await upsertBatch(admin.database, "quotes_latest", quoteRows, "instrument_id");
+
+  const templates = parseNewsTemplatesJson(
+    JSON.parse(
+      readFileSync(path.join(repoRoot, "mock_data", "news-templates.json"), "utf8"),
+    ) as unknown,
+  );
+  const newsRows = generateNewsBackfill({ universe, templates }).map((row) => ({
+    id: row.id,
+    ts: row.ts,
+    headline: row.headline,
+    body: row.body,
+    source: row.source,
+    symbols: row.symbols,
+    sector: row.sector,
+    sentiment: row.sentiment,
+    event_type: row.event_type,
+  }));
+  process.stdout.write(`Upserting ${newsRows.length} news_items…\n`);
+  await upsertBatch(admin.database, "news_items", newsRows, "id");
 
   process.stdout.write("SQL count check:\n");
   process.stdout.write(`${SEED_COUNT_SQL}\n`);

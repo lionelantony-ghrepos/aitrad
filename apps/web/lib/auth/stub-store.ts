@@ -14,6 +14,7 @@ import type {
   PositionRecord,
   PortfolioSnapshot,
   QuotesLatest,
+  NewsItem,
   RuleAuditView,
   Watchlist,
   WatchlistItem,
@@ -264,6 +265,59 @@ export const STUB_QUOTES: QuotesLatest[] = [
     ts: STUB_TS,
   },
 ];
+
+const STUB_NEWS_TS = "2026-09-09T15:00:00.000Z";
+
+export const STUB_NEWS: NewsItem[] = [
+  {
+    id: "55555555-5555-4555-8555-555555555551",
+    ts: "2026-09-09T16:00:00.000Z",
+    headline: "Tesla beats Q2 estimates as AI revenue jumps 12%",
+    body: "Management highlighted cloud as the primary swing factor. Street models now imply a 12% revision path into the next print.",
+    source: "Reuters",
+    symbols: ["TSLA"],
+    sector: "Consumer Discretionary",
+    sentiment: 0.62,
+    event_type: "earnings",
+  },
+  {
+    id: "55555555-5555-4555-8555-555555555552",
+    ts: "2026-09-09T15:30:00.000Z",
+    headline: "Morgan Stanley upgrades Tesla to Buy, lifts target to $280",
+    body: "The note cites execution as the key debate versus consensus. Positioning in Consumer Discretionary names may shift after the call.",
+    source: "Bloomberg",
+    symbols: ["TSLA"],
+    sector: "Consumer Discretionary",
+    sentiment: 0.41,
+    event_type: "analyst",
+  },
+  {
+    id: "55555555-5555-4555-8555-555555555553",
+    ts: "2026-09-09T15:10:00.000Z",
+    headline: "Apple unveils next-gen AI platform, targeting the enterprise AI market",
+    body: "Early demand checks in enterprise AI will set the near-term narrative. Rivals in Technology are watching execution on next-gen AI platform.",
+    source: "WSJ",
+    symbols: ["AAPL"],
+    sector: "Technology",
+    sentiment: 0.35,
+    event_type: "product",
+  },
+  {
+    id: "55555555-5555-4555-8555-555555555554",
+    ts: STUB_NEWS_TS,
+    headline: "Fed signals a data-dependent path; Technology stocks climb",
+    body: "Rates traders marked the a data-dependent path into the next session. Technology factor baskets climb as yields ease.",
+    source: "CNBC",
+    symbols: ["AAPL", "MSFT"],
+    sector: "Technology",
+    sentiment: 0.12,
+    event_type: "macro",
+  },
+];
+
+export function stubListNews(): NewsItem[] {
+  return [...STUB_NEWS].sort((a, b) => (a.ts < b.ts ? 1 : a.ts > b.ts ? -1 : 0));
+}
 
 export function stubSearchInstruments(query: string): Instrument[] {
   const q = query.trim().toUpperCase();

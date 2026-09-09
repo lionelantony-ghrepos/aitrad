@@ -8,9 +8,10 @@ export type SimParams = {
   gapEventProbPerDay: number;
   gapRangePct: readonly [number, number];
   volMultiplier: number;
+  driftNudgeBpsPerSentiment: number;
 };
 
-type SimContext = { betaClass: BetaClass };
+type SimContext = { betaClass: BetaClass; newsSentimentShock: boolean };
 
 type DtSim01Row = {
   when: (ctx: SimContext) => boolean;
@@ -21,6 +22,7 @@ const DT_SIM_01_DEFAULTS: SimParams = {
   gapEventProbPerDay: 0,
   gapRangePct: [0, 0],
   volMultiplier: 1,
+  driftNudgeBpsPerSentiment: 0,
 };
 
 const DT_SIM_01_ROWS: readonly DtSim01Row[] = [
@@ -36,13 +38,21 @@ const DT_SIM_01_ROWS: readonly DtSim01Row[] = [
     when: (ctx) => ctx.betaClass === "low",
     apply: (acc) => ({ ...acc, volMultiplier: 0.6 }),
   },
+  {
+    when: (ctx) => ctx.newsSentimentShock,
+    apply: (acc) => ({ ...acc, driftNudgeBpsPerSentiment: 30 }),
+  },
 ];
 
-export function simParamsForBeta(betaClass: BetaClass): SimParams {
+function evaluateSim(ctx: SimContext): SimParams {
   return DT_SIM_01_ROWS.reduce(
-    (acc, row) => (row.when({ betaClass }) ? row.apply(acc) : acc),
+    (acc, row) => (row.when(ctx) ? row.apply(acc) : acc),
     DT_SIM_01_DEFAULTS,
   );
+}
+
+export function simParamsForBeta(betaClass: BetaClass): SimParams {
+  return evaluateSim({ betaClass, newsSentimentShock: false });
 }
 
 /** Annualized GBM σ by beta_class (doc 06 generator), before DT-SIM-01 vol_multiplier. */
@@ -54,4 +64,16 @@ const ANNUAL_SIGMA: Record<BetaClass, number> = {
 
 export function annualSigma(betaClass: BetaClass): number {
   return ANNUAL_SIGMA[betaClass] * simParamsForBeta(betaClass).volMultiplier;
+}
+
+/**
+ * DT-SIM-01 row 4: drift_nudge_bps = sentiment × cell when news_sentiment_shock is true.
+ */
+export function newsSentimentDriftNudgeBps(
+  sentiment: number,
+  newsSentimentShock: boolean,
+  betaClass: BetaClass = "medium",
+): number {
+  const params = evaluateSim({ betaClass, newsSentimentShock });
+  return sentiment * params.driftNudgeBpsPerSentiment;
 }

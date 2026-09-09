@@ -100,4 +100,16 @@ npx -y @insforge/cli db migrations up --all
 | `apply_paper_fill`             | Locks order + account + position; asserts filled_qty and cash_delta; inserts execution; upserts position; adjusts cash. EXECUTE `project_admin` |
 | realtime channel `positions:*` | `publish_position_event(user_id, payload)` event `position`; EXECUTE `project_admin` only                                                       |
 
+## 0010 contents
+
+See the 0010 file (advanced orders). Trailing / group columns; writes via matching-runner / order-service.
+
+## 0011 contents
+
+| Table / object          | Access                                                                                        |
+| ----------------------- | --------------------------------------------------------------------------------------------- |
+| `news_items`            | Public `SELECT` (`anon` + `authenticated`); writes via `project_admin` / `news-ticker` / seed |
+| realtime channel `news` | `publish_news_batch(payload jsonb)` event `news_batch`; EXECUTE `project_admin` only          |
+| `news.sim_elapsed_sec`  | Global feature flag cursor for simulated 5-minute bursts                                      |
+
 UUID primary keys, `created_at` / `updated_at` (except `audit_log` and `executions`, which are insert-only), and `updated_at` triggers on mutable tables.

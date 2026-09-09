@@ -22,6 +22,7 @@ export const recordTables = {
   executions: "executions",
   positions: "positions",
   portfolio_snapshots: "portfolio_snapshots",
+  news_items: "news_items",
 } as const;
 
 export type RecordTable = (typeof recordTables)[keyof typeof recordTables];
@@ -43,6 +44,14 @@ export function inFilter(values: readonly string[]): string {
 export function ilikeContainsFilter(value: string): string {
   const sanitized = value.replace(/[%_,*()]/g, "").trim();
   return `ilike.*${sanitized}*`;
+}
+
+/** PostgREST `cs` (contains) for text[] columns, e.g. symbols tagged TSLA. */
+export function containsArrayFilter(values: readonly string[]): string {
+  const sanitized = values
+    .map((value) => value.replace(/[{},\s]/g, ""))
+    .filter((value) => value.length > 0);
+  return `cs.{${sanitized.join(",")}}`;
 }
 
 export function recordsUrl(input: {
