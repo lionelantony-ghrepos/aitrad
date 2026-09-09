@@ -13,6 +13,7 @@ import {
   type FeedMinuteBar,
   type FeedQuote,
 } from "../../packages/mock-data/src/feed.ts";
+import { newsShocksForSymbols } from "../../packages/mock-data/src/news.ts";
 
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -175,6 +176,27 @@ export default async function (req: Request): Promise<Response> {
   }
 
   const nowIso = new Date().toISOString();
+  const newsSince = new Date(Date.parse(nowIso) - 120_000).toISOString();
+  let newsShocks: { symbol: string; sentiment: number }[] = [];
+  const { data: newsData, error: newsErr } = await admin.database
+    .from("news_items")
+    .select("ts,symbols,sentiment")
+    .gte("ts", newsSince);
+  if (newsErr && !/news_items/i.test(newsErr.message)) {
+    return json(500, { error: newsErr.message });
+  }
+  if (!newsErr) {
+    newsShocks = newsShocksForSymbols(
+      asRows<{ ts: string; symbols: string[] | null; sentiment: number | string }>(newsData).map(
+        (row) => ({
+          ts: row.ts,
+          symbols: Array.isArray(row.symbols) ? row.symbols : [],
+          sentiment: Number(row.sentiment),
+        }),
+      ),
+    );
+  }
+
   const result = runFeedInvocation({
     nowIso,
     intervalSeconds,
@@ -183,6 +205,7 @@ export default async function (req: Request): Promise<Response> {
     instruments,
     quotes,
     minuteBars,
+    newsShocks,
   });
 
   if (result.quotes.length > 0) {

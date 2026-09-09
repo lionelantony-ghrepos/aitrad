@@ -63,6 +63,12 @@ Exported `*Schema` bindings discovered by static scan. Full OpenAPI from Zod is 
 - entities.ts: watchlistSchema
 - index.ts: publicInsforgeEnvSchema
 - index.ts: seedEnvSchema
+- news.ts: newsEventTypeSchema
+- news.ts: newsHeadlineTemplateSchema
+- news.ts: newsItemInsertSchema
+- news.ts: newsItemSchema
+- news.ts: newsRealtimeBatchSchema
+- news.ts: newsTemplatesFileSchema
 - orders.ts: blotterFiltersSchema
 - orders.ts: blotterSideFilterSchema
 - orders.ts: blotterTabSchema

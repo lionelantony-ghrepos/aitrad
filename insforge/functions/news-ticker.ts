@@ -1,195 +1,18 @@
-// insforge/functions/market-tick-src.ts
+// insforge/functions/news-ticker-src.ts
 
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all) __defProp(target, name, { get: all[name], enumerable: true });
 };
 
-// insforge/functions/market-tick-src.ts
+// insforge/functions/news-ticker-src.ts
 import { createAdminClient } from "npm:@insforge/sdk";
 
 // packages/mock-data/src/calendar.ts
-var MINUTES_PER_SESSION = 390;
-var GBM_SESSIONS_PER_YEAR = 252;
-function pad2(n) {
-  return String(n).padStart(2, "0");
-}
-function formatYmd(year, month, day) {
-  return `${year}-${pad2(month)}-${pad2(day)}`;
-}
-function parseYmd(isoDate) {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate);
-  if (!match) {
-    throw new Error(`INVALID_DATE:${isoDate}`);
-  }
-  const year = Number(match[1]);
-  const month = Number(match[2]);
-  const day = Number(match[3]);
-  return { year, month, day };
-}
-function utcWeekday(year, month, day) {
-  return new Date(Date.UTC(year, month - 1, day)).getUTCDay();
-}
-function addUtcDays(year, month, day, delta) {
-  const dt = new Date(Date.UTC(year, month - 1, day + delta));
-  return { year: dt.getUTCFullYear(), month: dt.getUTCMonth() + 1, day: dt.getUTCDate() };
-}
-function easterSunday(year) {
-  const a = year % 19;
-  const b = Math.floor(year / 100);
-  const c = year % 100;
-  const d = Math.floor(b / 4);
-  const e = b % 4;
-  const f = Math.floor((b + 8) / 25);
-  const g = Math.floor((b - f + 1) / 3);
-  const h = (19 * a + b - d - g + 15) % 30;
-  const i = Math.floor(c / 4);
-  const k = c % 4;
-  const l = (32 + 2 * e + 2 * i - h - k) % 7;
-  const m = Math.floor((a + 11 * h + 22 * l) / 451);
-  const month = Math.floor((h + l - 7 * m + 114) / 31);
-  const day = ((h + l - 7 * m + 114) % 31) + 1;
-  return { year, month, day };
-}
-function nthWeekday(year, month, weekday, nth) {
-  const first = utcWeekday(year, month, 1);
-  const offset = (weekday - first + 7) % 7;
-  const day = 1 + offset + (nth - 1) * 7;
-  return { year, month, day };
-}
-function lastWeekday(year, month, weekday) {
-  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
-  const lastWd = utcWeekday(year, month, lastDay);
-  const delta = (lastWd - weekday + 7) % 7;
-  return { year, month, day: lastDay - delta };
-}
-function observed(year, month, day) {
-  const wd = utcWeekday(year, month, day);
-  if (wd === 6) {
-    const prev = addUtcDays(year, month, day, -1);
-    return formatYmd(prev.year, prev.month, prev.day);
-  }
-  if (wd === 0) {
-    const next = addUtcDays(year, month, day, 1);
-    return formatYmd(next.year, next.month, next.day);
-  }
-  return formatYmd(year, month, day);
-}
-var holidayCache = /* @__PURE__ */ new Map();
-function nyseHolidays(year) {
-  const cached = holidayCache.get(year);
-  if (cached) {
-    return cached;
-  }
-  const easter = easterSunday(year);
-  const goodFriday = addUtcDays(easter.year, easter.month, easter.day, -2);
-  const mlk = nthWeekday(year, 1, 1, 3);
-  const presidents = nthWeekday(year, 2, 1, 3);
-  const memorial = lastWeekday(year, 5, 1);
-  const labor = nthWeekday(year, 9, 1, 1);
-  const thanksgiving = nthWeekday(year, 11, 4, 4);
-  const set = /* @__PURE__ */ new Set([
-    observed(year, 1, 1),
-    formatYmd(mlk.year, mlk.month, mlk.day),
-    formatYmd(presidents.year, presidents.month, presidents.day),
-    formatYmd(goodFriday.year, goodFriday.month, goodFriday.day),
-    formatYmd(memorial.year, memorial.month, memorial.day),
-    observed(year, 6, 19),
-    observed(year, 7, 4),
-    formatYmd(labor.year, labor.month, labor.day),
-    formatYmd(thanksgiving.year, thanksgiving.month, thanksgiving.day),
-    observed(year, 12, 25),
-  ]);
-  holidayCache.set(year, set);
-  return set;
-}
-var NY_TZ = "America/New_York";
+var HISTORY_SEED = 42;
 var REGULAR_OPEN_MINUTE = 9 * 60 + 30;
 var REGULAR_CLOSE_MINUTE = 16 * 60;
 var HALF_CLOSE_MINUTE = 13 * 60;
-function nyClockParts(now) {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: NY_TZ,
-    weekday: "short",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hourCycle: "h23",
-  }).formatToParts(now);
-  const get = (type) => parts.find((p) => p.type === type)?.value ?? "";
-  return {
-    weekday: get("weekday"),
-    dateKey: `${get("year")}-${get("month")}-${get("day")}`,
-    hour: Number(get("hour")),
-    minute: Number(get("minute")),
-    second: Number(get("second")),
-  };
-}
-function nyseHalfDays(year) {
-  const thanksgiving = nthWeekday(year, 11, 4, 4);
-  const friday = addUtcDays(thanksgiving.year, thanksgiving.month, thanksgiving.day, 1);
-  const fridayIso = formatYmd(friday.year, friday.month, friday.day);
-  const eve = formatYmd(year, 12, 24);
-  const set = /* @__PURE__ */ new Set();
-  if (isNyseSession(fridayIso)) {
-    set.add(fridayIso);
-  }
-  if (isNyseSession(eve)) {
-    set.add(eve);
-  }
-  return set;
-}
-function nyseTradingSessions(year) {
-  const half = nyseHalfDays(year);
-  const rows = [];
-  const cursor = { year, month: 1, day: 1 };
-  const end = new Date(Date.UTC(year + 1, 0, 1)).getTime();
-  while (Date.UTC(cursor.year, cursor.month - 1, cursor.day) < end) {
-    const iso = formatYmd(cursor.year, cursor.month, cursor.day);
-    if (isNyseSession(iso)) {
-      const kind = half.has(iso) ? "half" : "regular";
-      rows.push({
-        session_date: iso,
-        venue: "NYSE",
-        session_kind: kind,
-        open_minute: REGULAR_OPEN_MINUTE,
-        close_minute: kind === "half" ? HALF_CLOSE_MINUTE : REGULAR_CLOSE_MINUTE,
-      });
-    }
-    const next = addUtcDays(cursor.year, cursor.month, cursor.day, 1);
-    cursor.year = next.year;
-    cursor.month = next.month;
-    cursor.day = next.day;
-  }
-  return rows;
-}
-function lookupSession(isoDate, sessions) {
-  return sessions.find((row) => row.session_date === isoDate);
-}
-function nyseSessionState(now, sessions) {
-  const p = nyClockParts(now);
-  const rows = sessions ?? nyseTradingSessions(Number.parseInt(p.dateKey.slice(0, 4), 10));
-  const row = lookupSession(p.dateKey, rows);
-  if (!row) {
-    return "CLOSED";
-  }
-  const minutes = p.hour * 60 + p.minute;
-  if (minutes >= row.open_minute && minutes < row.close_minute) {
-    return "OPEN";
-  }
-  return "CLOSED";
-}
-function isNyseSession(isoDate) {
-  const { year, month, day } = parseYmd(isoDate);
-  const wd = utcWeekday(year, month, day);
-  if (wd === 0 || wd === 6) {
-    return false;
-  }
-  return !nyseHolidays(year).has(isoDate);
-}
 
 // packages/mock-data/src/rng.ts
 function hashSymbolSeed(symbol, seed) {
@@ -209,186 +32,8 @@ function mulberry32(seed) {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
-function gaussian(rng) {
-  const u1 = Math.max(rng(), Number.EPSILON);
-  const u2 = rng();
-  return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
-}
-
-// packages/mock-data/src/sim-params.ts
-var DT_SIM_01_DEFAULTS = {
-  gapEventProbPerDay: 0,
-  gapRangePct: [0, 0],
-  volMultiplier: 1,
-  driftNudgeBpsPerSentiment: 0,
-};
-var DT_SIM_01_ROWS = [
-  {
-    when: () => true,
-    apply: (acc) => ({ ...acc, gapEventProbPerDay: 0.02, gapRangePct: [1, 6] }),
-  },
-  {
-    when: (ctx) => ctx.betaClass === "high",
-    apply: (acc) => ({ ...acc, volMultiplier: 1.8 }),
-  },
-  {
-    when: (ctx) => ctx.betaClass === "low",
-    apply: (acc) => ({ ...acc, volMultiplier: 0.6 }),
-  },
-  {
-    when: (ctx) => ctx.newsSentimentShock,
-    apply: (acc) => ({ ...acc, driftNudgeBpsPerSentiment: 30 }),
-  },
-];
-function evaluateSim(ctx) {
-  return DT_SIM_01_ROWS.reduce(
-    (acc, row) => (row.when(ctx) ? row.apply(acc) : acc),
-    DT_SIM_01_DEFAULTS,
-  );
-}
-function simParamsForBeta(betaClass) {
-  return evaluateSim({ betaClass, newsSentimentShock: false });
-}
-var ANNUAL_SIGMA = {
-  low: 0.15,
-  medium: 0.28,
-  high: 0.55,
-};
-function annualSigma(betaClass) {
-  return ANNUAL_SIGMA[betaClass] * simParamsForBeta(betaClass).volMultiplier;
-}
-function newsSentimentDriftNudgeBps(sentiment, newsSentimentShock, betaClass = "medium") {
-  const params = evaluateSim({ betaClass, newsSentimentShock });
-  return sentiment * params.driftNudgeBpsPerSentiment;
-}
-
-// packages/mock-data/src/generator.ts
-function roundToTick(price, tickSize) {
-  if (tickSize <= 0) {
-    throw new Error("TICK_SIZE_POSITIVE");
-  }
-  const n = Math.round(price / tickSize);
-  return Number((n * tickSize).toFixed(10));
-}
-function enforceOhlc(o, h, l, c, tickSize) {
-  let open = roundToTick(o, tickSize);
-  let high = roundToTick(h, tickSize);
-  let low = roundToTick(l, tickSize);
-  let close = roundToTick(c, tickSize);
-  const minOc = Math.min(open, close);
-  const maxOc = Math.max(open, close);
-  if (low > minOc) {
-    low = minOc;
-  }
-  if (high < maxOc) {
-    high = maxOc;
-  }
-  if (low <= 0) {
-    low = tickSize;
-  }
-  if (open < low) {
-    open = low;
-  }
-  if (close < low) {
-    close = low;
-  }
-  if (open > high) {
-    open = high;
-  }
-  if (close > high) {
-    close = high;
-  }
-  return { o: open, h: high, l: low, c: close };
-}
 
 // packages/mock-data/src/feed.ts
-var MAX_QUOTE_BATCHES_PER_SEC = 4;
-function stepGbmPrice(input) {
-  const seed = input.seed ?? 42;
-  const last = roundToTick(Math.max(input.tickSize, input.last), input.tickSize);
-  if (!input.sessionOpen) {
-    return { last, appliedGap: false };
-  }
-  let price = last;
-  let appliedGap = false;
-  const sim = simParamsForBeta(input.betaClass);
-  if (input.sessionOpenStart) {
-    const dayId = Math.floor(input.simEpochSec / 86400);
-    const gapRng = mulberry32(hashSymbolSeed(`${input.symbol}:gap:${dayId}`, seed));
-    if (gapRng() < sim.gapEventProbPerDay) {
-      const lo = sim.gapRangePct[0];
-      const hi = sim.gapRangePct[1];
-      const mag = (lo + gapRng() * (hi - lo)) / 100;
-      const sign = gapRng() < 0.5 ? -1 : 1;
-      price *= 1 + sign * mag;
-      appliedGap = true;
-    }
-  }
-  const sigma = annualSigma(input.betaClass);
-  const dt = 1 / (GBM_SESSIONS_PER_YEAR * MINUTES_PER_SESSION * 60);
-  const muRng = mulberry32(hashSymbolSeed(`${input.symbol}:mu`, seed));
-  const mu = 0.06 + 0.08 * gaussian(muRng);
-  const zRng = mulberry32(hashSymbolSeed(`${input.symbol}:z:${input.simEpochSec}`, seed));
-  const z = gaussian(zRng);
-  price *= Math.exp((mu - (sigma * sigma) / 2) * dt + sigma * Math.sqrt(dt) * z);
-  return { last: roundToTick(Math.max(input.tickSize, price), input.tickSize), appliedGap };
-}
-function minuteBucketTs(iso) {
-  const d = new Date(iso);
-  d.setUTCSeconds(0, 0);
-  return d.toISOString();
-}
-function rollMinuteBar(current, tick) {
-  const bucket = minuteBucketTs(tick.ts);
-  const startBar = (open, ts) => {
-    const ohlc2 = enforceOhlc(open, open, open, open, tick.tickSize);
-    return {
-      timeframe: "1m",
-      ts,
-      ...ohlc2,
-      v: tick.volumeDelta,
-    };
-  };
-  if (!current) {
-    return { completed: null, current: startBar(tick.last, bucket) };
-  }
-  if (current.ts !== bucket) {
-    return { completed: current, current: startBar(tick.last, bucket) };
-  }
-  const ohlc = enforceOhlc(
-    current.o,
-    Math.max(current.h, tick.last),
-    Math.min(current.l, tick.last),
-    tick.last,
-    tick.tickSize,
-  );
-  return {
-    completed: null,
-    current: { ...current, ...ohlc, v: current.v + tick.volumeDelta },
-  };
-}
-function coalesceQuoteBatches(items, maxPerSec = MAX_QUOTE_BATCHES_PER_SEC) {
-  if (items.length <= maxPerSec) {
-    return [...items];
-  }
-  if (maxPerSec <= 1) {
-    return items.length === 0 ? [] : [items[items.length - 1]];
-  }
-  const out = [];
-  let prev = -1;
-  for (let i = 0; i < maxPerSec; i += 1) {
-    const idx = Math.round((i * (items.length - 1)) / (maxPerSec - 1));
-    if (idx === prev) {
-      continue;
-    }
-    const item = items[idx];
-    if (item !== void 0) {
-      out.push(item);
-      prev = idx;
-    }
-  }
-  return out;
-}
 function asRecord(value) {
   if (typeof value === "object" && value !== null && !Array.isArray(value)) {
     return value;
@@ -448,180 +93,6 @@ function parseFeedControls(rows) {
     }
   }
   return { paused, speed, forcePrice };
-}
-function barWriteKey(bar) {
-  return `${bar.instrument_id}${bar.timeframe}${minuteBucketTs(bar.ts)}`;
-}
-function mergeBarWrites(first, next) {
-  const ts = minuteBucketTs(first.ts);
-  return {
-    instrument_id: first.instrument_id,
-    timeframe: first.timeframe,
-    ts,
-    o: first.o,
-    h: Math.max(first.h, next.h),
-    l: Math.min(first.l, next.l),
-    c: next.c,
-    v: first.v + next.v,
-  };
-}
-function normalizeBarsToUpsert(bars) {
-  const order = [];
-  const byKey = /* @__PURE__ */ new Map();
-  for (const bar of bars) {
-    const canonical = { ...bar, ts: minuteBucketTs(bar.ts) };
-    const key = barWriteKey(canonical);
-    const prior = byKey.get(key);
-    if (prior === void 0) {
-      order.push(key);
-      byKey.set(key, canonical);
-    } else {
-      byKey.set(key, mergeBarWrites(prior, canonical));
-    }
-  }
-  return order.map((key) => byKey.get(key));
-}
-function spreadQuote(last, tickSize, volume, ts, prevClose) {
-  const rounded = roundToTick(Math.max(tickSize, last), tickSize);
-  const bid = roundToTick(Math.max(tickSize, rounded - tickSize), tickSize);
-  const ask = roundToTick(rounded + tickSize, tickSize);
-  return {
-    instrument_id: "",
-    bid: Math.min(bid, rounded),
-    ask: Math.max(ask, rounded),
-    last: rounded,
-    prev_close: prevClose,
-    volume,
-    ts,
-  };
-}
-function volumePerSecond(avgVolume, sessionMinutes) {
-  const seconds = Math.max(1, sessionMinutes * 60);
-  return Math.max(1, Math.round(avgVolume / seconds));
-}
-function runFeedInvocation(input) {
-  const seed = input.seed ?? 42;
-  const now = new Date(input.nowIso);
-  const session = nyseSessionState(now, input.calendar);
-  const byId = new Map(input.quotes.map((q) => [q.instrument_id, { ...q }]));
-  const currentBar = /* @__PURE__ */ new Map();
-  for (const bar of normalizeBarsToUpsert(
-    input.minuteBars.map((row) => ({ ...row, ts: minuteBucketTs(row.ts) })),
-  )) {
-    currentBar.set(bar.instrument_id, {
-      timeframe: bar.timeframe,
-      ts: bar.ts,
-      o: bar.o,
-      h: bar.h,
-      l: bar.l,
-      c: bar.c,
-      v: bar.v,
-    });
-  }
-  let consumeForcePrice = false;
-  if (input.flags.forcePrice) {
-    consumeForcePrice = true;
-    const target = input.instruments.find((i) => i.symbol === input.flags.forcePrice?.symbol);
-    if (target) {
-      const q = byId.get(target.id);
-      if (q) {
-        const next = spreadQuote(
-          input.flags.forcePrice.price,
-          target.tick_size,
-          q.volume,
-          q.ts,
-          q.prev_close,
-        );
-        next.instrument_id = q.instrument_id;
-        byId.set(target.id, next);
-      }
-    }
-  }
-  const ticks =
-    input.flags.paused || input.flags.speed <= 0
-      ? 0
-      : Math.max(0, Math.round(input.flags.speed * input.intervalSeconds));
-  const snapshots = [];
-  const barsToUpsert = [];
-  const shockBySymbol = new Map((input.newsShocks ?? []).map((row) => [row.symbol, row.sentiment]));
-  const nudged = /* @__PURE__ */ new Set();
-  for (let k = 0; k < ticks; k += 1) {
-    const sim = new Date(now.getTime() + (k + 1) * 1e3);
-    const simIso = sim.toISOString();
-    const open = nyseSessionState(sim, input.calendar) === "OPEN";
-    const prev = nyseSessionState(new Date(sim.getTime() - 1e3), input.calendar) === "OPEN";
-    const sessionOpenStart = open && !prev;
-    const partsDate = lookupSession(nyClockParts(sim).dateKey, input.calendar);
-    const sessionMinutes = partsDate
-      ? partsDate.close_minute - partsDate.open_minute
-      : MINUTES_PER_SESSION;
-    for (const inst of input.instruments) {
-      const q = byId.get(inst.id);
-      if (!q) {
-        continue;
-      }
-      let lastPx = q.last;
-      if (open && !nudged.has(inst.symbol)) {
-        const sentiment = shockBySymbol.get(inst.symbol);
-        if (sentiment !== void 0) {
-          const bps = newsSentimentDriftNudgeBps(sentiment, true, inst.beta_class);
-          lastPx = roundToTick(Math.max(inst.tick_size, lastPx * (1 + bps / 1e4)), inst.tick_size);
-          nudged.add(inst.symbol);
-        }
-      }
-      const stepped = stepGbmPrice({
-        last: lastPx,
-        tickSize: inst.tick_size,
-        betaClass: inst.beta_class,
-        symbol: inst.symbol,
-        simEpochSec: Math.floor(sim.getTime() / 1e3),
-        seed,
-        sessionOpen: open,
-        sessionOpenStart,
-      });
-      const volDelta = open ? volumePerSecond(inst.avg_volume, sessionMinutes) : 0;
-      const next = spreadQuote(
-        stepped.last,
-        inst.tick_size,
-        q.volume + volDelta,
-        simIso,
-        q.prev_close,
-      );
-      next.instrument_id = q.instrument_id;
-      byId.set(inst.id, next);
-      if (open) {
-        const rolled = rollMinuteBar(currentBar.get(inst.id) ?? null, {
-          last: next.last,
-          volumeDelta: volDelta,
-          ts: simIso,
-          tickSize: inst.tick_size,
-        });
-        if (rolled.completed) {
-          barsToUpsert.push({ ...rolled.completed, instrument_id: inst.id });
-        }
-        currentBar.set(inst.id, rolled.current);
-      }
-    }
-    snapshots.push([...byId.values()].map((q) => ({ ...q })));
-  }
-  for (const [instrumentId, bar] of currentBar) {
-    barsToUpsert.push({ ...bar, instrument_id: instrumentId });
-  }
-  const quotesOut = [...byId.values()];
-  let publishes = [];
-  if (ticks > 0 && session === "OPEN") {
-    publishes = coalesceQuoteBatches(snapshots, MAX_QUOTE_BATCHES_PER_SEC);
-  } else if (consumeForcePrice && ticks === 0) {
-    publishes = [quotesOut.map((q) => ({ ...q }))];
-  }
-  return {
-    session,
-    ticksApplied: ticks,
-    quotes: quotesOut,
-    barsToUpsert: normalizeBarsToUpsert(barsToUpsert),
-    publishes,
-    consumeForcePrice,
-  };
 }
 
 // node_modules/.pnpm/zod@3.25.76/node_modules/zod/v3/external.js
@@ -5530,23 +5001,338 @@ var seedEnvSchema = external_exports.object({
 });
 
 // packages/mock-data/src/news.ts
-function newsShocksForSymbols(items) {
-  const latest = /* @__PURE__ */ new Map();
-  for (const item of items) {
-    for (const symbol of item.symbols) {
-      const prior = latest.get(symbol);
-      if (!prior || item.ts >= prior.ts) {
-        latest.set(symbol, { ts: item.ts, sentiment: item.sentiment });
-      }
+var NEWS_LIVE_WINDOW_SEC = 300;
+var NEWS_LIVE_MIN_ITEMS = 1;
+var NEWS_LIVE_MAX_ITEMS = 5;
+var EVENT_WEIGHTS = [
+  { type: "analyst", weight: 0.3 },
+  { type: "earnings", weight: 0.2 },
+  { type: "macro", weight: 0.2 },
+  { type: "product", weight: 0.15 },
+  { type: "regulatory", weight: 0.1 },
+  { type: "mna", weight: 0.05 },
+];
+var CAP_WEIGHTS = {
+  mega: 8,
+  large: 4,
+  mid: 2,
+  small: 1,
+  micro: 0.5,
+};
+var SOURCES = ["Reuters", "Bloomberg", "WSJ", "CNBC", "AP"];
+var BODY_LINES = {
+  earnings: [
+    "Management highlighted {segment} as the primary swing factor.",
+    "Street models now imply a {pct}% revision path into the next print.",
+    "The result lands against a busy {sector} reporting calendar.",
+  ],
+  analyst: [
+    "The note cites {concern} as the key debate versus consensus.",
+    "{bank} frames risk/reward as balanced near ${target}.",
+    "Positioning in {sector} names may shift after the call.",
+  ],
+  product: [
+    "Early demand checks in {market} will set the near-term narrative.",
+    "Rivals in {sector} are watching execution on {product}.",
+    "Investors will parse commentary on {segment} attach rates.",
+  ],
+  macro: [
+    "Rates traders marked the {stance} path into the next session.",
+    "{sector} factor baskets {direction} as yields {yielddir}.",
+    "Futures {futdir} after the inflation print came in {inflation}.",
+  ],
+  regulatory: [
+    "Counsel said the {agency} process remains at an early stage.",
+    "The {issue} docket has been a lingering {sector} overhang.",
+    "A timeline for the next filing was not specified.",
+  ],
+  mna: [
+    "Advisors put the cash-and-stock mix as still in flux.",
+    "The {targetco} asset would expand {company} in {segment}.",
+    "Antitrust review is the next gating item for the ${dealsize}B package.",
+  ],
+};
+function parseNewsTemplatesJson(raw) {
+  return newsTemplatesFileSchema.parse(raw);
+}
+function requireItem(item, code) {
+  if (item === void 0) {
+    throw new Error(code);
+  }
+  return item;
+}
+function pickWeighted(rng, items) {
+  if (items.length === 0) {
+    throw new Error("NEWS_WEIGHT_EMPTY");
+  }
+  const total = items.reduce((sum, row) => sum + row.weight, 0);
+  let cursor = rng() * total;
+  for (const row of items) {
+    cursor -= row.weight;
+    if (cursor <= 0) {
+      return row.item;
     }
   }
-  return [...latest.entries()].map(([symbol, row]) => ({
-    symbol,
-    sentiment: row.sentiment,
-  }));
+  return requireItem(items[items.length - 1], "NEWS_WEIGHT_EMPTY").item;
+}
+function pickOne(rng, values) {
+  if (values.length === 0) {
+    throw new Error("NEWS_FILL_EMPTY");
+  }
+  return requireItem(values[Math.floor(rng() * values.length)] ?? values[0], "NEWS_FILL_EMPTY");
+}
+function fillSlots(template, vars) {
+  return template.replace(/\{([a-z0-9]+)\}/gi, (_match, key) => {
+    const value = vars[key];
+    if (value === void 0) {
+      throw new Error(`NEWS_FILL_MISSING:${key}`);
+    }
+    return value;
+  });
+}
+function eventTypeFromRng(rng) {
+  return pickWeighted(
+    rng,
+    EVENT_WEIGHTS.map((row) => ({ item: row.type, weight: row.weight })),
+  );
+}
+function pickInstrument(rng, universe) {
+  return pickWeighted(
+    rng,
+    universe.map((item) => ({ item, weight: CAP_WEIGHTS[item.market_cap_band] })),
+  );
+}
+function buildVars(rng, templates, instrument) {
+  const fills = templates.fills;
+  const pick = (key, fallback) => {
+    const vocab = fills[key];
+    return pickOne(rng, vocab && vocab.length > 0 ? vocab : fallback);
+  };
+  return {
+    company: instrument.name,
+    symbol: instrument.symbol,
+    sector: instrument.sector,
+    q: String(1 + Math.floor(rng() * 4)),
+    pct: String(3 + Math.floor(rng() * 26)),
+    target: String(20 + Math.floor(rng() * 480)),
+    dealsize: (1 + rng() * 44).toFixed(1),
+    bank: pick("bank", ["Goldman Sachs"]),
+    concern: pick("concern", ["valuation"]),
+    segment: pick("segment", ["cloud"]),
+    product: pick("product", ["next-gen AI platform"]),
+    market: pick("market", ["enterprise AI"]),
+    stance: pick("stance", ["a data-dependent"]),
+    direction: pick("direction", ["climb"]),
+    yielddir: pick("yielddir", ["ease"]),
+    inflation: pick("inflation", ["in line"]),
+    futdir: pick("futdir", ["hold steady"]),
+    agency: pick("agency", ["SEC"]),
+    issue: pick("issue", ["disclosure practices"]),
+    targetco: pick("targetco", ["a private AI startup"]),
+  };
+}
+function generateNewsItem(input) {
+  const seed = input.seed ?? HISTORY_SEED;
+  const rng = mulberry32(hashSymbolSeed(`news:${input.index}`, seed));
+  const eventType = eventTypeFromRng(rng);
+  const primary = pickInstrument(rng, input.universe);
+  const headlines = input.templates[eventType];
+  const template = requireItem(
+    headlines[Math.floor(rng() * headlines.length)] ?? headlines[0],
+    "NEWS_TEMPLATE_EMPTY",
+  );
+  const vars = buildVars(rng, input.templates, primary);
+  const lo = Math.min(template.sentiment[0], template.sentiment[1]);
+  const hi = Math.max(template.sentiment[0], template.sentiment[1]);
+  const sentiment = lo + rng() * (hi - lo);
+  const sentenceCount = 2 + Math.floor(rng() * 2);
+  const bodyPool = BODY_LINES[eventType];
+  const sentences = [];
+  const used = /* @__PURE__ */ new Set();
+  while (sentences.length < sentenceCount) {
+    const idx = Math.floor(rng() * bodyPool.length);
+    if (used.has(idx) && used.size < bodyPool.length) {
+      continue;
+    }
+    used.add(idx);
+    sentences.push(fillSlots(requireItem(bodyPool[idx], "NEWS_BODY_EMPTY"), vars));
+  }
+  let symbols = [primary.symbol];
+  if (eventType === "macro") {
+    const peers = input.universe.filter((row) => row.sector === primary.sector);
+    const extra = Math.min(peers.length, 2 + Math.floor(rng() * 3));
+    const picked = /* @__PURE__ */ new Set([primary.symbol]);
+    for (let i = 0; i < extra && picked.size < extra; i += 1) {
+      picked.add(
+        pickOne(
+          rng,
+          peers.map((p) => p.symbol),
+        ),
+      );
+    }
+    symbols = [...picked];
+  }
+  return {
+    ts: input.ts,
+    headline: fillSlots(template.headline, vars),
+    body: sentences.join(" "),
+    source: pickOne(rng, SOURCES),
+    symbols,
+    sector: primary.sector,
+    sentiment: Math.round(sentiment * 1e3) / 1e3,
+    event_type: eventType,
+  };
+}
+function newsSeedId(index, seed = HISTORY_SEED) {
+  const rng = mulberry32(hashSymbolSeed(`news-id:${index}`, seed));
+  const bytes = Array.from({ length: 16 }, () => Math.floor(rng() * 256));
+  bytes[6] = ((bytes[6] ?? 0) & 15) | 64;
+  bytes[8] = ((bytes[8] ?? 0) & 63) | 128;
+  const hex = bytes.map((b) => b.toString(16).padStart(2, "0")).join("");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
+}
+function liveCount(rng) {
+  return NEWS_LIVE_MIN_ITEMS + Math.floor(rng() * (NEWS_LIVE_MAX_ITEMS - NEWS_LIVE_MIN_ITEMS + 1));
+}
+function planNewsTickerInvocation(input) {
+  const seed = input.seed ?? HISTORY_SEED;
+  if (input.paused || input.speed <= 0) {
+    return { items: [], nextSimElapsedSec: input.simElapsedSec, bursts: 0 };
+  }
+  const delta = Math.max(0, input.speed * input.intervalSeconds);
+  let elapsed = input.simElapsedSec + delta;
+  const items = [];
+  let bursts = 0;
+  let liveIndexBase = Math.floor(input.simElapsedSec / NEWS_LIVE_WINDOW_SEC) * 1e4;
+  while (elapsed >= NEWS_LIVE_WINDOW_SEC) {
+    elapsed -= NEWS_LIVE_WINDOW_SEC;
+    bursts += 1;
+    const bucket = Math.floor(liveIndexBase / 1e4);
+    const rng = mulberry32(hashSymbolSeed(`news-live:${bucket}`, seed));
+    const count = liveCount(rng);
+    const burstTs = new Date(Date.parse(input.nowIso) + bursts * 1e3).toISOString();
+    for (let j = 0; j < count; j += 1) {
+      const index = 1e6 + bucket * 8 + j;
+      const generated = generateNewsItem({
+        universe: input.universe,
+        templates: input.templates,
+        index,
+        seed,
+        ts: burstTs,
+      });
+      items.push({ ...generated, id: newsSeedId(index, seed) });
+    }
+    liveIndexBase += 1e4;
+  }
+  return { items, nextSimElapsedSec: elapsed, bursts };
 }
 
-// insforge/functions/market-tick-src.ts
+// mock_data/news-templates.json
+var news_templates_default = {
+  earnings: [
+    {
+      headline: "{company} beats Q{q} estimates as {segment} revenue jumps {pct}%",
+      sentiment: [0.4, 0.9],
+    },
+    {
+      headline: "{company} misses on Q{q} earnings; guidance cut sends shares lower",
+      sentiment: [-0.9, -0.4],
+    },
+    {
+      headline: "{company} reports in-line Q{q} results, maintains full-year outlook",
+      sentiment: [-0.1, 0.2],
+    },
+  ],
+  analyst: [
+    {
+      headline: "{bank} upgrades {company} to Buy, lifts target to ${target}",
+      sentiment: [0.3, 0.8],
+    },
+    {
+      headline: "{bank} downgrades {company} on {concern} concerns",
+      sentiment: [-0.8, -0.3],
+    },
+    {
+      headline: "{bank} initiates {company} at Neutral, sees balanced risk/reward",
+      sentiment: [-0.1, 0.15],
+    },
+  ],
+  product: [
+    {
+      headline: "{company} unveils {product}, targeting the {market} market",
+      sentiment: [0.2, 0.7],
+    },
+    {
+      headline: "{company} delays {product} launch to address quality issues",
+      sentiment: [-0.7, -0.2],
+    },
+  ],
+  macro: [
+    {
+      headline: "Fed signals {stance} path; {sector} stocks {direction}",
+      sentiment: [-0.5, 0.5],
+    },
+    {
+      headline: "{sector} sector rallies as Treasury yields {yielddir}",
+      sentiment: [0.1, 0.6],
+    },
+    {
+      headline: "Inflation print comes in {inflation}; futures {futdir}",
+      sentiment: [-0.6, 0.6],
+    },
+  ],
+  regulatory: [
+    {
+      headline: "{company} faces {agency} probe over {issue}",
+      sentiment: [-0.9, -0.4],
+    },
+    {
+      headline: "{company} settles {agency} case; overhang removed",
+      sentiment: [0.1, 0.5],
+    },
+  ],
+  mna: [
+    {
+      headline: "{company} to acquire {targetco} in ${dealsize}B deal",
+      sentiment: [-0.2, 0.6],
+    },
+    {
+      headline: "Report: {company} explores strategic alternatives for {segment} unit",
+      sentiment: [0, 0.4],
+    },
+  ],
+  fills: {
+    bank: [
+      "Goldman Sachs",
+      "Morgan Stanley",
+      "JPMorgan",
+      "Barclays",
+      "UBS",
+      "Jefferies",
+      "Piper Sandler",
+    ],
+    concern: [
+      "valuation",
+      "margin compression",
+      "demand softness",
+      "competitive pressure",
+      "execution",
+    ],
+    segment: ["cloud", "AI", "consumer", "enterprise", "international", "services"],
+    product: ["next-gen AI platform", "flagship device", "autonomous suite", "subscription tier"],
+    market: ["enterprise AI", "consumer robotics", "digital health", "edge computing"],
+    stance: ["a slower easing", "a data-dependent", "an extended hold"],
+    direction: ["climb", "slip", "churn sideways"],
+    yielddir: ["ease", "spike"],
+    inflation: ["cooler than expected", "hotter than expected", "in line"],
+    futdir: ["rise", "fall", "hold steady"],
+    agency: ["SEC", "FTC", "DOJ", "EU Commission"],
+    issue: ["disclosure practices", "market dominance", "data handling"],
+    targetco: ["a private AI startup", "a logistics platform", "a fintech challenger"],
+  },
+};
+
+// insforge/functions/news-ticker-src.ts
 function json(status, body) {
   return new Response(JSON.stringify(body), {
     status,
@@ -5562,7 +5348,17 @@ function flagValue(row) {
   }
   return { key: row.key, value: row.value };
 }
-async function market_tick_src_default(req) {
+function readElapsed(value) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === "string" && value.trim() !== "") {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : 0;
+  }
+  return 0;
+}
+async function news_ticker_src_default(req) {
   if (req.method !== "POST") {
     return json(405, { error: "METHOD_NOT_ALLOWED" });
   }
@@ -5572,8 +5368,9 @@ async function market_tick_src_default(req) {
   if (!expected || token !== expected) {
     return json(401, { error: "UNAUTHENTICATED" });
   }
-  const intervalRaw = Deno.env.get("MARKET_TICK_INTERVAL_SECONDS");
-  const intervalSeconds = intervalRaw === void 0 ? 1 : Number(intervalRaw);
+  const intervalRaw =
+    Deno.env.get("NEWS_TICKER_INTERVAL_SECONDS") ?? Deno.env.get("MARKET_TICK_INTERVAL_SECONDS");
+  const intervalSeconds = intervalRaw === void 0 ? 60 : Number(intervalRaw);
   if (!Number.isFinite(intervalSeconds) || intervalSeconds <= 0) {
     return json(500, { error: "INTERVAL_INVALID" });
   }
@@ -5581,6 +5378,7 @@ async function market_tick_src_default(req) {
     baseUrl: Deno.env.get("INSFORGE_INTERNAL_URL") ?? Deno.env.get("INSFORGE_BASE_URL"),
     apiKey: expected,
   });
+  const templates = parseNewsTemplatesJson(news_templates_default);
   const { data: flagData, error: flagErr } = await admin.database
     .from("feature_flags")
     .select("id,key,value")
@@ -5588,218 +5386,107 @@ async function market_tick_src_default(req) {
   if (flagErr) {
     return json(500, { error: flagErr.message });
   }
-  const flags = parseFeedControls(
-    asRows(flagData)
-      .map(flagValue)
-      .filter((row) => row !== null),
-  );
-  const { data: calData, error: calErr } = await admin.database
-    .from("market_calendar")
-    .select("session_date,venue,session_kind,open_minute,close_minute")
-    .eq("venue", "NYSE");
-  if (calErr) {
-    return json(500, { error: calErr.message });
-  }
-  const calendar = asRows(calData).map((row) => ({
-    session_date: String(row.session_date).slice(0, 10),
-    venue: "NYSE",
-    session_kind: row.session_kind,
-    open_minute: Number(row.open_minute),
-    close_minute: Number(row.close_minute),
-  }));
+  const flagRows = asRows(flagData)
+    .map(flagValue)
+    .filter((row) => row !== null);
+  const flags = parseFeedControls(flagRows);
+  const elapsedRow = flagRows.find((row) => row.key === "news.sim_elapsed_sec");
+  const simElapsedSec = readElapsed(elapsedRow?.value);
   const { data: instData, error: instErr } = await admin.database
     .from("instruments")
-    .select("id,symbol,tick_size,beta_class,avg_volume")
+    .select(
+      "symbol,name,exchange,sector,industry,status,currency,tick_size,lot_size,base_price,market_cap_band,beta_class,avg_volume,avg_volume_band",
+    )
     .eq("status", "active");
   if (instErr) {
     return json(500, { error: instErr.message });
   }
-  const instruments = asRows(instData)
+  const universe = asRows(instData)
     .filter(
-      (row) => row.beta_class === "low" || row.beta_class === "medium" || row.beta_class === "high",
+      (row) =>
+        row.market_cap_band !== null &&
+        row.beta_class !== null &&
+        row.avg_volume_band !== null &&
+        row.sector !== null &&
+        row.industry !== null &&
+        row.base_price !== null,
     )
     .map((row) => ({
-      id: row.id,
       symbol: row.symbol,
+      name: row.name,
+      exchange: row.exchange,
+      sector: row.sector ?? "Unknown",
+      industry: row.industry ?? "Unknown",
+      status: row.status,
+      currency: row.currency,
       tick_size: Number(row.tick_size),
+      lot_size: Number(row.lot_size),
+      base_price: Number(row.base_price),
+      market_cap_band: row.market_cap_band,
       beta_class: row.beta_class,
       avg_volume: Number(row.avg_volume ?? 1),
+      avg_volume_band: row.avg_volume_band,
     }));
-  const { data: quoteData, error: quoteErr } = await admin.database
-    .from("quotes_latest")
-    .select("*");
-  if (quoteErr) {
-    return json(500, { error: quoteErr.message });
-  }
-  const quotes = asRows(quoteData).map((row) => ({
-    instrument_id: row.instrument_id,
-    bid: Number(row.bid),
-    ask: Number(row.ask),
-    last: Number(row.last),
-    prev_close: Number(row.prev_close),
-    volume: Number(row.volume),
-    ts: row.ts,
-  }));
-  const minuteBars = [];
-  const buckets = [...new Set(quotes.map((q) => minuteBucketTs(q.ts)))];
-  if (buckets.length > 0) {
-    const { data: barData, error: barErr } = await admin.database
-      .from("market_bars")
-      .select("instrument_id,timeframe,ts,o,h,l,c,v")
-      .eq("timeframe", "1m")
-      .in("ts", buckets);
-    if (barErr) {
-      return json(500, { error: barErr.message });
-    }
-    for (const row of asRows(barData)) {
-      minuteBars.push({
-        instrument_id: row.instrument_id,
-        timeframe: "1m",
-        ts: row.ts,
-        o: Number(row.o),
-        h: Number(row.h),
-        l: Number(row.l),
-        c: Number(row.c),
-        v: Number(row.v),
-      });
-    }
-  }
-  const nowIso = /* @__PURE__ */ new Date().toISOString();
-  const newsSince = new Date(Date.parse(nowIso) - 12e4).toISOString();
-  let newsShocks = [];
-  const { data: newsData, error: newsErr } = await admin.database
-    .from("news_items")
-    .select("ts,symbols,sentiment")
-    .gte("ts", newsSince);
-  if (newsErr && !/news_items/i.test(newsErr.message)) {
-    return json(500, { error: newsErr.message });
-  }
-  if (!newsErr) {
-    newsShocks = newsShocksForSymbols(
-      asRows(newsData).map((row) => ({
-        ts: row.ts,
-        symbols: Array.isArray(row.symbols) ? row.symbols : [],
-        sentiment: Number(row.sentiment),
-      })),
-    );
-  }
-  const result = runFeedInvocation({
-    nowIso,
+  const plan = planNewsTickerInvocation({
     intervalSeconds,
-    calendar,
-    flags,
-    instruments,
-    quotes,
-    minuteBars,
-    newsShocks,
+    speed: flags.speed,
+    paused: flags.paused,
+    simElapsedSec,
+    universe,
+    templates,
+    nowIso: /* @__PURE__ */ new Date().toISOString(),
   });
-  if (result.quotes.length > 0) {
-    const { error } = await admin.database.from("quotes_latest").upsert(
-      result.quotes.map((q) => ({
-        instrument_id: q.instrument_id,
-        bid: q.bid,
-        ask: q.ask,
-        last: q.last,
-        prev_close: q.prev_close,
-        volume: q.volume,
-        ts: q.ts,
+  if (plan.items.length > 0) {
+    const { error } = await admin.database.from("news_items").upsert(
+      plan.items.map((item) => ({
+        id: item.id,
+        ts: item.ts,
+        headline: item.headline,
+        body: item.body,
+        source: item.source,
+        symbols: item.symbols,
+        sector: item.sector,
+        sentiment: item.sentiment,
+        event_type: item.event_type,
       })),
-      { onConflict: "instrument_id" },
+      { onConflict: "id" },
     );
     if (error) {
       return json(500, { error: error.message });
     }
-  }
-  if (result.barsToUpsert.length > 0) {
-    const { error } = await admin.database.from("market_bars").upsert(
-      result.barsToUpsert.map((b) => ({
-        instrument_id: b.instrument_id,
-        timeframe: "1m",
-        ts: b.ts,
-        o: b.o,
-        h: b.h,
-        l: b.l,
-        c: b.c,
-        v: b.v,
-      })),
-      { onConflict: "instrument_id,timeframe,ts" },
-    );
-    if (error) {
-      return json(500, { error: error.message });
+    const payload = { ts: plan.items[0]?.ts, items: plan.items };
+    const published = await admin.database.rpc("publish_news_batch", { payload });
+    if (published.error) {
+      return json(500, { error: published.error.message });
     }
   }
-  const symbolById = new Map(instruments.map((i) => [i.id, i.symbol]));
-  for (const snapshot of result.publishes) {
-    const payload = {
-      ts: snapshot[0]?.ts ?? nowIso,
-      ticks: snapshot.map((q) => ({
-        ...q,
-        symbol: symbolById.get(q.instrument_id),
-      })),
-    };
-    const { error } = await admin.database.rpc("publish_quotes_batch", { payload });
-    if (error) {
-      return json(500, { error: error.message });
-    }
-  }
-  if (result.consumeForcePrice) {
-    await admin.database
+  if (elapsedRow) {
+    const { error } = await admin.database
       .from("feature_flags")
-      .delete()
-      .eq("key", "feed.force_price")
+      .update({ value: plan.nextSimElapsedSec })
+      .eq("key", "news.sim_elapsed_sec")
       .is("user_id", null);
-  }
-  const matchTicks = result.publishes.flat().map((q) => ({
-    ...q,
-    symbol: symbolById.get(q.instrument_id),
-  }));
-  let matching = { ok: true };
-  if (matchTicks.length > 0) {
-    try {
-      const matchRes = await fetch(
-        `${(Deno.env.get("INSFORGE_INTERNAL_URL") ?? Deno.env.get("INSFORGE_BASE_URL") ?? "").replace(/\/+$/, "")}/functions/matching-runner`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${expected}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ ticks: matchTicks }),
-        },
-      );
-      const matchBody = await matchRes.json();
-      if (!matchRes.ok) {
-        matching = { ok: false, error: `MATCHING_${matchRes.status}` };
-      } else if (matchBody && typeof matchBody === "object" && "fills" in matchBody) {
-        matching = { ok: true, fills: Number(matchBody.fills) };
-      }
-    } catch (error) {
-      matching = {
-        ok: false,
-        error: error instanceof Error ? error.message : "MATCHING_UNAVAILABLE",
-      };
+    if (error) {
+      return json(500, { error: error.message });
     }
   }
   await admin.database.from("audit_log").insert([
     {
-      action: "market-tick",
-      entity_type: "quotes_latest",
+      action: "news-ticker",
+      entity_type: "news_items",
       payload: {
-        session: result.session,
-        ticksApplied: result.ticksApplied,
-        published: result.publishes.length,
+        published: plan.items.length,
+        bursts: plan.bursts,
         paused: flags.paused,
-        consumeForcePrice: result.consumeForcePrice,
-        matching,
+        nextSimElapsedSec: plan.nextSimElapsedSec,
       },
     },
   ]);
   return json(200, {
-    session: result.session,
-    ticksApplied: result.ticksApplied,
-    published: result.publishes.length,
+    published: plan.items.length,
+    bursts: plan.bursts,
     paused: flags.paused,
-    matching,
+    nextSimElapsedSec: plan.nextSimElapsedSec,
   });
 }
-export { market_tick_src_default as default };
+export { news_ticker_src_default as default };

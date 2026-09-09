@@ -25,6 +25,7 @@ export {
 export {
   EXPECTED_INSTRUMENTS,
   EXPECTED_MINUTE_BARS_TOTAL,
+  EXPECTED_NEWS_ITEMS,
   MINUTE_BARS_PER_INSTRUMENT,
   MIN_DAILY_BARS_PER_INSTRUMENT,
   SEED_COUNT_SQL,
@@ -62,4 +63,27 @@ export {
 export { parseInstrumentsJson } from "./instruments";
 export { marketCalendarInsertSql, marketCalendarSeedRows } from "./calendar-sql";
 export { gaussian, hashSymbolSeed, mulberry32 } from "./rng";
-export { annualSigma, simParamsForBeta, type SimParams } from "./sim-params";
+export {
+  annualSigma,
+  newsSentimentDriftNudgeBps,
+  simParamsForBeta,
+  type SimParams,
+} from "./sim-params";
+export {
+  NEWS_BACKFILL_COUNT,
+  NEWS_BACKFILL_DAYS,
+  NEWS_LIVE_MAX_ITEMS,
+  NEWS_LIVE_MIN_ITEMS,
+  NEWS_LIVE_WINDOW_SEC,
+  generateNewsBackfill,
+  generateNewsItem,
+  newsPriceNudgeBps,
+  newsSeedId,
+  newsShocksForSymbols,
+  parseNewsTemplatesJson,
+  planNewsTickerInvocation,
+  type GeneratedNewsItem,
+  type NewsShock,
+  type NewsTickerPlan,
+  type NewsTickerPlanInput,
+} from "./news";

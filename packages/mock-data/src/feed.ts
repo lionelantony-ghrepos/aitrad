@@ -9,7 +9,7 @@ import {
 } from "./calendar";
 import { enforceOhlc, roundToTick, type OhlcvBar } from "./generator";
 import { gaussian, hashSymbolSeed, mulberry32 } from "./rng";
-import { annualSigma, simParamsForBeta } from "./sim-params";
+import { annualSigma, newsSentimentDriftNudgeBps, simParamsForBeta } from "./sim-params";
 
 /** Architecture §9 coalescing cap (not a decision-table cell). */
 export const MAX_QUOTE_BATCHES_PER_SEC = 4;
@@ -239,6 +239,7 @@ export type FeedInvocationInput = {
   quotes: readonly FeedQuote[];
   minuteBars: readonly FeedMinuteBar[];
   seed?: number;
+  newsShocks?: readonly { symbol: string; sentiment: number }[];
 };
 
 export type FeedBarWrite = OhlcvBar & { instrument_id: string };
@@ -362,6 +363,10 @@ export function runFeedInvocation(input: FeedInvocationInput): FeedInvocationRes
 
   const snapshots: FeedQuote[][] = [];
   const barsToUpsert: FeedBarWrite[] = [];
+  const shockBySymbol = new Map(
+    (input.newsShocks ?? []).map((row) => [row.symbol, row.sentiment] as const),
+  );
+  const nudged = new Set<string>();
 
   for (let k = 0; k < ticks; k += 1) {
     const sim = new Date(now.getTime() + (k + 1) * 1000);
@@ -379,8 +384,20 @@ export function runFeedInvocation(input: FeedInvocationInput): FeedInvocationRes
       if (!q) {
         continue;
       }
+      let lastPx = q.last;
+      if (open && !nudged.has(inst.symbol)) {
+        const sentiment = shockBySymbol.get(inst.symbol);
+        if (sentiment !== undefined) {
+          const bps = newsSentimentDriftNudgeBps(sentiment, true, inst.beta_class);
+          lastPx = roundToTick(
+            Math.max(inst.tick_size, lastPx * (1 + bps / 10_000)),
+            inst.tick_size,
+          );
+          nudged.add(inst.symbol);
+        }
+      }
       const stepped = stepGbmPrice({
-        last: q.last,
+        last: lastPx,
         tickSize: inst.tick_size,
         betaClass: inst.beta_class,
         symbol: inst.symbol,

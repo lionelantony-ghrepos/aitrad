@@ -41,7 +41,8 @@ PBI-023 embeds **news** (and later filings) for the copilot. It must **not** ing
 | 016 | [PBI-016](as-built/PBI-016.md) | Bracket/OCO groups, trailing ratchet, ticket Bracket tab |
 | 017 | [PBI-017](as-built/PBI-017.md) | Blotter: virtualized table, live `orders:{userId}`, cancel/modify/explain |
 | 018 | [PBI-018](as-built/PBI-018.md) | Portfolio panel, analytics-service, snapshot cron |
-| 019–031 | _pending_ | Copy [`_template-as-built.md`](_template-as-built.md) when the PBI ships |
+| 019 | [PBI-019](as-built/PBI-019.md) | news_items, mock generator, news-ticker, News panel; AC/TC ticks owned by QA |
+| 020–031 | _pending_ | Copy [`_template-as-built.md`](_template-as-built.md) when the PBI ships |
 
 ## Architecture decision records
 

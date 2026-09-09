@@ -10,9 +10,9 @@ You receive a **paper cash account** on first login (amount comes from the openi
 ## 2. The workspace
 Meridian is a multi-panel terminal. Open **`/workspace`**. Drag panel edges to resize, drag tabs to rearrange, and your layout is saved automatically (**Reset layout** in the top command bar). The status bar shows the market clock (America/New_York, OPEN/CLOSED) and a connection indicator.
 
-Placeholder panels in this build: News, Screener, Copilot (input only), Description (`DES`). **Watchlist** (PBI-007), **Chart** (PBI-008), **Order ticket** (PBI-013), **Blotter** (PBI-017), and **Portfolio** (PBI-018) are live. `DES <symbol>` opens the Description placeholder until fundamentals ship.
+Placeholder panels in this build: Screener, Copilot (input only), Description (`DES`). **Watchlist** (PBI-007), **Chart** (PBI-008), **Order ticket** (PBI-013), **Blotter** (PBI-017), **Portfolio** (PBI-018), and **News** (PBI-019) are live. `DES <symbol>` opens the Description placeholder until fundamentals ship.
 
-**Linked symbol.** The workspace exposes a shared symbol context. Clicking a watchlist row sets it (debug readout for tests: `symbol-context-readout`) and retargets the Chart panel.
+**Linked symbol.** The workspace exposes a shared symbol context. Clicking a watchlist row sets it (debug readout for tests: `symbol-context-readout`) and retargets the Chart, News, and Order ticket panels.
 
 **Command palette.** Press **Ctrl+K** (or the command-bar **Ctrl+K** control). Type a function or ticker, then Enter. Recent commands appear when the box is empty. Arrow keys move the highlight. Examples:
 | Command | Action |
@@ -40,7 +40,7 @@ As you edit, a preview runs automatically: each pre-trade check (validation, ris
 The **Blotter** lists orders in Working / Filled / Rejected / All tabs (virtualized). Rows update live without reload. Bracket and OCO groups expand as a tree. **Cancel** drops a working order; **Modify** cancels it and reopens the ticket prefilled (submit places the replacement). **Fills** opens the execution list. Rejected rows show the rule reason and **Explain**, which loads the `rule_audit` trace. Filter by symbol, side, status, or date, then **Export CSV** of the current view. The **Portfolio** panel (`PORT`) shows account equity, cash, buying power, and day change. Open positions list quantity, average cost, last, market value, unrealized/realized/day P&L, and weight. Rows revalue on live ticks. **Close** prefills an opposite market order in the ticket. Donuts show position and sector mix; the equity curve reads daily snapshots (1M / 3M / 1Y).
 
 ## 5. Intelligence
-- **News panel:** live headlines with sentiment badges; filters by symbol/event type; semantic search ("earnings beats in semis this week").
+- **News panel:** reverse-chron headline stream with color-scaled sentiment badges and event-type chips. It follows the linked symbol (`NEWS TSLA`) unless you turn on **All markets**. Click a row for the full body in a detail drawer. Semantic search over embeddings ships later.
 - **DES page:** company profile, key stats, financial charts, analyst ratings, peer quick-switch.
 - **Screener:** build criteria (sector, P/E, yield, %change, RSI…), save screens, send results to a watchlist.
 - **Alerts:** set price/%change/RSI/news alerts from any watchlist row; the bell in the status bar collects them.

@@ -37,3 +37,10 @@ npx -y @insforge/cli functions deploy analytics-service --file insforge/function
 ```
 
 `analytics-service` accepts `POST` `{ op: "portfolio" | "snapshot" }` (paths `/portfolio`, `/snapshot`). `/portfolio` is a user JWT read (`authorize` `portfolio:read`) that marks positions against `quotes_latest` with P&L from `@meridian/schemas/analytics`. `/snapshot` is service-key only: after the NYSE close minute it inserts one `portfolio_snapshots` row per account (idempotent on `account_id + as_of_date`) and writes `audit_log`. Schedule the snapshot op at or after the close (interval syntax; the handler no-ops while the session is OPEN).
+
+```bash
+pnpm functions:bundle:news-ticker
+npx -y @insforge/cli functions deploy news-ticker --file insforge/functions/news-ticker.ts --name "News ticker"
+```
+
+`news-ticker` is service-key only. It advances simulated time with `feed.speed` / `feed.paused`, writes 1–5 `news_items` per simulated 5 minutes from `mock_data/news-templates.json`, publishes realtime `news` / `news_batch`, and writes `audit_log`. Schedule `POST /functions/news-ticker` (interval syntax; `NEWS_TICKER_INTERVAL_SECONDS`). `market-tick` applies DT-SIM-01 news-sentiment drift nudges from recent items.

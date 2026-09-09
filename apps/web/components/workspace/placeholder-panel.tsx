@@ -12,7 +12,7 @@ export function PlaceholderPanel(props: IDockviewPanelProps): React.JSX.Element 
   const id = props.api.id;
   const title = isPanelId(id) ? getPanelDefinition(id).title : id;
   const activeSymbol = useSymbolContext((s) => s.activeSymbol);
-  const showSymbol = id === "des" || id === "news" || id === "orderTicket";
+  const showSymbol = id === "des" || id === "orderTicket";
   return (
     <div
       className="flex h-full flex-col gap-1 overflow-auto bg-background p-1 text-xs text-muted-foreground"
