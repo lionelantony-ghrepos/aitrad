@@ -17,4 +17,11 @@ describe("news-ticker source", () => {
     expect(src).toContain("publish_news_batch");
     expect(src).toContain("NEWS_TICKER_INTERVAL_SECONDS");
   });
+
+  it("requires API_KEY / INSFORGE_API_KEY and upserts via createAdminClient", () => {
+    expect(src).toContain('Deno.env.get("API_KEY") ?? Deno.env.get("INSFORGE_API_KEY")');
+    expect(src).toContain("createAdminClient");
+    expect(src).toContain('.from("news_items").upsert');
+    expect(src).toContain('admin.database.rpc("publish_news_batch"');
+  });
 });

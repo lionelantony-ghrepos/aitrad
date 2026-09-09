@@ -28,11 +28,25 @@ describe("PBI-019 migration 0011 news_items", () => {
     );
     expect(migrationSql).toContain("sentiment >= -1 AND sentiment <= 1");
     expect(migrationSql).toContain("CREATE POLICY news_items_select_public");
+    expect(migrationSql).toContain("FOR SELECT TO anon, authenticated");
     expect(migrationSql).toContain("publish_news_batch");
     expect(migrationSql).toContain("SET search_path = pg_catalog, public, realtime, pg_temp");
     expect(migrationSql).toContain(
       "GRANT SELECT ON TABLE public.news_items TO anon, authenticated",
     );
+    expect(migrationSql).toContain(
+      "GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.news_items TO project_admin",
+    );
+    expect(migrationSql).toContain(
+      "REVOKE EXECUTE ON FUNCTION public.publish_news_batch(jsonb) FROM anon, authenticated",
+    );
+    expect(migrationSql).toContain(
+      "GRANT EXECUTE ON FUNCTION public.publish_news_batch(jsonb) TO project_admin",
+    );
+    expect(migrationSql).toContain(
+      "DROP POLICY IF EXISTS news_channel_select ON realtime.channels",
+    );
     expect(migrationSql).not.toContain("FOR INSERT TO authenticated");
+    expect(migrationSql).not.toContain("FOR INSERT TO anon");
   });
 });
