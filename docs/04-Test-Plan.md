@@ -178,12 +178,12 @@ Seeded via `scripts/seed-all.ts` (see doc 06): 150 instruments, 5y daily + 5d 1m
 ### PBI-017 Blotter
 | ID | Criterion / Test | Pri | Status |
 |---|---|---|---|
-| AC-017-01 | Live status updates without reload; group tree renders legs | P0 | ☑ |
-| AC-017-02 | Cancel/modify actions respect FSM; reject rows show Explain trace | P0 | ☑ |
-| AC-017-03 | Filters + CSV export reflect current view | P1 | ☑ |
-| TC-017-01 | Place → working → cancel from blotter → cancelled live (AC-017-01/02) | P0 | ☑ |
-| TC-017-02 | Rejected order → Explain popover shows matched rule rows (AC-017-02) | P0 | ☑ |
-| TC-017-03 | Filter symbol → export CSV rows match grid (AC-017-03) | P1 | ☑ |
+| AC-017-01 | Live status updates without reload; group tree renders legs | P0 | ☐ |
+| AC-017-02 | Cancel/modify actions respect FSM; reject rows show Explain trace | P0 | ☐ |
+| AC-017-03 | Filters + CSV export reflect current view | P1 | ☐ |
+| TC-017-01 | Place → working → cancel from blotter → cancelled live (AC-017-01/02) | P0 | ☐ |
+| TC-017-02 | Rejected order → Explain popover shows matched rule rows (AC-017-02) | P0 | ☐ |
+| TC-017-03 | Filter symbol → export CSV rows match grid (AC-017-03) | P1 | ☐ |
 
 ### PBI-018 Portfolio & P&L
 | ID | Criterion / Test | Pri | Status |
