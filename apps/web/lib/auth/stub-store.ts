@@ -9,8 +9,10 @@ import type {
   Instrument,
   MarketBar,
   Profile,
+  ExecutionRecord,
   OrderRecord,
   QuotesLatest,
+  RuleAuditView,
   Watchlist,
   WatchlistItem,
 } from "@meridian/schemas";
@@ -29,6 +31,7 @@ type StubState = {
   watchlists: Watchlist[];
   watchlistItems: WatchlistItem[];
   orders: OrderRecord[];
+  executions: ExecutionRecord[];
   rules: RulesAdminMemory;
   /** Next stub create for these users fails reserve so the ticket can show a rejected order. */
   forceOrderRejectUserIds: Set<string>;
@@ -43,6 +46,7 @@ function createState(): StubState {
     watchlists: [],
     watchlistItems: [],
     orders: [],
+    executions: [],
     rules: createRulesAdminMemory(),
     forceOrderRejectUserIds: new Set(),
   };
@@ -412,6 +416,24 @@ export function stubListOrders(userId: string): OrderRecord[] {
     .orders.filter((row) => row.user_id === userId)
     .slice()
     .sort((a, b) => a.created_at.localeCompare(b.created_at));
+}
+
+export function stubInsertExecution(row: ExecutionRecord): ExecutionRecord {
+  getStubState().executions.push(row);
+  return row;
+}
+
+export function stubListExecutions(userId: string, orderId?: string): ExecutionRecord[] {
+  return getStubState()
+    .executions.filter(
+      (row) => row.user_id === userId && (orderId ? row.order_id === orderId : true),
+    )
+    .slice()
+    .sort((a, b) => a.created_at.localeCompare(b.created_at));
+}
+
+export function stubGetRuleAudit(id: string): RuleAuditView | null {
+  return getStubState().rules.audits.find((row) => row.id === id) ?? null;
 }
 
 export function stubInstrumentBySymbol(symbol: string): Instrument | null {

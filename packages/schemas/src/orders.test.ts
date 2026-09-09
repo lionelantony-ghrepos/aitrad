@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   execConfigSchema,
   matchingRunnerRequestSchema,
+  blotterFiltersSchema,
   orderCancelRequestSchema,
   orderDraftSchema,
   orderPreviewResponseSchema,
+  orderRealtimeEventSchema,
 } from "./orders";
 
 describe("orderDraftSchema", () => {
@@ -88,6 +90,32 @@ describe("execConfigSchema", () => {
 describe("matchingRunnerRequestSchema", () => {
   it("accepts an empty body or ticks", () => {
     expect(matchingRunnerRequestSchema.parse({}).ticks).toBeUndefined();
+  });
+});
+
+describe("orderRealtimeEventSchema", () => {
+  it("accepts a channel order event", () => {
+    expect(
+      orderRealtimeEventSchema.parse({
+        id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        status: "working",
+        symbol: "AAPL",
+      }).symbol,
+    ).toBe("AAPL");
+  });
+});
+
+describe("blotterFiltersSchema", () => {
+  it("accepts empty filters", () => {
+    expect(
+      blotterFiltersSchema.parse({
+        symbol: "",
+        side: "all",
+        status: "all",
+        dateFrom: "",
+        dateTo: "",
+      }).side,
+    ).toBe("all");
   });
 });
 

@@ -1,6 +1,11 @@
 import { applyTicks, type CycleOrder } from "@meridian/paper-engine";
 import type { MatchTick, OrderRecord } from "@meridian/schemas";
-import { getStubState, stubListOrders, stubReplaceOrder } from "@/lib/auth/stub-store";
+import {
+  getStubState,
+  stubInsertExecution,
+  stubListOrders,
+  stubReplaceOrder,
+} from "@/lib/auth/stub-store";
 
 const CFG = { slippage_bps: 0, liquidity_cap: 10_000 };
 
@@ -50,6 +55,24 @@ export function stubApplyTicks(userId: string, ticks: readonly MatchTick[]): Ord
   account.cash_balance = result.state.ledger.cashBalance;
   account.reserved_cash = result.state.ledger.reservedCash;
   const now = new Date().toISOString();
+  for (const fill of result.fills) {
+    const prior = existing.find((row) => row.id === fill.order_id);
+    if (!prior) {
+      continue;
+    }
+    stubInsertExecution({
+      id: crypto.randomUUID(),
+      order_id: fill.order_id,
+      user_id: userId,
+      account_id: prior.account_id,
+      instrument_id: prior.instrument_id,
+      symbol: prior.symbol,
+      side: fill.side,
+      qty: fill.qty,
+      price: fill.price,
+      created_at: now,
+    });
+  }
   for (const order of result.state.orders) {
     const prior = existing.find((row) => row.id === order.id);
     if (!prior) {

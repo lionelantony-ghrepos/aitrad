@@ -139,6 +139,29 @@ export const orderCancelResponseSchema = z.object({
   order: orderRecordSchema,
 });
 
+/** Realtime `orders:{userId}` event `order` payload (publish_order_event). */
+export const orderRealtimeEventSchema = z.object({
+  id: uuidSchema,
+  status: orderStatusSchema.optional(),
+  symbol: z.string().min(1).optional(),
+  reject_reason: z.string().nullable().optional(),
+  rule_audit_id: z.string().nullable().optional(),
+});
+
+export const blotterTabSchema = z.enum(["working", "filled", "rejected", "all"]);
+
+export const blotterSideFilterSchema = z.enum(["all", "buy", "sell"]);
+
+export const blotterFiltersSchema = z
+  .object({
+    symbol: z.string(),
+    side: blotterSideFilterSchema,
+    status: z.union([z.literal("all"), orderStatusSchema]),
+    dateFrom: z.string(),
+    dateTo: z.string(),
+  })
+  .strict();
+
 export const executionRecordSchema = z.object({
   id: uuidSchema,
   order_id: uuidSchema,
@@ -251,6 +274,10 @@ export type OrderRecord = z.infer<typeof orderRecordSchema>;
 export type OrderCreateResponse = z.infer<typeof orderCreateResponseSchema>;
 export type OrderCancelRequest = z.infer<typeof orderCancelRequestSchema>;
 export type OrderCancelResponse = z.infer<typeof orderCancelResponseSchema>;
+export type OrderRealtimeEvent = z.infer<typeof orderRealtimeEventSchema>;
+export type BlotterTab = z.infer<typeof blotterTabSchema>;
+export type BlotterSideFilter = z.infer<typeof blotterSideFilterSchema>;
+export type BlotterFilters = z.infer<typeof blotterFiltersSchema>;
 export type ExecutionRecord = z.infer<typeof executionRecordSchema>;
 export type PositionRecord = z.infer<typeof positionRecordSchema>;
 export type PortfolioSnapshot = z.infer<typeof portfolioSnapshotSchema>;

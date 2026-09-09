@@ -40,6 +40,9 @@ function evalPorts(memory: RulesAdminMemory): EvaluateDomainPorts {
         domain: row.domain,
         context: row.context,
         outcome: row.outcome,
+        matched_rows: row.matched_rows,
+        table_versions: row.table_versions,
+        latency_ms: row.latency_ms,
         created_at: new Date().toISOString(),
       });
       return { id };

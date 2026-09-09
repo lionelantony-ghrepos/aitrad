@@ -2,12 +2,13 @@
 
 import { authorize } from "@meridian/rules-engine";
 import { canCancel, expandOrderGroup, seedTrailingOnCreate } from "@meridian/paper-engine";
-import type { MatchTick, OrderLegRole } from "@meridian/schemas";
+import type { ExecutionRecord, MatchTick, OrderLegRole, RuleAuditView } from "@meridian/schemas";
 import {
   orderCancelResponseSchema,
   orderCreateResponseSchema,
   orderDraftSchema,
   orderPreviewResponseSchema,
+  ruleAuditViewSchema,
   type Account,
   type Instrument,
   type OrderCancelResponse,
@@ -20,7 +21,9 @@ import {
 } from "@meridian/schemas";
 import { createAccountsRepository } from "@/lib/api/accounts";
 import { createRecordsClient } from "@/lib/api/client";
+import { createExecutionsRepository } from "@/lib/api/executions";
 import { createOrdersRepository } from "@/lib/api/orders";
+import { createRuleAuditRepository } from "@/lib/api/rule-audit";
 import { createInstrumentsRepository } from "@/lib/api/instruments";
 import { stubApplyTicks } from "@/lib/orders/stub-matching";
 import { invokeOrderCancel, invokeOrderCreate, invokeOrderPreview } from "@/lib/api/order-service";
@@ -31,7 +34,9 @@ import { getAccessToken, getSessionUser } from "@/lib/auth/session";
 import {
   stubConsumeForceOrderReject,
   stubGetOrder,
+  stubGetRuleAudit,
   stubInsertOrder,
+  stubListExecutions,
   stubListOrders,
   stubInstrumentBySymbol,
   stubLoadProvision,
@@ -320,6 +325,43 @@ export async function listOrdersAction(): Promise<ActionResult<OrderRecord[]>> {
   const client = records(session.token);
   const rows = await createOrdersRepository(client).listMine();
   return { ok: true, data: rows };
+}
+
+export async function listExecutionsAction(
+  orderId?: string,
+): Promise<ActionResult<ExecutionRecord[]>> {
+  const session = await requireUser();
+  if (!session.ok) {
+    return session;
+  }
+  if (isAuthStub()) {
+    return { ok: true, data: stubListExecutions(session.userId, orderId) };
+  }
+  const client = records(session.token);
+  const repo = createExecutionsRepository(client);
+  const rows = orderId ? await repo.listByOrderId(orderId) : await repo.listMine();
+  return { ok: true, data: rows };
+}
+
+export async function getRuleAuditAction(auditId: string): Promise<ActionResult<RuleAuditView>> {
+  const session = await requireUser();
+  if (!session.ok) {
+    return session;
+  }
+  if (isAuthStub()) {
+    const row = stubGetRuleAudit(auditId);
+    if (!row) {
+      return { ok: false, message: "Rule audit not found." };
+    }
+    return { ok: true, data: ruleAuditViewSchema.parse(row) };
+  }
+  const client = records(session.token);
+  const rows = await createRuleAuditRepository(client).getById(auditId);
+  const row = rows[0];
+  if (!row) {
+    return { ok: false, message: "Rule audit not found." };
+  }
+  return { ok: true, data: row };
 }
 
 export async function applyPaperTicksAction(
