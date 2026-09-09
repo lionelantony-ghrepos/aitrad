@@ -11,6 +11,8 @@ import type {
   Profile,
   ExecutionRecord,
   OrderRecord,
+  PositionRecord,
+  PortfolioSnapshot,
   QuotesLatest,
   RuleAuditView,
   Watchlist,
@@ -32,6 +34,8 @@ type StubState = {
   watchlistItems: WatchlistItem[];
   orders: OrderRecord[];
   executions: ExecutionRecord[];
+  positions: PositionRecord[];
+  snapshots: PortfolioSnapshot[];
   rules: RulesAdminMemory;
   /** Next stub create for these users fails reserve so the ticket can show a rejected order. */
   forceOrderRejectUserIds: Set<string>;
@@ -47,6 +51,8 @@ function createState(): StubState {
     watchlistItems: [],
     orders: [],
     executions: [],
+    positions: [],
+    snapshots: [],
     rules: createRulesAdminMemory(),
     forceOrderRejectUserIds: new Set(),
   };
@@ -420,6 +426,38 @@ export function stubListOrders(userId: string): OrderRecord[] {
 
 export function stubInsertExecution(row: ExecutionRecord): ExecutionRecord {
   getStubState().executions.push(row);
+  return row;
+}
+
+export function stubListPositions(userId: string): PositionRecord[] {
+  return getStubState()
+    .positions.filter((row) => row.user_id === userId)
+    .slice()
+    .sort((a, b) => a.symbol.localeCompare(b.symbol));
+}
+
+export function stubUpsertPosition(row: PositionRecord): PositionRecord {
+  const state = getStubState();
+  const idx = state.positions.findIndex(
+    (item) => item.account_id === row.account_id && item.instrument_id === row.instrument_id,
+  );
+  if (idx >= 0) {
+    state.positions[idx] = row;
+    return row;
+  }
+  state.positions.push(row);
+  return row;
+}
+
+export function stubListSnapshots(userId: string): PortfolioSnapshot[] {
+  return getStubState()
+    .snapshots.filter((row) => row.user_id === userId)
+    .slice()
+    .sort((a, b) => a.as_of_date.localeCompare(b.as_of_date));
+}
+
+export function stubInsertSnapshot(row: PortfolioSnapshot): PortfolioSnapshot {
+  getStubState().snapshots.push(row);
   return row;
 }
 

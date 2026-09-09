@@ -16,6 +16,7 @@ import { CopilotPanel } from "./copilot-panel";
 import { BlotterPanel } from "./blotter-panel";
 import { OrderTicketPanel } from "./order-ticket-panel";
 import { PlaceholderPanel } from "./placeholder-panel";
+import { PortfolioPanel } from "./portfolio-panel";
 import { WatchlistPanel } from "./watchlist-panel";
 
 const components = {
@@ -26,7 +27,8 @@ const components = {
         id !== "chart" &&
         id !== "copilot" &&
         id !== "orderTicket" &&
-        id !== "blotter",
+        id !== "blotter" &&
+        id !== "portfolio",
     ).map((id) => [id, PlaceholderPanel]),
   ),
   watchlist: WatchlistPanel,
@@ -34,6 +36,7 @@ const components = {
   copilot: CopilotPanel,
   orderTicket: OrderTicketPanel,
   blotter: BlotterPanel,
+  portfolio: PortfolioPanel,
 };
 
 function snapshot(api: DockviewApi): Record<string, unknown> {

@@ -28,3 +28,4 @@ export * from "./decision-table";
 export * from "./rules-service";
 export * from "./rules-admin";
 export * from "./orders";
+export * from "./analytics";

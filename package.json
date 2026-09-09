@@ -22,6 +22,7 @@
     "functions:bundle:order-service": "node scripts/bundle-order-service.mjs",
     "functions:bundle:matching-runner": "node scripts/bundle-matching-runner.mjs",
     "functions:bundle:market-tick": "node scripts/bundle-market-tick.mjs",
+    "functions:bundle:analytics-service": "node scripts/bundle-analytics-service.mjs",
     "prepare": "husky"
   },
   "dependencies": {

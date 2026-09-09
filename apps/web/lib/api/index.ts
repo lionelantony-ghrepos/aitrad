@@ -30,3 +30,9 @@ export {
 export { createOrdersRepository } from "./orders";
 export { createExecutionsRepository } from "./executions";
 export { createRuleAuditRepository } from "./rule-audit";
+export { createPositionsRepository, createPortfolioSnapshotsRepository } from "./positions";
+export {
+  analyticsServiceUrl,
+  invokeAnalyticsPortfolio,
+  invokeAnalyticsSnapshot,
+} from "./analytics-service";
