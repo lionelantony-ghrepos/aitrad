@@ -4,7 +4,9 @@ import {
   getStubState,
   stubInsertExecution,
   stubListOrders,
+  stubListPositions,
   stubReplaceOrder,
+  stubUpsertPosition,
 } from "@/lib/auth/stub-store";
 
 const CFG = { slippage_bps: 0, liquidity_cap: 10_000 };
@@ -39,10 +41,16 @@ export function stubApplyTicks(userId: string, ticks: readonly MatchTick[]): Ord
   if (!account || existing.length === 0 || ticks.length === 0) {
     return existing;
   }
+  const priorPositions = stubListPositions(userId);
   const result = applyTicks(
     {
       orders: existing.map(toCycle),
-      positions: [],
+      positions: priorPositions.map((row) => ({
+        symbol: row.symbol,
+        qty: row.qty,
+        avgCost: row.avg_cost,
+        realizedPnl: row.realized_pnl,
+      })),
       ledger: {
         cashBalance: account.cash_balance,
         reservedCash: account.reserved_cash ?? 0,
@@ -71,6 +79,27 @@ export function stubApplyTicks(userId: string, ticks: readonly MatchTick[]): Ord
       qty: fill.qty,
       price: fill.price,
       created_at: now,
+    });
+  }
+  for (const pos of result.state.positions) {
+    const prior =
+      priorPositions.find((row) => row.symbol === pos.symbol) ??
+      existing.find((row) => row.symbol === pos.symbol);
+    if (!prior) {
+      continue;
+    }
+    const existingPos = priorPositions.find((row) => row.symbol === pos.symbol);
+    stubUpsertPosition({
+      id: existingPos?.id ?? crypto.randomUUID(),
+      user_id: userId,
+      account_id: account.id,
+      instrument_id: prior.instrument_id,
+      symbol: pos.symbol,
+      qty: pos.qty,
+      avg_cost: pos.avgCost,
+      realized_pnl: pos.realizedPnl,
+      created_at: existingPos?.created_at ?? now,
+      updated_at: now,
     });
   }
   for (const order of result.state.orders) {

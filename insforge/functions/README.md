@@ -30,3 +30,10 @@ npx -y @insforge/cli functions deploy matching-runner --file insforge/functions/
 ```
 
 `matching-runner` is service-key only. On each tick batch it promotes `accepted` → `working`, evaluates `execution_sim` (DT-EXEC-01), and applies fills through `apply_paper_fill` (executions, positions, cash, reserve release). It publishes `orders:{userId}` and `positions:{userId}` and writes `audit_log` per fill. `market-tick` invokes it after publishing quotes; feed test mode (`feed.paused` + `feed.force_price`) is the integration path for a limit cross.
+
+```bash
+pnpm functions:bundle:analytics-service
+npx -y @insforge/cli functions deploy analytics-service --file insforge/functions/analytics-service.ts --name "Analytics service"
+```
+
+`analytics-service` accepts `POST` `{ op: "portfolio" | "snapshot" }` (paths `/portfolio`, `/snapshot`). `/portfolio` is a user JWT read (`authorize` `portfolio:read`) that marks positions against `quotes_latest` with P&L from `@meridian/schemas/analytics`. `/snapshot` is service-key only: after the NYSE close minute it inserts one `portfolio_snapshots` row per account (idempotent on `account_id + as_of_date`) and writes `audit_log`. Schedule the snapshot op at or after the close (interval syntax; the handler no-ops while the session is OPEN).

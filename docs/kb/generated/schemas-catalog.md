@@ -2,6 +2,14 @@
 
 Exported `*Schema` bindings discovered by static scan. Full OpenAPI from Zod is deferred until DTO coverage is broader (add `zod-to-openapi` then). Typedoc for packages is deferred until public APIs stabilize.
 
+- analytics.ts: allocationSliceSchema
+- analytics.ts: analyticsPortfolioRequestSchema
+- analytics.ts: analyticsSnapshotRequestSchema
+- analytics.ts: analyticsSnapshotResponseSchema
+- analytics.ts: equityCurveRangeSchema
+- analytics.ts: portfolioAccountViewSchema
+- analytics.ts: portfolioPositionViewSchema
+- analytics.ts: portfolioResponseSchema
 - auth.ts: credentialsSchema
 - auth.ts: profileWizardSchema
 - auth.ts: provisionCreatedSchema

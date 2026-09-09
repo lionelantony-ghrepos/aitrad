@@ -6,6 +6,7 @@ import {
   resetStubState,
   stubInsertOrder,
   stubListOrders,
+  stubListPositions,
   stubTryReserve,
 } from "@/lib/auth/stub-store";
 import { stubApplyTicks } from "./stub-matching";
@@ -81,6 +82,7 @@ describe("stub matching bracket path", () => {
     }
     stubApplyTicks(USER, [{ last: 200, symbol: "AAPL" }]);
     expect(stubListOrders(USER).find((row) => row.leg_role === "entry")?.status).toBe("filled");
+    expect(stubListPositions(USER).find((row) => row.symbol === "AAPL")?.qty).toBe(2);
     expect(stubListOrders(USER).find((row) => row.leg_role === "take_profit")?.status).toBe(
       "working",
     );
