@@ -213,7 +213,7 @@ export async function runUniverseSeed(): Promise<void> {
 
   const functionsOrigin = env.INSFORGE_URL.replace(/\/+$/, "");
   process.stdout.write("Backfilling news_embeddings via embed-worker…\n");
-  for (let i = 0; i < 20; i += 1) {
+  for (let i = 0; i < 80; i += 1) {
     const response = await fetch(`${functionsOrigin}/functions/embed-worker`, {
       method: "POST",
       headers: {
@@ -227,6 +227,10 @@ export async function runUniverseSeed(): Promise<void> {
       embedded?: number;
       error?: string;
     } | null;
+    if (response.status === 504) {
+      process.stdout.write("  embed-worker timeout, retrying smaller batch…\n");
+      continue;
+    }
     if (!response.ok) {
       throw new Error(`EMBED_WORKER_${response.status}:${payload?.error ?? "failed"}`);
     }

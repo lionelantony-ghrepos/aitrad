@@ -12,15 +12,15 @@ const fs = await import("node:fs");
 
 await build({
   absWorkingDir: root,
-  entryPoints: [path.join(root, "insforge/functions/analytics-service-src.ts")],
-  outfile: path.join(root, "insforge/functions/analytics-service.ts"),
+  entryPoints: [path.join(root, "insforge/functions/provision-account.ts")],
+  outfile: path.join(root, "insforge/functions/provision-account.bundle.js"),
   bundle: true,
   format: "esm",
   platform: "neutral",
   target: "esnext",
-  banner: { js: "// bundled from insforge/functions/analytics-service-src.ts\n" },
+  banner: { js: "// bundled from insforge/functions/provision-account.ts\n" },
   external: ["npm:@insforge/sdk"],
 });
 
-const outfile = path.join(root, "insforge/functions/analytics-service.ts");
+const outfile = path.join(root, "insforge/functions/provision-account.bundle.js");
 fs.writeFileSync(outfile, rewriteInsforgeWorkerBundle(fs.readFileSync(outfile, "utf8")));

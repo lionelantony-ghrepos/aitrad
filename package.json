@@ -28,6 +28,7 @@
     "functions:bundle:alert-runner": "node scripts/bundle-alert-runner.mjs",
     "functions:bundle:embed-worker": "node scripts/bundle-embed-worker.mjs",
     "functions:bundle:search-news": "node scripts/bundle-search-news.mjs",
+    "functions:bundle:provision-account": "node scripts/bundle-provision-account.mjs",
     "prepare": "husky"
   },
   "dependencies": {

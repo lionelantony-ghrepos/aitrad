@@ -60,7 +60,7 @@ export default async function (req: Request): Promise<Response> {
     apiKey: expected,
   });
 
-  const batch = parsed.data.op === "backfill" ? 100 : 32;
+  const batch = 8;
   const pendingRpc = await admin.database.rpc("list_pending_news_embeds", {
     p_limit: batch,
     p_ids: parsed.data.news_ids ?? null,

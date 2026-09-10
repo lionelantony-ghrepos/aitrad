@@ -1,3 +1,14 @@
+// rewritten for InsForge worker (new Function — no import/export)
+function createAdminClient(config) {
+  const raw = config ?? {};
+  const apiKey = typeof raw.apiKey === "string" ? raw.apiKey.trim() : "";
+  if (!apiKey) {
+    throw new Error("Missing apiKey. Pass apiKey to createAdminClient().");
+  }
+  const clientConfig = { ...raw };
+  delete clientConfig.apiKey;
+  return createClient({ ...clientConfig, accessToken: apiKey, isServerMode: true });
+}
 // insforge/functions/news-ticker-src.ts
 
 var __defProp = Object.defineProperty;
@@ -6,8 +17,6 @@ var __export = (target, all) => {
 };
 
 // insforge/functions/news-ticker-src.ts
-import { createAdminClient } from "npm:@insforge/sdk";
-
 // packages/mock-data/src/calendar.ts
 var HISTORY_SEED = 42;
 var REGULAR_OPEN_MINUTE = 9 * 60 + 30;
@@ -5999,4 +6008,5 @@ async function news_ticker_src_default(req) {
     alerting,
   });
 }
-export { news_ticker_src_default as default };
+
+module.exports = news_ticker_src_default;

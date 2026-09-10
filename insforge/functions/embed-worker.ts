@@ -1,3 +1,14 @@
+// rewritten for InsForge worker (new Function — no import/export)
+function createAdminClient(config) {
+  const raw = config ?? {};
+  const apiKey = typeof raw.apiKey === "string" ? raw.apiKey.trim() : "";
+  if (!apiKey) {
+    throw new Error("Missing apiKey. Pass apiKey to createAdminClient().");
+  }
+  const clientConfig = { ...raw };
+  delete clientConfig.apiKey;
+  return createClient({ ...clientConfig, accessToken: apiKey, isServerMode: true });
+}
 // bundled from insforge/functions/embed-worker-src.ts
 
 var __defProp = Object.defineProperty;
@@ -6,8 +17,6 @@ var __export = (target, all) => {
 };
 
 // insforge/functions/embed-worker-src.ts
-import { createAdminClient } from "npm:@insforge/sdk";
-
 // node_modules/.pnpm/zod@3.25.76/node_modules/zod/v3/external.js
 var external_exports = {};
 __export(external_exports, {
@@ -5586,7 +5595,7 @@ async function embed_worker_src_default(req) {
     baseUrl,
     apiKey: expected,
   });
-  const batch = parsed.data.op === "backfill" ? 100 : 32;
+  const batch = 8;
   const pendingRpc = await admin.database.rpc("list_pending_news_embeds", {
     p_limit: batch,
     p_ids: parsed.data.news_ids ?? null,
@@ -5675,4 +5684,5 @@ async function embed_worker_src_default(req) {
   ]);
   return json(200, embedWorkerResponseSchema.parse(result));
 }
-export { embed_worker_src_default as default };
+
+module.exports = embed_worker_src_default;

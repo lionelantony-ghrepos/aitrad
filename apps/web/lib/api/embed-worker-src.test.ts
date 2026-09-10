@@ -14,6 +14,11 @@ const searchSrc = readFileSync(
   "utf8",
 );
 
+const bundled = readFileSync(
+  path.join(here, "../../../../insforge/functions/embed-worker.ts"),
+  "utf8",
+);
+
 describe("embed-worker source", () => {
   it("is service-key gated, embeds news_items only, and dead-letters gateway failures", () => {
     expect(src).toContain("UNAUTHENTICATED");
@@ -25,6 +30,12 @@ describe("embed-worker source", () => {
     expect(src).toContain('action: "embed-worker"');
     expect(src).not.toContain("readdir");
     expect(src).not.toContain('.from("documents")');
+  });
+
+  it("deploys as a script for InsForge new Function (no ESM import/export)", () => {
+    expect(bundled).not.toContain("import {");
+    expect(bundled).toContain("module.exports =");
+    expect(bundled).toContain("function createAdminClient");
   });
 });
 

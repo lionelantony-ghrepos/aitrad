@@ -1,3 +1,14 @@
+// rewritten for InsForge worker (new Function — no import/export)
+function createAdminClient(config) {
+  const raw = config ?? {};
+  const apiKey = typeof raw.apiKey === "string" ? raw.apiKey.trim() : "";
+  if (!apiKey) {
+    throw new Error("Missing apiKey. Pass apiKey to createAdminClient().");
+  }
+  const clientConfig = { ...raw };
+  delete clientConfig.apiKey;
+  return createClient({ ...clientConfig, accessToken: apiKey, isServerMode: true });
+}
 // bundled from insforge/functions/search-news-src.ts
 
 var __defProp = Object.defineProperty;
@@ -6,8 +17,6 @@ var __export = (target, all) => {
 };
 
 // insforge/functions/search-news-src.ts
-import { createAdminClient, createClient } from "npm:@insforge/sdk";
-
 // node_modules/.pnpm/zod@3.25.76/node_modules/zod/v3/external.js
 var external_exports = {};
 __export(external_exports, {
@@ -5621,4 +5630,5 @@ async function search_news_src_default(req) {
     }),
   );
 }
-export { search_news_src_default as default };
+
+module.exports = search_news_src_default;

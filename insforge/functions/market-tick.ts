@@ -1,3 +1,14 @@
+// rewritten for InsForge worker (new Function — no import/export)
+function createAdminClient(config) {
+  const raw = config ?? {};
+  const apiKey = typeof raw.apiKey === "string" ? raw.apiKey.trim() : "";
+  if (!apiKey) {
+    throw new Error("Missing apiKey. Pass apiKey to createAdminClient().");
+  }
+  const clientConfig = { ...raw };
+  delete clientConfig.apiKey;
+  return createClient({ ...clientConfig, accessToken: apiKey, isServerMode: true });
+}
 // insforge/functions/market-tick-src.ts
 
 var __defProp = Object.defineProperty;
@@ -6,8 +17,6 @@ var __export = (target, all) => {
 };
 
 // insforge/functions/market-tick-src.ts
-import { createAdminClient } from "npm:@insforge/sdk";
-
 // packages/mock-data/src/calendar.ts
 var MINUTES_PER_SESSION = 390;
 var GBM_SESSIONS_PER_YEAR = 252;
@@ -5527,6 +5536,39 @@ var newsRealtimeBatchSchema = external_exports.object({
   items: external_exports.array(newsItemSchema).min(1),
 });
 
+// packages/schemas/src/news-search.ts
+var NEWS_SEARCH_LIMIT = 50;
+var newsSearchRequestSchema = external_exports.object({
+  query: external_exports.string().trim().min(1).max(500),
+  symbols: external_exports.array(external_exports.string().min(1)).max(32).optional(),
+  since: timestamptzSchema.optional(),
+  limit: external_exports.number().int().min(1).max(NEWS_SEARCH_LIMIT).optional(),
+});
+var newsSearchHitSchema = newsItemSchema.extend({
+  score: numericSchema,
+});
+var newsSearchResponseSchema = external_exports.object({
+  items: external_exports.array(newsSearchHitSchema),
+});
+var embedWorkerRequestSchema = external_exports.object({
+  op: external_exports.enum(["cycle", "backfill"]).default("cycle"),
+  news_ids: external_exports.array(uuidSchema).max(200).optional(),
+});
+var embedWorkerResponseSchema = external_exports.object({
+  scanned: external_exports.number().int().nonnegative(),
+  embedded: external_exports.number().int().nonnegative(),
+  retried: external_exports.number().int().nonnegative(),
+  dead_lettered: external_exports.number().int().nonnegative(),
+});
+var newsEmbedDeadLetterSchema = external_exports.object({
+  news_id: uuidSchema,
+  attempts: external_exports.number().int().nonnegative(),
+  last_error: external_exports.string().min(1),
+  last_http_status: external_exports.number().int().nullable(),
+  dead: external_exports.boolean(),
+  updated_at: timestamptzSchema,
+});
+
 // packages/schemas/src/fundamentals.ts
 var analystRatingsSchema = external_exports.object({
   buy: external_exports.coerce.number().int().nonnegative(),
@@ -6269,4 +6311,5 @@ async function market_tick_src_default(req) {
     alerting,
   });
 }
-export { market_tick_src_default as default };
+
+module.exports = market_tick_src_default;
