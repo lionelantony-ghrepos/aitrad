@@ -224,10 +224,10 @@ Seeded via `scripts/seed-all.ts` (see doc 06): 150 instruments, 5y daily + 5d 1m
 ### PBI-022 Alerts
 | ID | Criterion / Test | Pri | Status |
 |---|---|---|---|
-| AC-022-01 | Price-cross alert fires exactly once per DT-ALRT-01 throttle | P0 | ☑ |
-| AC-022-02 | Toast + unread badge + history row on fire; disable stops firing | P0 | ☑ |
-| TC-022-01 | E2E: create cross alert, force price past → one toast, badge=1; force again within throttle → still 1 (AC-022-01/02) | P0 | ☑ |
-| TC-022-02 | Disabled alert + trigger condition → nothing fires (AC-022-02) | P1 | ☑ |
+| AC-022-01 | Price-cross alert fires exactly once per DT-ALRT-01 throttle | P0 | ☐ |
+| AC-022-02 | Toast + unread badge + history row on fire; disable stops firing | P0 | ☐ |
+| TC-022-01 | E2E: create cross alert, force price past → one toast, badge=1; force again within throttle → still 1 (AC-022-01/02) | P0 | ☐ |
+| TC-022-02 | Disabled alert + trigger condition → nothing fires (AC-022-02) | P1 | ☐ |
 
 ### PBI-023 RAG
 | ID | Criterion / Test | Pri | Status |
