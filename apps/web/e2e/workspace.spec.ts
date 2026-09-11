@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { LAYOUT_STORAGE_KEY } from "../lib/layout-storage";
 import { signUpThroughWizard } from "./helpers/onboard";
-import { waitForWorkspaceReady } from "./helpers/palette";
+import { dispatchPaletteHotkey, waitForWorkspaceReady } from "./helpers/palette";
 
 function layoutGrid(raw: string | null): unknown {
   if (raw === null) {
@@ -94,8 +94,7 @@ test.describe("PBI-003 terminal shell", () => {
   test("Ctrl+K opens the palette placeholder", async ({ page }) => {
     await page.goto("/workspace");
     await waitForWorkspaceReady(page);
-    await page.getByTestId("command-bar").click({ position: { x: 12, y: 4 } });
-    await page.getByTestId("workspace").press("Control+K");
+    await dispatchPaletteHotkey(page);
     await expect(page.getByTestId("command-palette")).toBeVisible();
   });
 });
