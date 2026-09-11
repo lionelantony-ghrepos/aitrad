@@ -35,9 +35,7 @@ describe("PBI-025 migration 0017 copilot sessions", () => {
       "GRANT SELECT, INSERT ON TABLE public.copilot_messages TO authenticated",
     );
     expect(migrationSql).toContain("CREATE POLICY copilot_messages_insert_own");
-    expect(migrationSql).toContain("user_id = (SELECT auth.uid())");
-    expect(migrationSql).toContain("AND EXISTS (");
-    expect(migrationSql).toContain("SELECT 1 FROM public.copilot_sessions s");
-    expect(migrationSql).toContain("WHERE s.id = session_id AND s.user_id = (SELECT auth.uid())");
+    expect(migrationSql).toContain("WITH CHECK (user_id = (SELECT auth.uid()))");
+    expect(migrationSql).not.toContain("FROM public.copilot_sessions s");
   });
 });

@@ -6726,6 +6726,9 @@ async function runCopilotRequest(input) {
   return { sessionId, assistantContent: result.assistantContent };
 }
 
+// packages/copilot/src/session-access.ts
+var COPILOT_SESSION_NOT_FOUND = "SESSION_NOT_FOUND";
+
 // insforge/functions/_shared/entitlements.ts
 function asRows(data) {
   return Array.isArray(data) ? data : [];
@@ -6826,13 +6829,13 @@ function encodeSse(event) {
 
 `);
 }
-async function requireOwnedCopilotSession(input) {
-  const { data, error } = await input.admin.database.from("copilot_sessions").select("id,user_id").eq("id", input.sessionId).eq("user_id", input.userId).limit(1);
+async function requireOwnedCopilotSession(admin, userId, sessionId) {
+  const { data, error } = await admin.database.from("copilot_sessions").select("id,user_id").eq("id", sessionId).eq("user_id", userId).limit(1);
   if (error) {
     throw new Error(error.message);
   }
-  if (asRows2(data).length === 0) {
-    throw new Error("SESSION_NOT_FOUND");
+  if (!asRows2(data)[0]) {
+    throw new Error(COPILOT_SESSION_NOT_FOUND);
   }
 }
 async function copilot_orchestrator_src_default(req) {
@@ -6942,7 +6945,7 @@ async function copilot_orchestrator_src_default(req) {
               return copilotSessionSchema.parse(asRows2(data)[0]);
             },
             async appendMessage(row) {
-              await requireOwnedCopilotSession({ admin, sessionId: row.sessionId, userId });
+              await requireOwnedCopilotSession(admin, userId, row.sessionId);
               await admin.database.from("copilot_messages").insert([
                 {
                   session_id: row.sessionId,
@@ -6964,7 +6967,7 @@ async function copilot_orchestrator_src_default(req) {
               });
             },
             async loadHistory(sessionId) {
-              await requireOwnedCopilotSession({ admin, sessionId, userId });
+              await requireOwnedCopilotSession(admin, userId, sessionId);
               const { data, error } = await admin.database.from("copilot_messages").select("*").eq("session_id", sessionId).eq("user_id", userId).order("created_at", { ascending: true });
               if (error) {
                 throw new Error(error.message);

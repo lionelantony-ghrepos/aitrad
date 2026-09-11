@@ -150,3 +150,9 @@ PRD named this migration 0010; 0010 is advanced-orders. Do not create `docs_embe
 | `count_copilot_user_messages_today` | EXECUTE `project_admin` (rate-limit fact for DT-AI-01)        |
 
 PRD named this migration 0012; 0012 is fundamentals.
+
+## 0018 contents
+
+| Object                    | Access                                                                                    |
+| ------------------------- | ----------------------------------------------------------------------------------------- |
+| `copilot_messages` INSERT | Must be caller `user_id` **and** `EXISTS` parent `copilot_sessions` owned by `auth.uid()` |

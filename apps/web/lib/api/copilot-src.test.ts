@@ -31,6 +31,9 @@ describe("copilot-orchestrator source contracts", () => {
     expect(src).toMatch(/async appendMessage[\s\S]*requireOwnedCopilotSession/);
     expect(src).toMatch(/async loadHistory[\s\S]*requireOwnedCopilotSession/);
     expect(src).not.toContain("docs/kb");
+    expect(src).toContain("requireOwnedCopilotSession");
+    expect(src).toContain('.eq("user_id", userId)');
+    expect(src).toContain("COPILOT_SESSION_NOT_FOUND");
   });
 
   it("panel uses the repository/action path and citation chips", () => {

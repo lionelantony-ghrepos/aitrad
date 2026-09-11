@@ -24,6 +24,7 @@ import {
   resolveRulesServiceApiKey,
 } from "../../packages/rules-engine/src/index.ts";
 import {
+  COPILOT_SESSION_NOT_FOUND,
   DEFAULT_OPENROUTER_CHAT_MODEL,
   DEFAULT_OPENROUTER_CHAT_URL,
   newsSummaryLlm,
@@ -80,22 +81,22 @@ function encodeSse(event: CopilotChatEvent): Uint8Array {
 }
 
 /** Admin client bypasses RLS — never load/append by session_id alone. */
-async function requireOwnedCopilotSession(input: {
-  admin: ReturnType<typeof createAdminClient>;
-  sessionId: string;
-  userId: string;
-}): Promise<void> {
-  const { data, error } = await input.admin.database
+async function requireOwnedCopilotSession(
+  admin: ReturnType<typeof createAdminClient>,
+  userId: string,
+  sessionId: string,
+): Promise<void> {
+  const { data, error } = await admin.database
     .from("copilot_sessions")
     .select("id,user_id")
-    .eq("id", input.sessionId)
-    .eq("user_id", input.userId)
+    .eq("id", sessionId)
+    .eq("user_id", userId)
     .limit(1);
   if (error) {
     throw new Error(error.message);
   }
-  if (asRows<{ id: string }>(data).length === 0) {
-    throw new Error("SESSION_NOT_FOUND");
+  if (!asRows<{ id: string; user_id: string }>(data)[0]) {
+    throw new Error(COPILOT_SESSION_NOT_FOUND);
   }
 }
 
@@ -226,7 +227,7 @@ export default async function (req: Request): Promise<Response> {
               return copilotSessionSchema.parse(asRows<CopilotSession>(data)[0]);
             },
             async appendMessage(row) {
-              await requireOwnedCopilotSession({ admin, sessionId: row.sessionId, userId });
+              await requireOwnedCopilotSession(admin, userId, row.sessionId);
               await admin.database.from("copilot_messages").insert([
                 {
                   session_id: row.sessionId,
@@ -252,7 +253,7 @@ export default async function (req: Request): Promise<Response> {
               });
             },
             async loadHistory(sessionId) {
-              await requireOwnedCopilotSession({ admin, sessionId, userId });
+              await requireOwnedCopilotSession(admin, userId, sessionId);
               const { data, error } = await admin.database
                 .from("copilot_messages")
                 .select("*")
