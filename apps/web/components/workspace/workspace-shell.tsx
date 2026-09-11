@@ -71,6 +71,8 @@ export function WorkspaceShell({
         className="flex h-screen flex-col bg-background text-foreground"
         data-testid="workspace"
         data-e2e-feed={e2eFeed ? "1" : "0"}
+        data-ready={api ? "1" : "0"}
+        tabIndex={-1}
       >
         <CommandBar
           email={email}

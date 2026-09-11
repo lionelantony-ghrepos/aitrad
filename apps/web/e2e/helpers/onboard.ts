@@ -1,4 +1,5 @@
 import { expect, type Page } from "@playwright/test";
+import { waitForWorkspaceReady } from "./palette";
 
 export async function signUpThroughWizard(
   page: Page,
@@ -13,5 +14,5 @@ export async function signUpThroughWizard(
   await page.getByTestId("display-name").fill("E2E Trader");
   await page.getByTestId("objectives").fill("learn the terminal");
   await page.getByTestId("wizard-submit").click();
-  await expect(page.getByTestId("workspace")).toBeVisible({ timeout: 20_000 });
+  await waitForWorkspaceReady(page, 20_000);
 }
