@@ -8,6 +8,7 @@ import { hashEmbed, hybridRank, newsEmbedText, ragFixtureItems } from "@meridian
 import { evaluateScreener } from "@meridian/schemas";
 import type {
   Account,
+  AdminUserRow,
   Instrument,
   MarketBar,
   Profile,
@@ -30,6 +31,7 @@ import type {
   ScreenerRunResponse,
   NewsSearchHit,
   NewsSearchRequest,
+  UserRole,
   AlertRule,
   AlertInstance,
 } from "@meridian/schemas";
@@ -55,6 +57,7 @@ type StubState = {
   positions: PositionRecord[];
   snapshots: PortfolioSnapshot[];
   rules: RulesAdminMemory;
+  roles: Map<string, UserRole>;
   /** Next stub create for these users fails reserve so the ticket can show a rejected order. */
   forceOrderRejectUserIds: Set<string>;
 };
@@ -75,6 +78,7 @@ function createState(): StubState {
     positions: [],
     snapshots: [],
     rules: createRulesAdminMemory(),
+    roles: new Map(),
     forceOrderRejectUserIds: new Set(),
   };
 }
@@ -124,6 +128,7 @@ export function stubSignUp(email: string, password: string): StubUser {
   const user: StubUser = { id: crypto.randomUUID(), email: key, password };
   state.usersByEmail.set(key, user);
   state.usersById.set(user.id, user);
+  state.roles.set(user.id, "trader");
   return user;
 }
 
@@ -145,11 +150,30 @@ export function stubOauthUser(email: string): StubUser {
   const user: StubUser = { id: crypto.randomUUID(), email: key, password: "" };
   state.usersByEmail.set(key, user);
   state.usersById.set(user.id, user);
+  state.roles.set(user.id, "trader");
   return user;
 }
 
 export function stubGetUser(userId: string): StubUser | null {
   return getStubState().usersById.get(userId) ?? null;
+}
+
+export function stubGetRole(userId: string): UserRole {
+  return getStubState().roles.get(userId) ?? "trader";
+}
+
+export function stubSetRole(userId: string, role: UserRole): void {
+  getStubState().roles.set(userId, role);
+}
+
+export function stubListUsers(): AdminUserRow[] {
+  const state = getStubState();
+  return [...state.usersById.values()].map((user) => ({
+    user_id: user.id,
+    email: user.email,
+    display_name: state.profiles.get(user.id)?.display_name ?? null,
+    role: state.roles.get(user.id) ?? "trader",
+  }));
 }
 
 export function stubLoadProvision(userId: string): {
@@ -209,6 +233,9 @@ export function stubPatchProfile(userId: string, patch: Partial<Profile>): Profi
     updated_at: nowIso(),
   };
   getStubState().profiles.set(userId, next);
+  if (next.persona === "trader" || next.persona === "admin" || next.persona === "compliance") {
+    getStubState().roles.set(userId, next.persona);
+  }
   return next;
 }
 

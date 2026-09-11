@@ -1,4 +1,5 @@
-import { authorize, executeProvision } from "@meridian/rules-engine";
+import { authorizeFromTable, baselineTable, executeProvision } from "@meridian/rules-engine";
+import { authorizeUser } from "../auth/authorize-user";
 import { provisionResultSchema, type ProvisionResult } from "@meridian/schemas";
 import { isAuthStub } from "../auth/mode";
 import { stubInsertAccount, stubInsertProfile, stubLoadProvision } from "../auth/stub-store";
@@ -9,7 +10,11 @@ export async function provisionAccountForUser(input: {
   userId: string;
   accessToken: string;
 }): Promise<ProvisionResult> {
-  const decision = authorize({ userId: input.userId, action: "provision-account" });
+  const decision = await authorizeUser({
+    userId: input.userId,
+    action: "provision-account",
+    token: input.accessToken,
+  });
   if (!decision.allowed) {
     throw new Error(decision.reason ?? "DENIED");
   }
@@ -17,7 +22,13 @@ export async function provisionAccountForUser(input: {
   if (isAuthStub()) {
     return executeProvision({
       userId: input.userId,
-      authorize: (userId) => authorize({ userId, action: "provision-account" }),
+      authorize: (userId) =>
+        authorizeFromTable({
+          userId,
+          action: "provision-account",
+          role: "trader",
+          table: baselineTable("DT-ENT-01"),
+        }),
       load: async () => stubLoadProvision(input.userId),
       insertProfile: async () => stubInsertProfile(input.userId),
       insertAccount: async () => stubInsertAccount(input.userId),

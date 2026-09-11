@@ -1,6 +1,6 @@
 "use server";
 
-import { authorize } from "@meridian/rules-engine";
+import { authorizeUser } from "@/lib/auth/authorize-user";
 import {
   assemblePortfolio,
   equityCurveRangeSchema,
@@ -43,7 +43,11 @@ export async function getPortfolioAction(
   if (!session.ok) {
     return session;
   }
-  const gate = authorize({ userId: session.userId, action: "portfolio:read" });
+  const gate = await authorizeUser({
+    userId: session.userId,
+    action: "portfolio:read",
+    token: session.token,
+  });
   if (!gate.allowed) {
     return { ok: false, message: "Not allowed." };
   }

@@ -30,7 +30,8 @@ describe("analytics-service orchestration", () => {
   it("joins quotes, authorizes portfolio:read, and writes snapshots with audit", () => {
     expect(analyticsSrc).toContain('from("quotes_latest")');
     expect(analyticsSrc).toContain("assemblePortfolio");
-    expect(analyticsSrc).toContain('authorize({ userId, action: "portfolio:read" })');
+    expect(analyticsSrc).toContain('action: "portfolio:read"');
+    expect(analyticsSrc).toContain("authorizeEdgeUser");
     expect(analyticsSrc).toContain('from("portfolio_snapshots")');
     expect(analyticsSrc).toContain('action: "portfolio:snapshot"');
     expect(analyticsSrc).toContain("dailySnapshotDate");

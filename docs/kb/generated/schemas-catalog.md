@@ -2,6 +2,14 @@
 
 Exported `*Schema` bindings discovered by static scan. Full OpenAPI from Zod is deferred until DTO coverage is broader (add `zod-to-openapi` then). Typedoc for packages is deferred until public APIs stabilize.
 
+- admin-users.ts: adminUserRowSchema
+- admin-users.ts: adminUsersAssignRequestSchema
+- admin-users.ts: adminUsersAssignResponseSchema
+- admin-users.ts: adminUsersListRequestSchema
+- admin-users.ts: adminUsersListResponseSchema
+- admin-users.ts: adminUsersOpSchema
+- admin-users.ts: adminUsersRequestSchema
+- admin-users.ts: userRoleSchema
 - alerts.ts: alertConditionListSchema
 - alerts.ts: alertCreateRequestSchema
 - alerts.ts: alertInstanceInsertSchema

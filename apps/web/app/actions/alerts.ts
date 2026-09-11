@@ -1,6 +1,7 @@
 "use server";
 
-import { authorize, compileAlertTemplate, defaultAlertName } from "@meridian/rules-engine";
+import { compileAlertTemplate, defaultAlertName } from "@meridian/rules-engine";
+import { authorizeUser } from "@/lib/auth/authorize-user";
 import {
   alertCreateRequestSchema,
   alertRuleInsertSchema,
@@ -91,7 +92,11 @@ export async function listAlertRulesAction(): Promise<ActionResult<AlertRule[]>>
   if (!session.ok) {
     return session;
   }
-  const gate = authorize({ userId: session.userId, action: "alerts:list" });
+  const gate = await authorizeUser({
+    userId: session.userId,
+    token: session.token,
+    action: "alerts:list",
+  });
   if (!gate.allowed) {
     return { ok: false, message: "Not allowed." };
   }
@@ -107,7 +112,11 @@ export async function listAlertsAction(): Promise<ActionResult<AlertInstance[]>>
   if (!session.ok) {
     return session;
   }
-  const gate = authorize({ userId: session.userId, action: "alerts:read" });
+  const gate = await authorizeUser({
+    userId: session.userId,
+    token: session.token,
+    action: "alerts:read",
+  });
   if (!gate.allowed) {
     return { ok: false, message: "Not allowed." };
   }
@@ -130,7 +139,11 @@ export async function createAlertRuleAction(raw: unknown): Promise<ActionResult<
   if (!parsed.success) {
     return { ok: false, message: "Invalid alert." };
   }
-  const gate = authorize({ userId: session.userId, action: "alerts:create" });
+  const gate = await authorizeUser({
+    userId: session.userId,
+    token: session.token,
+    action: "alerts:create",
+  });
   if (!gate.allowed) {
     return { ok: false, message: "Not allowed." };
   }
@@ -209,7 +222,11 @@ export async function setAlertRuleActiveAction(
   if (!session.ok) {
     return session;
   }
-  const gate = authorize({ userId: session.userId, action: "alerts:update" });
+  const gate = await authorizeUser({
+    userId: session.userId,
+    token: session.token,
+    action: "alerts:update",
+  });
   if (!gate.allowed) {
     return { ok: false, message: "Not allowed." };
   }
@@ -238,7 +255,11 @@ export async function deleteAlertRuleAction(id: string): Promise<ActionResult<{ 
   if (!session.ok) {
     return session;
   }
-  const gate = authorize({ userId: session.userId, action: "alerts:delete" });
+  const gate = await authorizeUser({
+    userId: session.userId,
+    token: session.token,
+    action: "alerts:delete",
+  });
   if (!gate.allowed) {
     return { ok: false, message: "Not allowed." };
   }
@@ -266,7 +287,11 @@ export async function markAlertReadAction(
   if (!session.ok) {
     return session;
   }
-  const gate = authorize({ userId: session.userId, action: "alerts:update" });
+  const gate = await authorizeUser({
+    userId: session.userId,
+    token: session.token,
+    action: "alerts:update",
+  });
   if (!gate.allowed) {
     return { ok: false, message: "Not allowed." };
   }
@@ -297,7 +322,11 @@ export async function evaluateAlertsOnTicksAction(
   if (!session.ok) {
     return session;
   }
-  const gate = authorize({ userId: session.userId, action: "alerts:evaluate" });
+  const gate = await authorizeUser({
+    userId: session.userId,
+    token: session.token,
+    action: "alerts:evaluate",
+  });
   if (!gate.allowed) {
     return { ok: false, message: "Not allowed." };
   }
