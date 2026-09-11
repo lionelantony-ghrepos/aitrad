@@ -232,12 +232,12 @@ Seeded via `scripts/seed-all.ts` (see doc 06): 150 instruments, 5y daily + 5d 1m
 ### PBI-023 RAG
 | ID | Criterion / Test | Pri | Status |
 |---|---|---|---|
-| AC-023-01 | New news items embedded within one worker cycle; backfill completes | P0 | ☑ |
-| AC-023-02 | 5 canned semantic queries rank fixture item first | P0 | ☑ |
-| AC-023-03 | Gateway failure → retry then dead-letter, no crash | P1 | ☑ |
-| TC-023-01 | Insert item → embedding row appears (AC-023-01) | P0 | ☑ |
-| TC-023-02 | Canned-query ranking suite (AC-023-02) | P0 | ☑ |
-| TC-023-03 | Simulate gateway 500 → dead-letter row (AC-023-03) | P1 | ☑ |
+| AC-023-01 | New news items embedded within one worker cycle; backfill completes | P0 | ☐ |
+| AC-023-02 | 5 canned semantic queries rank fixture item first | P0 | ☐ |
+| AC-023-03 | Gateway failure → retry then dead-letter, no crash | P1 | ☐ |
+| TC-023-01 | Insert item → embedding row appears (AC-023-01) | P0 | ☐ |
+| TC-023-02 | Canned-query ranking suite (AC-023-02) | P0 | ☐ |
+| TC-023-03 | Simulate gateway 500 → dead-letter row (AC-023-03) | P1 | ☐ |
 
 ### PBI-024 Entitlements
 | ID | Criterion / Test | Pri | Status |
