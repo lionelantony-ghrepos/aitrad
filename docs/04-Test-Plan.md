@@ -242,10 +242,10 @@ Seeded via `scripts/seed-all.ts` (see doc 06): 150 instruments, 5y daily + 5d 1m
 ### PBI-024 Entitlements
 | ID | Criterion / Test | Pri | Status |
 |---|---|---|---|
-| AC-024-01 | Role × endpoint matrix enforced per DT-ENT-01, deny-by-default | P0 | ☑ |
-| AC-024-02 | Publishing an entitlement change alters behavior without deploy | P0 | ☑ |
-| TC-024-01 | Matrix test: 3 roles × protected endpoints (AC-024-01) | P0 | ☑ |
-| TC-024-02 | Flip compliance→rules:write in draft, publish, retest (AC-024-02) | P0 | ☑ |
+| AC-024-01 | Role × endpoint matrix enforced per DT-ENT-01, deny-by-default | P0 | ☐ |
+| AC-024-02 | Publishing an entitlement change alters behavior without deploy | P0 | ☐ |
+| TC-024-01 | Matrix test: 3 roles × protected endpoints (AC-024-01) | P0 | ☐ |
+| TC-024-02 | Flip compliance→rules:write in draft, publish, retest (AC-024-02) | P0 | ☐ |
 
 ### PBI-025 Copilot chat
 | ID | Criterion / Test | Pri | Status |
