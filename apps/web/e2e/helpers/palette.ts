@@ -31,20 +31,18 @@ export async function dispatchPaletteHotkey(page: Page): Promise<void> {
 export async function openCommandPalette(page: Page): Promise<void> {
   await waitForWorkspaceReady(page);
   const palette = page.getByTestId("command-palette");
-  if (await palette.isVisible()) {
-    return;
-  }
-  await dispatchPaletteHotkey(page);
-  try {
-    await expect(palette).toBeVisible({ timeout: 2_000 });
-  } catch {
+  if (!(await palette.isVisible())) {
+    // Click the command-bar control. Native Control+K is a Chromium shortcut
+    // and locator.press/fill on the cmdk input can hang on actionability.
     await page.getByTestId("open-palette").click();
-    await expect(palette).toBeVisible();
   }
+  await expect(palette).toBeVisible();
+  await expect(page.getByTestId("palette-input")).toBeVisible();
 }
 
 export async function runPalette(page: Page, command: string): Promise<void> {
   await openCommandPalette(page);
-  await page.getByTestId("palette-input").fill(command);
-  await page.getByTestId("palette-input").press("Enter");
+  const input = page.getByTestId("palette-input");
+  await input.fill(command, { force: true });
+  await input.press("Enter");
 }
