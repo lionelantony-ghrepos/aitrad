@@ -16,7 +16,8 @@ const cliTwinSql = readFileSync(
 
 describe("PBI-022 migration 0014 alerts", () => {
   it("lists 0014 after 0013", () => {
-    expect(LOCAL_MIGRATION_IDS[LOCAL_MIGRATION_IDS.length - 1]).toBe("0014");
+    expect(LOCAL_MIGRATION_IDS).toContain("0014");
+    expect(LOCAL_MIGRATION_IDS[LOCAL_MIGRATION_IDS.length - 1]).toBe("0015");
     expect(LOCAL_MIGRATION_IDS).toContain("0013");
   });
 

@@ -94,6 +94,12 @@ Exported `*Schema` bindings discovered by static scan. Full OpenAPI from Zod is 
 - fundamentals.ts: fundamentalsValuationSchema
 - index.ts: publicInsforgeEnvSchema
 - index.ts: seedEnvSchema
+- news-search.ts: embedWorkerRequestSchema
+- news-search.ts: embedWorkerResponseSchema
+- news-search.ts: newsEmbedDeadLetterSchema
+- news-search.ts: newsSearchHitSchema
+- news-search.ts: newsSearchRequestSchema
+- news-search.ts: newsSearchResponseSchema
 - news.ts: newsEventTypeSchema
 - news.ts: newsHeadlineTemplateSchema
 - news.ts: newsItemInsertSchema

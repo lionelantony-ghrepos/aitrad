@@ -21,7 +21,12 @@ describe("listNewsAction security", () => {
   });
 
   it("does not put a service-role client in the News panel", () => {
+    expect(newsAction).toContain("searchNewsAction");
+    expect(newsAction).toContain('authorize({ userId: session.userId, action: "news:search" })');
     expect(newsPanel).toContain("listNewsAction");
+    expect(newsPanel).toContain("searchNewsAction");
+    expect(newsPanel).toContain("news-semantic-input");
+    expect(newsPanel).toContain("earnings beats in semis this week");
     expect(newsPanel).not.toContain("createAdminClient");
     expect(newsPanel).not.toContain("INSFORGE_API_KEY");
     expect(newsPanel).not.toContain("service_role");

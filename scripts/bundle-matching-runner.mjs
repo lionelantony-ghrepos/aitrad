@@ -7,6 +7,8 @@ const require = createRequire(
   path.join(root, "node_modules/.pnpm/esbuild@0.28.2/node_modules/esbuild/package.json"),
 );
 const { build } = require("esbuild");
+const { rewriteInsforgeWorkerBundle } = await import("./insforge-worker-rewrite.mjs");
+const fs = await import("node:fs");
 
 await build({
   absWorkingDir: root,
@@ -19,3 +21,6 @@ await build({
   banner: { js: "// bundled from insforge/functions/matching-runner-src.ts\n" },
   external: ["npm:@insforge/sdk"],
 });
+
+const outfile = path.join(root, "insforge/functions/matching-runner.ts");
+fs.writeFileSync(outfile, rewriteInsforgeWorkerBundle(fs.readFileSync(outfile, "utf8")));

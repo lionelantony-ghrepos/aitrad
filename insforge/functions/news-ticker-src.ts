@@ -169,18 +169,20 @@ export default async function (req: Request): Promise<Response> {
     if (published.error) {
       return json(500, { error: published.error.message });
     }
+    const origin = (
+      Deno.env.get("INSFORGE_INTERNAL_URL") ??
+      Deno.env.get("INSFORGE_BASE_URL") ??
+      ""
+    ).replace(/\/+$/, "");
     try {
-      const alertRes = await fetch(
-        `${(Deno.env.get("INSFORGE_INTERNAL_URL") ?? Deno.env.get("INSFORGE_BASE_URL") ?? "").replace(/\/+$/, "")}/functions/alert-runner`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${expected}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ news: plan.items }),
+      const alertRes = await fetch(`${origin}/functions/alert-runner`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${expected}`,
+          "Content-Type": "application/json",
         },
-      );
+        body: JSON.stringify({ news: plan.items }),
+      });
       if (!alertRes.ok) {
         alerting = { ok: false, error: `ALERT_RUNNER_${alertRes.status}` };
       }
@@ -189,6 +191,21 @@ export default async function (req: Request): Promise<Response> {
         ok: false,
         error: error instanceof Error ? error.message : "ALERT_RUNNER_UNAVAILABLE",
       };
+    }
+    try {
+      await fetch(`${origin}/functions/embed-worker`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${expected}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          op: "cycle",
+          news_ids: plan.items.map((item) => item.id),
+        }),
+      });
+    } catch {
+      // Embed failures are retried / dead-lettered by embed-worker; do not fail the ticker.
     }
   }
 

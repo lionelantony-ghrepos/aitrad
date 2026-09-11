@@ -45,7 +45,8 @@ PBI-023 embeds **news** (and later filings) for the copilot. It must **not** ing
 | 020 | [PBI-020](as-built/PBI-020.md) | fundamentals 0012, DES panel, seed hydrate from fundamentals.json; AC/TC ticks owned by QA |
 | 021 | [PBI-021](as-built/PBI-021.md) | screens 0013, SCR panel, parameterized `/functions/screener`, daily RSI in analytics-service; AC/TC ticks owned by QA |
 | 022 | [PBI-022](as-built/PBI-022.md) | alert_rules/alerts 0014, alert-runner, Watchlist Alerts tab, status-bar bell/toast; DT-ALRT-01 |
-| 023–031 | _pending_ | Copy [`_template-as-built.md`](_template-as-built.md) when the PBI ships |
+| 023 | [PBI-023](as-built/PBI-023.md) | news_embeddings 0015, embed-worker, search-news hybrid RAG, News panel semantic search; not docs/kb |
+| 024–031 | _pending_ | Copy [`_template-as-built.md`](_template-as-built.md) when the PBI ships |
 
 ## Architecture decision records
 
@@ -53,6 +54,7 @@ PBI-023 embeds **news** (and later filings) for the copilot. It must **not** ing
 | --- | --- |
 | [0001](adr/0001-docs-as-code-knowledge-layer.md) | Docs-as-code knowledge layer beside the spec |
 | [0002](adr/0002-decision-condition-negate.md) | Optional `negate` on decision-table condition cells |
+| [0003](adr/0003-openrouter-embeddings-gateway.md) | Embeddings via OpenRouter key provisioned by InsForge Model Gateway |
 
 Add further ADRs from [`_template-adr.md`](_template-adr.md) only for durable choices not already in doc 02.
 

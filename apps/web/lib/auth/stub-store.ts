@@ -4,6 +4,7 @@ import {
   type RulesAdminMemory,
 } from "@meridian/rules-engine";
 import { tryReserveBuyingPower, releaseBuyingPower } from "@meridian/paper-engine";
+import { hashEmbed, hybridRank, newsEmbedText, ragFixtureItems } from "@meridian/rag";
 import { evaluateScreener } from "@meridian/schemas";
 import type {
   Account,
@@ -27,6 +28,8 @@ import type {
   ScreenerFact,
   ScreenerRunRequest,
   ScreenerRunResponse,
+  NewsSearchHit,
+  NewsSearchRequest,
   AlertRule,
   AlertInstance,
 } from "@meridian/schemas";
@@ -426,6 +429,7 @@ export const STUB_QUOTES: QuotesLatest[] = [
 const STUB_NEWS_TS = "2026-09-09T15:00:00.000Z";
 
 export const STUB_NEWS: NewsItem[] = [
+  ...ragFixtureItems(),
   {
     id: "55555555-5555-4555-8555-555555555551",
     ts: "2026-09-09T16:00:00.000Z",
@@ -474,6 +478,20 @@ export const STUB_NEWS: NewsItem[] = [
 
 export function stubListNews(): NewsItem[] {
   return [...STUB_NEWS].sort((a, b) => (a.ts < b.ts ? 1 : a.ts > b.ts ? -1 : 0));
+}
+
+export function stubSearchNews(request: NewsSearchRequest): NewsSearchHit[] {
+  const corpus = STUB_NEWS.map((item) => ({
+    item,
+    vector: hashEmbed(newsEmbedText(item)),
+  }));
+  return hybridRank({
+    queryVector: hashEmbed(request.query),
+    corpus,
+    symbols: request.symbols,
+    since: request.since,
+    limit: request.limit,
+  });
 }
 
 export function stubSearchInstruments(query: string): Instrument[] {

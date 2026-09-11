@@ -129,3 +129,14 @@ UUID primary keys, `created_at` / `updated_at` (except `audit_log` and `executio
 | realtime channel `alerts:*` | `publish_alert_event(user_id, payload)` event `alert`; EXECUTE `project_admin` only |
 
 PRD named this migration 0009; 0009 is paper-matching.
+
+## 0015 contents
+
+| Table / object             | Access                                                                             |
+| -------------------------- | ---------------------------------------------------------------------------------- |
+| `news_embeddings`          | pgvector `vector(1536)`; writes `project_admin` / `embed-worker`; no client SELECT |
+| `news_embed_dead_letters`  | Gateway retry / dead-letter; `project_admin` only                                  |
+| `list_pending_news_embeds` | Pending `news_items` without an embedding; EXECUTE `project_admin`                 |
+| `search_news_hybrid`       | Cosine rank + symbol/date filters; EXECUTE `authenticated` + `project_admin`       |
+
+PRD named this migration 0010; 0010 is advanced-orders. Do not create `docs_embeddings`.

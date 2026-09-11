@@ -36,4 +36,21 @@ test.describe("PBI-019 news panel", () => {
     await expect(page.getByTestId("news-drawer")).toBeVisible();
     await expect(page.getByTestId("news-drawer-body")).not.toHaveText("");
   });
+
+  test("TC-023-02 semantic search ranks the semis earnings fixture first @TC-023-02", async ({
+    page,
+  }) => {
+    await page.goto("/workspace");
+    await runPalette(page, "NEWS TSLA");
+    await expect(page.getByTestId("panel-news")).toBeVisible();
+    await page.getByTestId("news-all-markets").check();
+    await page.getByTestId("news-semantic-input").fill("earnings beats in semis this week");
+    await page.getByTestId("news-semantic-submit").click();
+    await expect(page.getByTestId("news-search-results")).toBeVisible();
+    const first = page.locator("[data-testid^='news-search-row-']").first();
+    await expect(first).toHaveAttribute(
+      "data-testid",
+      "news-search-row-02302302-aaaa-4aaa-8aaa-000000000001",
+    );
+  });
 });

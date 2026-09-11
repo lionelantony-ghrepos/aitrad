@@ -16,6 +16,7 @@
     "@meridian/indicators": "workspace:*",
     "@meridian/mock-data": "workspace:*",
     "@meridian/paper-engine": "workspace:*",
+    "@meridian/rag": "workspace:*",
     "@meridian/rules-engine": "workspace:^",
     "@meridian/schemas": "workspace:*",
     "@radix-ui/react-slot": "^1.1.2",

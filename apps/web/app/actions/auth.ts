@@ -164,17 +164,22 @@ export async function completeWizardAction(formData: FormData): Promise<AuthActi
     redirect("/workspace");
   }
 
+  let mine;
+  try {
+    const provisioned = await provisionAccountForUser({ userId: user.id, accessToken: token });
+    mine = provisioned.profile;
+  } catch {
+    return { ok: false, message: "Profile is not provisioned." };
+  }
+  if (!mine) {
+    return { ok: false, message: "Profile is not provisioned." };
+  }
   const env = readPublicInsforgeEnv();
   const records = createRecordsClient({
     baseUrl: env.baseUrl,
     getAccessToken: () => token,
   });
   const profiles = createProfilesRepository(records);
-  const rows = await profiles.listMine();
-  const mine = rows[0];
-  if (!mine) {
-    return { ok: false, message: "Profile is not provisioned." };
-  }
   await profiles.updateById(mine.id, patch);
   await createAuditLogRepository(records).insert({
     user_id: user.id,

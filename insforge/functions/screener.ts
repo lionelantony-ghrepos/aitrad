@@ -1,3 +1,14 @@
+// rewritten for InsForge worker (new Function — no import/export)
+function createAdminClient(config) {
+  const raw = config ?? {};
+  const apiKey = typeof raw.apiKey === "string" ? raw.apiKey.trim() : "";
+  if (!apiKey) {
+    throw new Error("Missing apiKey. Pass apiKey to createAdminClient().");
+  }
+  const clientConfig = { ...raw };
+  delete clientConfig.apiKey;
+  return createClient({ ...clientConfig, accessToken: apiKey, isServerMode: true });
+}
 // bundled from insforge/functions/screener-src.ts
 
 var __defProp = Object.defineProperty;
@@ -6,8 +17,6 @@ var __export = (target, all) => {
 };
 
 // insforge/functions/screener-src.ts
-import { createAdminClient, createClient } from "npm:@insforge/sdk";
-
 // node_modules/.pnpm/zod@3.25.76/node_modules/zod/v3/external.js
 var external_exports = {};
 __export(external_exports, {
@@ -4911,6 +4920,39 @@ var newsRealtimeBatchSchema = external_exports.object({
   items: external_exports.array(newsItemSchema).min(1),
 });
 
+// packages/schemas/src/news-search.ts
+var NEWS_SEARCH_LIMIT = 50;
+var newsSearchRequestSchema = external_exports.object({
+  query: external_exports.string().trim().min(1).max(500),
+  symbols: external_exports.array(external_exports.string().min(1)).max(32).optional(),
+  since: timestamptzSchema.optional(),
+  limit: external_exports.number().int().min(1).max(NEWS_SEARCH_LIMIT).optional(),
+});
+var newsSearchHitSchema = newsItemSchema.extend({
+  score: numericSchema,
+});
+var newsSearchResponseSchema = external_exports.object({
+  items: external_exports.array(newsSearchHitSchema),
+});
+var embedWorkerRequestSchema = external_exports.object({
+  op: external_exports.enum(["cycle", "backfill"]).default("cycle"),
+  news_ids: external_exports.array(uuidSchema).max(200).optional(),
+});
+var embedWorkerResponseSchema = external_exports.object({
+  scanned: external_exports.number().int().nonnegative(),
+  embedded: external_exports.number().int().nonnegative(),
+  retried: external_exports.number().int().nonnegative(),
+  dead_lettered: external_exports.number().int().nonnegative(),
+});
+var newsEmbedDeadLetterSchema = external_exports.object({
+  news_id: uuidSchema,
+  attempts: external_exports.number().int().nonnegative(),
+  last_error: external_exports.string().min(1),
+  last_http_status: external_exports.number().int().nullable(),
+  dead: external_exports.boolean(),
+  updated_at: timestamptzSchema,
+});
+
 // packages/schemas/src/fundamentals.ts
 var analystRatingsSchema = external_exports.object({
   buy: external_exports.coerce.number().int().nonnegative(),
@@ -5329,7 +5371,7 @@ function compileWhere(criteria, params) {
   return groupSql.join(` ${sqlCombinator(criteria.combinator)} `);
 }
 var FORBIDDEN_SQL =
-  /\m(drop|insert|update|delete|alter|truncate|create|grant|revoke|copy|execute|into|union|pg_sleep|set|reset)\M/i;
+  /\b(drop|insert|update|delete|alter|truncate|create|grant|revoke|copy|execute|into|union|pg_sleep|set|reset)\b/i;
 function assertSafeScreenerSql(sql) {
   if (!sql.startsWith("SELECT ")) {
     throw new Error("SCREENER_SQL_REJECTED");
@@ -5359,6 +5401,111 @@ function compileScreenerSql(input) {
   assertSafeScreenerSql(sql);
   return { sql, params, paramsJson: params };
 }
+
+// packages/schemas/src/alerts.ts
+var alertKindSchema = external_exports.enum([
+  "price_cross_above",
+  "price_cross_below",
+  "pct_chg",
+  "volume",
+  "rsi",
+  "news_sentiment",
+]);
+var alertThrottleStateSchema = external_exports
+  .object({
+    last_fired_at: timestamptzSchema.nullable().optional(),
+    fires_today: external_exports.coerce.number().int().nonnegative().optional(),
+    fires_on_date: external_exports.string().nullable().optional(),
+    last_eval_last: numericSchema.nullable().optional(),
+    paused: external_exports.boolean().optional(),
+  })
+  .strict();
+var alertRuleConditionSchema = decisionRowSchema;
+var alertRuleSchema = external_exports.object({
+  id: uuidSchema,
+  user_id: uuidSchema,
+  instrument_id: uuidSchema.nullable(),
+  name: external_exports.string().min(1),
+  kind: alertKindSchema,
+  condition: alertRuleConditionSchema,
+  active: external_exports.boolean(),
+  throttle_state: alertThrottleStateSchema,
+  created_at: timestamptzSchema,
+  updated_at: timestamptzSchema,
+});
+var alertRuleInsertSchema = external_exports
+  .object({
+    user_id: uuidSchema,
+    instrument_id: uuidSchema.nullable().optional(),
+    name: external_exports.string().min(1),
+    kind: alertKindSchema,
+    condition: alertRuleConditionSchema,
+    active: external_exports.boolean().optional(),
+    throttle_state: alertThrottleStateSchema.optional(),
+  })
+  .strict();
+var alertRulePatchSchema = external_exports
+  .object({
+    name: external_exports.string().min(1).optional(),
+    active: external_exports.boolean().optional(),
+    throttle_state: alertThrottleStateSchema.optional(),
+    condition: alertRuleConditionSchema.optional(),
+  })
+  .strict();
+var alertCreateRequestSchema = external_exports
+  .object({
+    instrument_id: uuidSchema.nullable().optional(),
+    symbol: external_exports.string().min(1).optional(),
+    kind: alertKindSchema,
+    threshold: numericSchema.optional(),
+    name: external_exports.string().min(1).optional(),
+  })
+  .strict();
+var alertInstanceSchema = external_exports.object({
+  id: uuidSchema,
+  user_id: uuidSchema,
+  alert_rule_id: uuidSchema,
+  instrument_id: uuidSchema.nullable(),
+  fired_at: timestamptzSchema,
+  message: external_exports.string().min(1),
+  payload: external_exports.record(external_exports.unknown()),
+  read: external_exports.boolean(),
+  created_at: timestamptzSchema,
+});
+var alertInstanceInsertSchema = external_exports
+  .object({
+    user_id: uuidSchema,
+    alert_rule_id: uuidSchema,
+    instrument_id: uuidSchema.nullable().optional(),
+    fired_at: timestamptzSchema.optional(),
+    message: external_exports.string().min(1),
+    payload: external_exports.record(external_exports.unknown()).optional(),
+    read: external_exports.boolean().optional(),
+  })
+  .strict();
+var alertRealtimeEventSchema = external_exports.object({
+  kind: external_exports.literal("alert"),
+  alert: alertInstanceSchema,
+});
+var alertRunnerRequestSchema = external_exports
+  .object({
+    ticks: external_exports.array(quoteTickSchema).optional(),
+    news: external_exports.array(newsItemSchema).optional(),
+    clock: timestamptzSchema.optional(),
+  })
+  .strict();
+var alertRunnerResponseSchema = external_exports.object({
+  evaluated: external_exports.number().int().nonnegative(),
+  fired: external_exports.number().int().nonnegative(),
+  suppressed: external_exports.number().int().nonnegative(),
+});
+var evaluateAlertsRequestSchema = external_exports
+  .object({
+    ticks: external_exports.array(quoteTickSchema).optional(),
+    news: external_exports.array(newsItemSchema).optional(),
+  })
+  .strict();
+var alertConditionListSchema = external_exports.array(decisionConditionSchema).min(1);
 
 // packages/schemas/src/index.ts
 var publicInsforgeEnvSchema = external_exports.object({
@@ -5515,4 +5662,5 @@ async function screener_src_default(req) {
     }),
   );
 }
-export { screener_src_default as default };
+
+module.exports = screener_src_default;
