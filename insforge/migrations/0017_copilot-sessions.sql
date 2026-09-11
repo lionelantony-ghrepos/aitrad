@@ -71,7 +71,13 @@ CREATE POLICY copilot_messages_select_own ON public.copilot_messages
 DROP POLICY IF EXISTS copilot_messages_insert_own ON public.copilot_messages;
 CREATE POLICY copilot_messages_insert_own ON public.copilot_messages
   FOR INSERT TO authenticated
-  WITH CHECK (user_id = (SELECT auth.uid()));
+  WITH CHECK (
+    user_id = (SELECT auth.uid())
+    AND EXISTS (
+      SELECT 1 FROM public.copilot_sessions s
+      WHERE s.id = session_id AND s.user_id = (SELECT auth.uid())
+    )
+  );
 
 REVOKE ALL ON TABLE public.copilot_messages FROM anon, authenticated;
 GRANT SELECT, INSERT ON TABLE public.copilot_messages TO authenticated;

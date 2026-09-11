@@ -25,6 +25,11 @@ describe("copilot-orchestrator source contracts", () => {
     expect(src).toContain("get_portfolio");
     expect(src).toContain("explain_rule_decision");
     expect(src).toContain("ai_action_policy");
+    expect(src).toContain("requireOwnedCopilotSession");
+    expect(src).toContain("SESSION_NOT_FOUND");
+    expect(src).toContain('.eq("user_id", userId)');
+    expect(src).toMatch(/async appendMessage[\s\S]*requireOwnedCopilotSession/);
+    expect(src).toMatch(/async loadHistory[\s\S]*requireOwnedCopilotSession/);
     expect(src).not.toContain("docs/kb");
   });
 

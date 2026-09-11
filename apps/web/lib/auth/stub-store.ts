@@ -997,6 +997,15 @@ export function stubCreateCopilotSession(userId: string, title: string): Copilot
   return row;
 }
 
+function requireOwnedStubCopilotSession(userId: string, sessionId: string): void {
+  const owned = getStubState().copilotSessions.some(
+    (item) => item.id === sessionId && item.user_id === userId,
+  );
+  if (!owned) {
+    throw new Error("SESSION_NOT_FOUND");
+  }
+}
+
 export function stubAppendCopilotMessage(input: {
   userId: string;
   sessionId: string;
@@ -1004,6 +1013,7 @@ export function stubAppendCopilotMessage(input: {
   content: string;
   tool_calls: CopilotToolCallRecord[];
 }): CopilotMessage {
+  requireOwnedStubCopilotSession(input.userId, input.sessionId);
   const ts = nowIso();
   const row: CopilotMessage = {
     id: crypto.randomUUID(),
@@ -1016,7 +1026,9 @@ export function stubAppendCopilotMessage(input: {
   };
   const state = getStubState();
   state.copilotMessages.push(row);
-  const session = state.copilotSessions.find((item) => item.id === input.sessionId);
+  const session = state.copilotSessions.find(
+    (item) => item.id === input.sessionId && item.user_id === input.userId,
+  );
   if (session) {
     session.updated_at = ts;
   }
@@ -1024,6 +1036,7 @@ export function stubAppendCopilotMessage(input: {
 }
 
 export function stubListCopilotMessages(userId: string, sessionId: string): CopilotMessage[] {
+  requireOwnedStubCopilotSession(userId, sessionId);
   return getStubState()
     .copilotMessages.filter((row) => row.user_id === userId && row.session_id === sessionId)
     .sort((a, b) => (a.created_at < b.created_at ? -1 : 1));
