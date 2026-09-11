@@ -63,6 +63,9 @@ importers:
       '@insforge/sdk':
         specifier: ^1.5.2
         version: 1.5.2
+      '@meridian/copilot':
+        specifier: workspace:*
+        version: link:../../packages/copilot
       '@meridian/indicators':
         specifier: workspace:*
         version: link:../../packages/indicators
@@ -168,6 +171,28 @@ importers:
         version: 4.3.3
       typescript:
         specifier: ^5
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.7
+        version: 3.2.7(@types/node@20.19.43)(jiti@2.7.0)(lightningcss@1.32.0)(msw@2.15.0(@types/node@20.19.43)(typescript@5.9.3))(tsx@4.23.13)(yaml@2.9.0)
+
+  packages/copilot:
+    dependencies:
+      '@meridian/rules-engine':
+        specifier: workspace:*
+        version: link:../rules-engine
+      '@meridian/schemas':
+        specifier: workspace:*
+        version: link:../schemas
+      zod:
+        specifier: ^3.24.2
+        version: 3.25.76
+    devDependencies:
+      eslint:
+        specifier: ^9.21.0
+        version: 9.39.5(jiti@2.7.0)
+      typescript:
+        specifier: ^5.8.2
         version: 5.9.3
       vitest:
         specifier: ^3.0.7

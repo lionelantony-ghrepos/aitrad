@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@insforge/sdk": "^1.5.2",
+    "@meridian/copilot": "workspace:*",
     "@meridian/indicators": "workspace:*",
     "@meridian/mock-data": "workspace:*",
     "@meridian/paper-engine": "workspace:*",

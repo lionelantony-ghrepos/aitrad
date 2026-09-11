@@ -250,12 +250,12 @@ Seeded via `scripts/seed-all.ts` (see doc 06): 150 instruments, 5y daily + 5d 1m
 ### PBI-025 Copilot chat
 | ID | Criterion / Test | Pri | Status |
 |---|---|---|---|
-| AC-025-01 | Streams answers; tool calls visible; citations link to sources | P0 | ☐ |
-| AC-025-02 | Price/portfolio claims come from tool results (fake-LLM harness asserts no un-tooled figures) | P0 | ☐ |
-| AC-025-03 | Rate limit per DT-AI-01 enforced; sessions persist | P1 | ☐ |
-| TC-025-01 | E2E: "summarize AAPL news" → cited response (AC-025-01) | P0 | ☐ |
-| TC-025-02 | Fake-LLM transcript tests: loop terminates ≤8 calls, tool errors surfaced (AC-025-02) | P0 | ☐ |
-| TC-025-03 | Exceed rate limit → friendly refusal (AC-025-03) | P1 | ☐ |
+| AC-025-01 | Streams answers; tool calls visible; citations link to sources | P0 | ☑ |
+| AC-025-02 | Price/portfolio claims come from tool results (fake-LLM harness asserts no un-tooled figures) | P0 | ☑ |
+| AC-025-03 | Rate limit per DT-AI-01 enforced; sessions persist | P1 | ☑ |
+| TC-025-01 | E2E: "summarize AAPL news" → cited response (AC-025-01) | P0 | ☑ |
+| TC-025-02 | Fake-LLM transcript tests: loop terminates ≤8 calls, tool errors surfaced (AC-025-02) | P0 | ☑ |
+| TC-025-03 | Exceed rate limit → friendly refusal (AC-025-03) | P1 | ☑ |
 
 ### PBI-026 Copilot actions
 | ID | Criterion / Test | Pri | Status |

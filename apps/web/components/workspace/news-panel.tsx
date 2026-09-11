@@ -12,6 +12,7 @@ import {
   createWindowNewsTransport,
   mergeNewsItems,
 } from "@/lib/news/transport";
+import { useNewsFocus } from "@/lib/news/focus";
 import { useSymbolContext } from "@/lib/symbol-context";
 import { useWorkspaceRuntime } from "@/lib/workspace-runtime";
 
@@ -36,6 +37,7 @@ export function NewsPanel(props: IDockviewPanelProps): React.JSX.Element {
   const [allMarkets, setAllMarkets] = useState(false);
   const [eventTypes, setEventTypes] = useState<NewsEventType[]>([]);
   const [selected, setSelected] = useState<NewsItem | null>(null);
+  const focusedNews = useNewsFocus((s) => s.item);
   const [query, setQuery] = useState("");
   const [searchHits, setSearchHits] = useState<NewsSearchHit[] | null>(null);
   const [searchStatus, setSearchStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
@@ -58,6 +60,12 @@ export function NewsPanel(props: IDockviewPanelProps): React.JSX.Element {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (focusedNews) {
+      setSelected(focusedNews);
+    }
+  }, [focusedNews]);
 
   useEffect(() => {
     return transport.subscribe((batch) => {

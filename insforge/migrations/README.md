@@ -140,3 +140,13 @@ PRD named this migration 0009; 0009 is paper-matching.
 | `search_news_hybrid`       | Cosine rank + symbol/date filters; EXECUTE `authenticated` + `project_admin`       |
 
 PRD named this migration 0010; 0010 is advanced-orders. Do not create `docs_embeddings`.
+
+## 0017 contents
+
+| Table / object                      | Access                                                        |
+| ----------------------------------- | ------------------------------------------------------------- |
+| `copilot_sessions`                  | Owner RLS CRUD (`user_id = auth.uid()`); `project_admin` full |
+| `copilot_messages`                  | Owner RLS SELECT + INSERT; writes also via orchestrator admin |
+| `count_copilot_user_messages_today` | EXECUTE `project_admin` (rate-limit fact for DT-AI-01)        |
+
+PRD named this migration 0012; 0012 is fundamentals.
