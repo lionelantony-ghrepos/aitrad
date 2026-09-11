@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { eqFilter, gteFilter, inFilter, recordsUrl, recordTables, RECORDS_PATH } from "./rest";
+import {
+  containsArrayFilter,
+  eqFilter,
+  gteFilter,
+  inFilter,
+  recordsUrl,
+  recordTables,
+  RECORDS_PATH,
+} from "./rest";
 
 describe("InsForge records URL construction", () => {
   it("builds the documented records path", () => {
@@ -35,5 +43,9 @@ describe("InsForge records URL construction", () => {
 
   it("encodes gte filters for market_bars lookback", () => {
     expect(gteFilter("2026-01-01T00:00:00.000Z")).toBe("gte.2026-01-01T00:00:00.000Z");
+  });
+
+  it("builds PostgREST contains filters for news symbols", () => {
+    expect(containsArrayFilter(["TSLA"])).toBe("cs.{TSLA}");
   });
 });

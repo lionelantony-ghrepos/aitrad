@@ -10,7 +10,7 @@ This GitHub repo is named `aitrad`; the product name in all specs is **Meridian*
 
 ## Status
 
-**Documentation and seed JSON are in place. Application code is not scaffolded yet.** Next work is PBI-001 (monorepo + CI) through PBI-031, in order, from [docs/03](docs/03-PRD-PBIs-and-Cursor-Prompts.md).
+**Monorepo and PBIs through the merged 001–012 tree are in this repo.** Continue PBI-013 → PBI-031 in order from [docs/03](docs/03-PRD-PBIs-and-Cursor-Prompts.md). Local InsForge is Docker on Linux/WSL2; see Prerequisites.
 
 | Artifact                                 | Location                                                                               |
 | ---------------------------------------- | -------------------------------------------------------------------------------------- |
@@ -88,13 +88,15 @@ InsForge is isolated behind a repository layer so migrations stay portable SQL i
 
 Policy is **not** encoded as magic numbers in UI or services. If a limit, fee, or entitlement changes, it belongs in a decision table (doc 05) and is evaluated through `rules-service`.
 
-## Prerequisites (when implementation starts)
+## Prerequisites
 
-1. Node.js + **pnpm**; Cursor with Agent mode.
-2. InsForge project (e.g. `meridian-dev`) and the **InsForge MCP** connected in Cursor.
+1. **Linux or WSL2** with Node.js 20+ and **pnpm**; Cursor with Agent mode. Native Windows (outside WSL) is not a supported local backend path.
+2. **InsForge backend** — either:
+   - **Local Docker** (this workspace): Docker Engine + Compose 2.24.4+, then from the repo root `npx -y @insforge/cli local start`. That provisions Postgres / PostgREST / InsForge / Deno on loopback (default app port `7130`) and writes `.env.local`. Details in [docs/07](docs/07-Agent-Build-Guide.md) §1.
+   - **Hosted:** an InsForge Cloud project plus the **InsForge MCP** in Cursor.
 3. One PBI per chat session; prepend the [PRD preamble](docs/03-PRD-PBIs-and-Cursor-Prompts.md); commit `feat(PBI-00X): …`.
 
-Until PBI-001 lands there is no `pnpm install` / `pnpm dev` at the repo root.
+`.insforge/` (including the Docker checkout and keys) and `.env.local` are gitignored. Never commit them. Copy names only from `.env.example` / `apps/web/.env.example`.
 
 ## Demo users (after seed)
 

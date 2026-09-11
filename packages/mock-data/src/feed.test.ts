@@ -463,4 +463,31 @@ describe("TC-006-01 / TC-006-03 feed controls", () => {
     expect(result.quotes[0]?.last).toBe(200);
     expect(result.consumeForcePrice).toBe(true);
   });
+
+  it("applies a one-bar news sentiment drift nudge from DT-SIM-01", () => {
+    const flags = parseFeedControls([
+      { key: "feed.paused", value: false },
+      { key: "feed.speed", value: 1 },
+    ]);
+    const base = runFeedInvocation({
+      nowIso: openTs,
+      intervalSeconds: 1,
+      calendar,
+      flags,
+      instruments: [instrument],
+      quotes: [quote],
+      minuteBars: [],
+    });
+    const shocked = runFeedInvocation({
+      nowIso: openTs,
+      intervalSeconds: 1,
+      calendar,
+      flags,
+      instruments: [instrument],
+      quotes: [quote],
+      minuteBars: [],
+      newsShocks: [{ symbol: "AAPL", sentiment: 1 }],
+    });
+    expect(shocked.quotes[0]?.last).not.toBe(base.quotes[0]?.last);
+  });
 });

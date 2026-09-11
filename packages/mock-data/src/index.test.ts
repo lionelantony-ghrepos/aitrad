@@ -129,6 +129,9 @@ describe("TC-005-01 count gate", () => {
       quotes: 150,
       minDailyPerInstrument: 1255,
       minMinutePerInstrument: 1950,
+      newsItems: 500,
+      newsEmbeddings: 500,
+      fundamentals: 150,
     });
     expect(result.ok).toBe(true);
   });

@@ -2,6 +2,7 @@
 
 # dependencies
 node_modules
+.pnpm-store
 /.pnp
 .pnp.js
 
@@ -42,7 +43,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 
-# InsForge & AI agent skills
+# InsForge local Docker (checkout, keys, local.json) & AI agent skills
 .insforge
 .agent
 .agents

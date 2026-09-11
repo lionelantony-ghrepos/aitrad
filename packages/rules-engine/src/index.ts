@@ -66,6 +66,21 @@ export {
   requiredActionForAdminOp,
   simulateDraftAgainstAudits,
 } from "./rules-admin";
+export { compileAlertTemplate, defaultAlertName } from "./alert-templates";
+export {
+  alertConditionMatched,
+  alertingDecisionFromOutcome,
+  buildAlertMarketFacts,
+  buildAlertThrottleFacts,
+  minutesSince,
+  runAlertCycle,
+  utcDay,
+  type AlertFireDraft,
+  type AlertMarketContext,
+  type AlertRuleSnapshot,
+  type AlertRuleUpdate,
+  type EvaluateAlerting,
+} from "./alert-cycle";
 export {
   createRulesAdminMemory,
   memoryAppendAudit,

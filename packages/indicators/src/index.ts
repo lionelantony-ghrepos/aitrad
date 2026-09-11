@@ -120,3 +120,18 @@ export function rsi(closes: readonly number[], period: number): Array<number | n
   }
   return out;
 }
+
+export function latestDefined<T>(values: readonly (T | null | undefined)[]): T | null {
+  for (let i = values.length - 1; i >= 0; i -= 1) {
+    const value = values[i];
+    if (value != null) {
+      return value;
+    }
+  }
+  return null;
+}
+
+/** Last Wilder RSI(14) on a daily close series (screener / analytics precompute). */
+export function rsi14Last(closes: readonly number[]): number | null {
+  return latestDefined(rsi(closes, 14));
+}

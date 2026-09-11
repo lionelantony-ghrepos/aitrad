@@ -16,14 +16,25 @@
     "docs:kb-check": "node scripts/check-kb.mjs",
     "docs:generate": "node scripts/generate-kb-reference.mjs",
     "docs:kb-test": "node --test scripts/check-kb.test.mjs",
-    "seed": "tsx scripts/seed.ts",
-    "seed:rules": "tsx scripts/seed-rules.ts",
+    "seed": "node --import tsx --env-file=.env scripts/seed.ts",
+    "seed:rules": "node --import tsx --env-file=.env scripts/seed-rules.ts",
     "functions:bundle:rules-service": "node scripts/bundle-rules-service.mjs",
+    "functions:bundle:order-service": "node scripts/bundle-order-service.mjs",
+    "functions:bundle:matching-runner": "node scripts/bundle-matching-runner.mjs",
+    "functions:bundle:market-tick": "node scripts/bundle-market-tick.mjs",
+    "functions:bundle:news-ticker": "node scripts/bundle-news-ticker.mjs",
+    "functions:bundle:analytics-service": "node scripts/bundle-analytics-service.mjs",
+    "functions:bundle:screener": "node scripts/bundle-screener.mjs",
+    "functions:bundle:alert-runner": "node scripts/bundle-alert-runner.mjs",
+    "functions:bundle:embed-worker": "node scripts/bundle-embed-worker.mjs",
+    "functions:bundle:search-news": "node scripts/bundle-search-news.mjs",
+    "functions:bundle:provision-account": "node scripts/bundle-provision-account.mjs",
     "prepare": "husky"
   },
   "dependencies": {
     "@insforge/sdk": "^1.5.2",
     "@meridian/mock-data": "workspace:*",
+    "@meridian/rag": "workspace:*",
     "@meridian/schemas": "workspace:*"
   },
   "devDependencies": {

@@ -14,8 +14,10 @@ const migrationSql = readFileSync(
 
 describe("PBI-012 migration 0006 persona lock", () => {
   it("lists 0006 after 0005", () => {
-    expect(LOCAL_MIGRATION_IDS[LOCAL_MIGRATION_IDS.length - 1]).toBe("0006");
-    expect(LOCAL_MIGRATION_IDS).toContain("0005");
+    expect(LOCAL_MIGRATION_IDS).toContain("0006");
+    expect(LOCAL_MIGRATION_IDS.indexOf("0006")).toBeGreaterThan(
+      LOCAL_MIGRATION_IDS.indexOf("0005"),
+    );
   });
 
   it("blocks authenticated persona writes via trigger, insert check, and column grants", () => {

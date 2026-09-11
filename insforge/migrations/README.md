@@ -2,7 +2,7 @@
 
 Schema changes live here as **numbered, append-only SQL files** (`0001_…`, `0002_…`). Never edit a file that has already been applied to a shared environment; add a new number instead.
 
-InsForge MCP is the preferred apply path when it is connected in Cursor. This workspace currently uses the **InsForge CLI** against the linked project (`npx -y @insforge/cli`).
+InsForge MCP is the apply path for a **hosted** project when it is connected in Cursor. This workspace’s default backend is **local Docker InsForge**. After `npx -y @insforge/cli local start`, the same CLI targets this directory’s stack (`npx -y @insforge/cli db …`) with no cloud login.
 
 ## How apply works
 
@@ -17,6 +17,8 @@ The CLI only applies files in the repo-root `migrations/` directory, named:
 ```text
 <YYYYMMDDHHMMSS>_<lowercase-hyphen-name>.sql
 ```
+
+That folder must contain **only** those `.sql` files. A `README.md` (or any other name) makes `db migrations up` fail with `Invalid migration filename`.
 
 Numbered sources in this folder are the product record. When applying with the CLI, keep a timestamped copy under `migrations/` with the **same SQL body** as the matching `000N_*.sql` file.
 
@@ -73,4 +75,68 @@ npx -y @insforge/cli db migrations up --all
 | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | `profiles.persona` | authenticated cannot INSERT/UPDATE the column; trigger + insert `WITH CHECK (persona IS NULL)`; `project_admin` / service still set role |
 
-UUID primary keys, `created_at` / `updated_at` (except `audit_log`, which is insert-only), and `updated_at` triggers on mutable tables.
+## 0007 contents
+
+| Table    | Access                                                                                                                                                                  |
+| -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `orders` | RLS owner SELECT (`user_id = auth.uid()`); authenticated SELECT-only. Writes via `order-service` (`project_admin` / API key). FSM reserve / executions land in PBI-014. |
+
+## 0008 contents
+
+| Table / object                                  | Access                                                                                                   |
+| ----------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `accounts.cash_balance` / `reserved_cash`       | Client SELECT own row; UPDATE locked (column grants + trigger). Writes via `project_admin` / reserve RPC |
+| `orders.reserved_amount`                        | Owner SELECT; writes via order-service admin                                                             |
+| `executions`                                    | Append-only; authenticated SELECT-only. Writes via `project_admin`                                       |
+| `positions`, `portfolio_snapshots`              | Authenticated SELECT-only. Writes via `project_admin`                                                    |
+| `reserve_buying_power` / `release_buying_power` | `SELECT … FOR UPDATE`; EXECUTE `project_admin` only; `p_user_id` must match `rec.user_id`                |
+| realtime channel `orders:*`                     | `publish_order_event(user_id, payload)` event `order`; EXECUTE `project_admin` only                      |
+
+## 0009 contents
+
+| Table / object                 | Access                                                                                                                                          |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `orders.stop_triggered`        | Owner SELECT; writes via matching-runner admin                                                                                                  |
+| `apply_paper_fill`             | Locks order + account + position; asserts filled_qty and cash_delta; inserts execution; upserts position; adjusts cash. EXECUTE `project_admin` |
+| realtime channel `positions:*` | `publish_position_event(user_id, payload)` event `position`; EXECUTE `project_admin` only                                                       |
+
+## 0010 contents
+
+See the 0010 file (advanced orders). Trailing / group columns; writes via matching-runner / order-service.
+
+## 0011 contents
+
+| Table / object          | Access                                                                                                                        |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `news_items`            | RLS SELECT for `anon` + `authenticated` (app still JWT-gates `listNewsAction`); writes `project_admin` / `news-ticker` / seed |
+| realtime channel `news` | `publish_news_batch(payload jsonb)` event `news_batch`; EXECUTE `project_admin` only                                          |
+| `news.sim_elapsed_sec`  | Global feature flag cursor for simulated 5-minute bursts                                                                      |
+
+## 0012 contents
+
+| Table / object | Access                                                                                                                                                                                                                   |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `fundamentals` | RLS SELECT for `anon` + `authenticated` (app JWT-gates `getDesProfileAction`); writes `project_admin` / seed. PK `instrument_id`. Nested jsonb `metrics` groups: valuation, income, margins, dividends, ranges, analyst. |
+
+UUID primary keys, `created_at` / `updated_at` (except `audit_log` and `executions`, which are insert-only), and `updated_at` triggers on mutable tables.
+
+## 0014 contents
+
+| Table / object              | Access                                                                              |
+| --------------------------- | ----------------------------------------------------------------------------------- |
+| `alert_rules`               | Owner RLS CRUD (`user_id = auth.uid()`); `project_admin` full                       |
+| `alerts`                    | Owner SELECT + UPDATE (read flag); INSERT via `alert-runner` (`project_admin`)      |
+| realtime channel `alerts:*` | `publish_alert_event(user_id, payload)` event `alert`; EXECUTE `project_admin` only |
+
+PRD named this migration 0009; 0009 is paper-matching.
+
+## 0015 contents
+
+| Table / object             | Access                                                                             |
+| -------------------------- | ---------------------------------------------------------------------------------- |
+| `news_embeddings`          | pgvector `vector(1536)`; writes `project_admin` / `embed-worker`; no client SELECT |
+| `news_embed_dead_letters`  | Gateway retry / dead-letter; `project_admin` only                                  |
+| `list_pending_news_embeds` | Pending `news_items` without an embedding; EXECUTE `project_admin`                 |
+| `search_news_hybrid`       | Cosine rank + symbol/date filters; EXECUTE `authenticated` + `project_admin`       |
+
+PRD named this migration 0010; 0010 is advanced-orders. Do not create `docs_embeddings`.
