@@ -44,7 +44,8 @@ describe("search-news source", () => {
     expect(searchNewsServiceUrl("https://app.insforge.app/")).toBe(
       "https://app.insforge.app/functions/search-news",
     );
-    expect(searchSrc).toContain('authorize({ userId, action: "news:search" })');
+    expect(searchSrc).toContain('action: "news:search"');
+    expect(searchSrc).toContain("authorizeEdgeUser");
     expect(searchSrc).toContain('rpc("search_news_hybrid"');
     expect(searchSrc).toContain("SEARCH_UNAVAILABLE");
     expect(searchSrc).toContain('action: "news:search"');

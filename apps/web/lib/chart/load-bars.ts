@@ -1,4 +1,4 @@
-import { authorize } from "@meridian/rules-engine";
+import { authorizeUser } from "@/lib/auth/authorize-user";
 import {
   chartBarsQuerySchema,
   chartBarsResponseSchema,
@@ -27,7 +27,11 @@ export async function loadChartBars(input: {
   if (!parsed.success) {
     return { ok: false, status: 400, message: "Invalid chart query." };
   }
-  const gate = authorize({ userId: input.userId, action: "chart:bars" });
+  const gate = await authorizeUser({
+    userId: input.userId,
+    action: "chart:bars",
+    token: input.token,
+  });
   if (!gate.allowed) {
     return { ok: false, status: 401, message: "You must be signed in." };
   }

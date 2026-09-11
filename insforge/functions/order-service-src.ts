@@ -33,7 +33,8 @@ import {
   seedTrailingOnCreate,
 } from "../../packages/paper-engine/src/index.ts";
 import type { OrderLegRole } from "../../packages/schemas/src/index.ts";
-import { authorize, resolveRulesServiceApiKey } from "../../packages/rules-engine/src/index.ts";
+import { resolveRulesServiceApiKey } from "../../packages/rules-engine/src/index.ts";
+import { authorizeEdgeUser } from "./_shared/entitlements.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -457,7 +458,11 @@ export default async function (req: Request): Promise<Response> {
 
   const action =
     op === "preview" ? "trade:preview" : op === "create" ? "trade:create" : "trade:cancel";
-  const gate = authorize({ userId, action });
+  const adminForAuth = requireAdminWriter(baseUrl);
+  if (!adminForAuth) {
+    return json(500, { error: "SERVICE_KEY_UNAVAILABLE" });
+  }
+  const gate = await authorizeEdgeUser({ db: adminForAuth.database, userId, action });
   if (!gate.allowed) {
     return json(403, { error: gate.reason ?? "DENIED" });
   }

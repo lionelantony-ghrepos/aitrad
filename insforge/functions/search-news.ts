@@ -5384,6 +5384,36 @@ var evaluateAlertsRequestSchema = external_exports
   .strict();
 var alertConditionListSchema = external_exports.array(decisionConditionSchema).min(1);
 
+// packages/schemas/src/admin-users.ts
+var userRoleSchema = rulesAdminRoleSchema;
+var adminUsersOpSchema = external_exports.enum(["list", "assign"]);
+var adminUserRowSchema = external_exports.object({
+  user_id: uuidSchema,
+  email: external_exports.string().email().nullable().optional(),
+  display_name: external_exports.string().nullable().optional(),
+  role: userRoleSchema,
+});
+var adminUsersListRequestSchema = external_exports.object({
+  op: external_exports.literal("list"),
+});
+var adminUsersAssignRequestSchema = external_exports.object({
+  op: external_exports.literal("assign"),
+  user_id: uuidSchema,
+  role: userRoleSchema,
+});
+var adminUsersRequestSchema = external_exports.discriminatedUnion("op", [
+  adminUsersListRequestSchema,
+  adminUsersAssignRequestSchema,
+]);
+var adminUsersListResponseSchema = external_exports.object({
+  users: external_exports.array(adminUserRowSchema),
+});
+var adminUsersAssignResponseSchema = external_exports.object({
+  ok: external_exports.literal(true),
+  user_id: uuidSchema,
+  role: userRoleSchema,
+});
+
 // packages/schemas/src/index.ts
 var publicInsforgeEnvSchema = external_exports.object({
   NEXT_PUBLIC_INSFORGE_URL: external_exports.string().url(),
@@ -5394,24 +5424,873 @@ var seedEnvSchema = external_exports.object({
   INSFORGE_API_KEY: external_exports.string().min(1),
 });
 
+// packages/rules-engine/src/evaluate.ts
+function evaluate(table, context, clock) {
+  const parsed = decisionTableSchema.parse(table);
+  return evaluateParsed(parsed, context, clock);
+}
+function evaluateParsed(table, context, clock) {
+  const trace = [];
+  const matched = [];
+  for (const row of table.rows) {
+    const effective = isEffective(row, clock);
+    const cells = row.conditions.map((condition) => ({
+      input: condition.input,
+      op: condition.op,
+      passed: evaluateCondition(condition, context),
+    }));
+    const conditionsPass = cells.every((cell) => cell.passed);
+    const rowMatched = effective && conditionsPass;
+    const outputs = interpolateOutputs(row.outputs, context);
+    trace.push({
+      rowId: row.id,
+      priority: row.priority,
+      effective,
+      cells,
+      matched: rowMatched,
+      outputs,
+    });
+    if (rowMatched) {
+      matched.push({ row, outputs });
+    }
+  }
+  matched.sort((a, b) => a.row.priority - b.row.priority || a.row.id.localeCompare(b.row.id));
+  const matchedRows = matched.map((item) => item.row);
+  const defaultOutputs = interpolateOutputs(table.default_outputs, context);
+  const outcome = applyHitPolicy(
+    table.hit_policy,
+    matched.map((item) => item.outputs),
+    defaultOutputs,
+  );
+  return { outcome, matchedRows, trace };
+}
+function applyHitPolicy(policy, matchedOutputs, defaultOutputs) {
+  if (matchedOutputs.length === 0) {
+    return policy === "COLLECT" ? [defaultOutputs] : defaultOutputs;
+  }
+  if (policy === "FIRST") {
+    return matchedOutputs[0] ?? defaultOutputs;
+  }
+  if (policy === "ALL") {
+    return Object.assign({}, ...matchedOutputs);
+  }
+  return matchedOutputs;
+}
+function isEffective(row, clock) {
+  const clockMs = clock.getTime();
+  if (row.effective_from != null && row.effective_from !== "") {
+    if (clockMs < Date.parse(row.effective_from)) {
+      return false;
+    }
+  }
+  if (row.effective_to != null && row.effective_to !== "") {
+    if (clockMs >= Date.parse(row.effective_to)) {
+      return false;
+    }
+  }
+  return true;
+}
+function evaluateCondition(condition, context) {
+  const left = context[condition.input];
+  const passed = matchOperator(condition.op, left, condition.value);
+  return condition.negate === true ? !passed : passed;
+}
+function matchOperator(op, left, right) {
+  switch (op) {
+    case "any":
+      return true;
+    case "is_null":
+      return left === null || left === void 0;
+    case "eq":
+      return Object.is(left, right);
+    case "neq":
+      return !Object.is(left, right);
+    case "lt":
+      return relational(left, right, (ord) => ord < 0);
+    case "lte":
+      return relational(left, right, (ord) => ord <= 0);
+    case "gt":
+      return relational(left, right, (ord) => ord > 0);
+    case "gte":
+      return relational(left, right, (ord) => ord >= 0);
+    case "in":
+      return Array.isArray(right) && right.some((item) => Object.is(left, item));
+    case "not_in":
+      return Array.isArray(right) && !right.some((item) => Object.is(left, item));
+    case "between":
+      return inBetween(left, right);
+    case "regex":
+      return matchRegex(left, right);
+  }
+}
+function relational(left, right, pred) {
+  const ord = compareOrd(left, right);
+  if (ord === null) {
+    return false;
+  }
+  return pred(ord);
+}
+function compareOrd(left, right) {
+  if (typeof left === "number" && typeof right === "number") {
+    if (!Number.isFinite(left) || !Number.isFinite(right)) {
+      return null;
+    }
+    if (left === right) {
+      return 0;
+    }
+    return left < right ? -1 : 1;
+  }
+  if (typeof left === "string" && typeof right === "string") {
+    if (left === right) {
+      return 0;
+    }
+    return left < right ? -1 : 1;
+  }
+  return null;
+}
+function inBetween(left, right) {
+  if (!Array.isArray(right) || right.length !== 2) {
+    return false;
+  }
+  const lo = right[0];
+  const hi = right[1];
+  const geLo = relational(left, lo, (ord) => ord >= 0);
+  const leHi = relational(left, hi, (ord) => ord <= 0);
+  return geLo && leHi;
+}
+function matchRegex(left, right) {
+  if (typeof right !== "string") {
+    return false;
+  }
+  try {
+    return new RegExp(right).test(String(left));
+  } catch {
+    return false;
+  }
+}
+function interpolateOutputs(outputs, context) {
+  const next = {};
+  for (const [key, value] of Object.entries(outputs)) {
+    next[key] = typeof value === "string" ? interpolateMessage(value, context) : value;
+  }
+  return next;
+}
+function interpolateMessage(message, context) {
+  return message.replace(/\$\{([A-Za-z_][A-Za-z0-9_]*)\}/g, (_full, field) => {
+    const value = context[field];
+    if (value === void 0 || value === null) {
+      return "";
+    }
+    return String(value);
+  });
+}
+
 // packages/rules-engine/src/authorize.ts
-function authorize(input) {
+function decisionFromOutcome(outcome) {
+  if (!outcome || typeof outcome !== "object" || !("decision" in outcome)) {
+    return "deny";
+  }
+  const decision = outcome.decision;
+  if (decision === "allow" || decision === "deny" || decision === "require_approval") {
+    return decision;
+  }
+  return "deny";
+}
+function authorizeResultFromOutcome(outcome) {
+  const decision = decisionFromOutcome(outcome);
+  return {
+    allowed: decision === "allow",
+    decision,
+    reason: decision === "allow" ? void 0 : "FORBIDDEN",
+  };
+}
+function authorizeFromTable(input) {
   if (!input.userId) {
-    return { allowed: false, reason: "UNAUTHENTICATED" };
+    return { allowed: false, decision: "deny", reason: "UNAUTHENTICATED" };
   }
   if (input.action.length === 0) {
-    return { allowed: false, reason: "ACTION_REQUIRED" };
+    return { allowed: false, decision: "deny", reason: "ACTION_REQUIRED" };
   }
-  return { allowed: true };
+  const role = input.role && input.role.length > 0 ? input.role : "unknown";
+  const result = evaluate(
+    input.table,
+    { role, action: input.action },
+    input.clock ?? /* @__PURE__ */ new Date(),
+  );
+  return authorizeResultFromOutcome(result.outcome);
+}
+async function authorize(input) {
+  if (!input.userId) {
+    return { allowed: false, decision: "deny", reason: "UNAUTHENTICATED" };
+  }
+  if (input.action.length === 0) {
+    return { allowed: false, decision: "deny", reason: "ACTION_REQUIRED" };
+  }
+  if (input.ports) {
+    const role = (await input.ports.loadRole(input.userId)) ?? "unknown";
+    const evaluated = await input.ports.evaluateEntitlements({ role, action: input.action });
+    return authorizeResultFromOutcome(evaluated.outcome);
+  }
+  if (input.table) {
+    return authorizeFromTable({
+      userId: input.userId,
+      action: input.action,
+      role: input.role,
+      table: input.table,
+      clock: input.clock,
+    });
+  }
+  return { allowed: false, decision: "deny", reason: "FORBIDDEN" };
+}
+
+// packages/rules-engine/src/doc05-fixtures.ts
+var dtRisk01 = {
+  id: "DT-RISK-01",
+  hit_policy: "FIRST",
+  default_outputs: { decision: "allow" },
+  rows: [
+    {
+      id: "1",
+      priority: 1,
+      conditions: [{ input: "exceeds_buying_power", op: "eq", value: true }],
+      outputs: { decision: "reject", reason_code: "RISK_BUYING_POWER" },
+    },
+    {
+      id: "2",
+      priority: 2,
+      conditions: [{ input: "order_notional", op: "gt", value: 5e4 }],
+      outputs: { decision: "reject", reason_code: "RISK_MAX_NOTIONAL" },
+    },
+    {
+      id: "3",
+      priority: 3,
+      conditions: [
+        { input: "position_pct_post", op: "gt", value: 25 },
+        { input: "experience_level", op: "eq", value: "novice" },
+      ],
+      outputs: { decision: "reject", reason_code: "RISK_CONCENTRATION_NOVICE" },
+    },
+    {
+      id: "4",
+      priority: 4,
+      conditions: [{ input: "position_pct_post", op: "gt", value: 40 }],
+      outputs: { decision: "reject", reason_code: "RISK_CONCENTRATION" },
+    },
+    {
+      id: "5",
+      priority: 5,
+      conditions: [{ input: "orders_today", op: "gte", value: 100 }],
+      outputs: { decision: "reject", reason_code: "RISK_DAILY_ORDER_CAP" },
+    },
+    {
+      id: "6",
+      priority: 6,
+      conditions: [
+        { input: "instrument_beta_class", op: "eq", value: "high" },
+        { input: "experience_level", op: "eq", value: "novice" },
+        { input: "order_notional", op: "gt", value: 5e3 },
+      ],
+      outputs: { decision: "require_ack", reason_code: "RISK_HIGH_BETA_ACK" },
+    },
+    {
+      id: "7",
+      priority: 7,
+      conditions: [
+        { input: "side", op: "eq", value: "sell" },
+        { input: "exceeds_position_qty", op: "eq", value: true },
+      ],
+      outputs: { decision: "reject", reason_code: "RISK_NO_SHORTING" },
+    },
+  ],
+};
+var dtVal01 = {
+  id: "DT-VAL-01",
+  hit_policy: "COLLECT",
+  default_outputs: { decision: "valid" },
+  rows: [
+    {
+      id: "1",
+      priority: 1,
+      conditions: [{ input: "qty", op: "lte", value: 0 }],
+      outputs: {
+        decision: "reject",
+        reason_code: "VAL_QTY_POSITIVE",
+        message: "Quantity must be positive.",
+      },
+    },
+    {
+      id: "2",
+      priority: 2,
+      conditions: [{ input: "qty", op: "gt", value: 1e4 }],
+      outputs: { decision: "reject", reason_code: "VAL_QTY_MAX" },
+    },
+    {
+      id: "3",
+      priority: 3,
+      conditions: [
+        { input: "order_type", op: "in", value: ["limit", "stop_limit"] },
+        { input: "limit_price", op: "is_null" },
+      ],
+      outputs: { decision: "reject", reason_code: "VAL_LIMIT_REQUIRED" },
+    },
+    {
+      id: "4",
+      priority: 4,
+      conditions: [
+        { input: "order_type", op: "in", value: ["stop", "stop_limit"] },
+        { input: "stop_price", op: "is_null" },
+      ],
+      outputs: { decision: "reject", reason_code: "VAL_STOP_REQUIRED" },
+    },
+    {
+      id: "5",
+      priority: 5,
+      conditions: [
+        { input: "order_type", op: "eq", value: "limit" },
+        { input: "side", op: "eq", value: "buy" },
+        { input: "limit_far_above_last", op: "eq", value: true },
+      ],
+      outputs: { decision: "warn", reason_code: "VAL_LIMIT_FAR" },
+    },
+    {
+      id: "6",
+      priority: 6,
+      conditions: [{ input: "instrument_status", op: "neq", value: "active" }],
+      outputs: { decision: "reject", reason_code: "VAL_HALTED" },
+    },
+    {
+      id: "7",
+      priority: 7,
+      conditions: [
+        { input: "tif", op: "eq", value: "IOC" },
+        { input: "order_type", op: "neq", value: "limit" },
+      ],
+      outputs: { decision: "reject", reason_code: "VAL_IOC_LIMIT_ONLY" },
+    },
+    {
+      id: "8",
+      priority: 8,
+      conditions: [{ input: "price_not_on_tick", op: "eq", value: true }],
+      outputs: { decision: "reject", reason_code: "VAL_TICK_SIZE" },
+    },
+  ],
+};
+var dtFee01 = {
+  id: "DT-FEE-01",
+  hit_policy: "ALL",
+  default_outputs: { commission_usd: 0 },
+  rows: [
+    {
+      id: "1",
+      priority: 1,
+      conditions: [{ input: "side", op: "any" }],
+      outputs: { commission_usd: 0 },
+    },
+    {
+      id: "2",
+      priority: 2,
+      conditions: [{ input: "side", op: "eq", value: "sell" }],
+      outputs: {
+        sec_fee: "notional_x_sec_rate",
+        taf: "qty_x_taf_capped",
+        sec_rate: 278e-7,
+        taf_per_share: 166e-6,
+        taf_cap: 8.3,
+      },
+    },
+    {
+      id: "3",
+      priority: 3,
+      conditions: [{ input: "account_tier", op: "eq", value: "pro" }],
+      outputs: { data_fee_monthly: 0 },
+    },
+  ],
+};
+
+// packages/rules-engine/src/baseline-tables.ts
+var dtVal02 = {
+  id: "DT-VAL-02",
+  hit_policy: "COLLECT",
+  default_outputs: { decision: "valid" },
+  rows: [
+    {
+      id: "1",
+      priority: 1,
+      conditions: [
+        { input: "group_type", op: "eq", value: "bracket" },
+        { input: "side", op: "eq", value: "buy" },
+        { input: "tp_not_above_entry", op: "eq", value: true },
+      ],
+      outputs: { decision: "reject", reason_code: "VAL_TP_ABOVE_ENTRY" },
+    },
+    {
+      id: "2",
+      priority: 2,
+      conditions: [
+        { input: "group_type", op: "eq", value: "bracket" },
+        { input: "side", op: "eq", value: "buy" },
+        { input: "sl_not_below_entry", op: "eq", value: true },
+      ],
+      outputs: { decision: "reject", reason_code: "VAL_SL_BELOW_ENTRY" },
+    },
+    {
+      id: "3",
+      priority: 3,
+      conditions: [
+        { input: "group_type", op: "eq", value: "bracket" },
+        { input: "legs_count", op: "neq", value: 3 },
+      ],
+      outputs: { decision: "reject", reason_code: "VAL_BRACKET_LEGS" },
+    },
+    {
+      id: "4",
+      priority: 4,
+      conditions: [
+        { input: "trail_type", op: "eq", value: "percent" },
+        { input: "trail_value", op: "between", value: [0.1, 50], negate: true },
+      ],
+      outputs: { decision: "reject", reason_code: "VAL_TRAIL_RANGE" },
+    },
+    {
+      id: "5",
+      priority: 5,
+      conditions: [
+        { input: "group_type", op: "eq", value: "oco" },
+        { input: "legs_count", op: "neq", value: 2 },
+      ],
+      outputs: { decision: "reject", reason_code: "VAL_OCO_LEGS" },
+    },
+  ],
+};
+var dtHrs01 = {
+  id: "DT-HRS-01",
+  hit_policy: "FIRST",
+  default_outputs: { decision: "allow" },
+  rows: [
+    {
+      id: "1",
+      priority: 1,
+      conditions: [
+        { input: "session", op: "eq", value: "closed" },
+        { input: "order_type", op: "eq", value: "market" },
+      ],
+      outputs: { decision: "reject", reason_code: "HRS_MARKET_CLOSED" },
+    },
+    {
+      id: "2",
+      priority: 2,
+      conditions: [
+        { input: "session", op: "eq", value: "closed" },
+        { input: "order_type", op: "in", value: ["limit", "stop", "stop_limit"] },
+      ],
+      outputs: { decision: "queue_for_open" },
+    },
+    {
+      id: "3",
+      priority: 3,
+      conditions: [{ input: "session", op: "eq", value: "open" }],
+      outputs: { decision: "allow" },
+    },
+  ],
+};
+var dtExec01 = {
+  id: "DT-EXEC-01",
+  hit_policy: "FIRST",
+  default_outputs: { slippage_bps: 5, liquidity_cap_pct_adv: 5 },
+  rows: [
+    {
+      id: "4a",
+      priority: 1,
+      conditions: [
+        { input: "avg_volume_band", op: "eq", value: "high" },
+        { input: "large_notional", op: "eq", value: true },
+      ],
+      outputs: { slippage_bps: 7, liquidity_cap_pct_adv: 10 },
+    },
+    {
+      id: "4b",
+      priority: 2,
+      conditions: [
+        { input: "avg_volume_band", op: "eq", value: "medium" },
+        { input: "large_notional", op: "eq", value: true },
+      ],
+      outputs: { slippage_bps: 10, liquidity_cap_pct_adv: 5 },
+    },
+    {
+      id: "4c",
+      priority: 3,
+      conditions: [
+        { input: "avg_volume_band", op: "eq", value: "low" },
+        { input: "large_notional", op: "eq", value: true },
+      ],
+      outputs: { slippage_bps: 20, liquidity_cap_pct_adv: 2 },
+    },
+    {
+      id: "1",
+      priority: 4,
+      conditions: [{ input: "avg_volume_band", op: "eq", value: "high" }],
+      outputs: { slippage_bps: 2, liquidity_cap_pct_adv: 10 },
+    },
+    {
+      id: "2",
+      priority: 5,
+      conditions: [{ input: "avg_volume_band", op: "eq", value: "medium" }],
+      outputs: { slippage_bps: 5, liquidity_cap_pct_adv: 5 },
+    },
+    {
+      id: "3",
+      priority: 6,
+      conditions: [{ input: "avg_volume_band", op: "eq", value: "low" }],
+      outputs: { slippage_bps: 15, liquidity_cap_pct_adv: 2 },
+    },
+  ],
+};
+var dtAi01 = {
+  id: "DT-AI-01",
+  hit_policy: "FIRST",
+  default_outputs: { decision: "require_approval" },
+  rows: [
+    {
+      id: "4",
+      priority: 1,
+      conditions: [
+        { input: "tool", op: "eq", value: "propose_order" },
+        { input: "order_notional", op: "gt", value: 5e4 },
+      ],
+      outputs: { decision: "block" },
+    },
+    {
+      id: "5",
+      priority: 2,
+      conditions: [{ input: "messages_today", op: "gt", value: 200 }],
+      outputs: { decision: "rate_limit", message: "Daily copilot quota reached." },
+    },
+    {
+      id: "1",
+      priority: 3,
+      conditions: [{ input: "tool", op: "eq", value: "propose_order" }],
+      outputs: { decision: "require_approval" },
+    },
+    {
+      id: "2",
+      priority: 4,
+      conditions: [
+        { input: "tool", op: "in", value: ["create_watchlist_item", "create_alert"] },
+        { input: "actions_today", op: "lt", value: 50 },
+      ],
+      outputs: { decision: "auto_approve" },
+    },
+    {
+      id: "3",
+      priority: 5,
+      conditions: [
+        { input: "tool", op: "eq", value: "create_monitor" },
+        { input: "monitors_count", op: "lt", value: 20 },
+      ],
+      outputs: { decision: "auto_approve" },
+    },
+  ],
+};
+var dtEnt01 = {
+  id: "DT-ENT-01",
+  hit_policy: "FIRST",
+  default_outputs: { decision: "deny" },
+  rows: [
+    {
+      id: "2",
+      priority: 1,
+      conditions: [{ input: "role", op: "eq", value: "admin" }],
+      outputs: { decision: "allow" },
+    },
+    {
+      id: "1",
+      priority: 2,
+      conditions: [
+        { input: "role", op: "eq", value: "trader" },
+        {
+          input: "action",
+          op: "regex",
+          value: "^(trade|watchlist|alerts|copilot|screener):|^portfolio:read$",
+        },
+      ],
+      outputs: { decision: "allow" },
+    },
+    {
+      id: "3",
+      priority: 3,
+      conditions: [
+        { input: "role", op: "eq", value: "compliance" },
+        { input: "action", op: "in", value: ["audit:read", "rules:read"] },
+      ],
+      outputs: { decision: "allow" },
+    },
+    {
+      id: "4",
+      priority: 4,
+      conditions: [
+        { input: "role", op: "eq", value: "compliance" },
+        { input: "action", op: "regex", value: "^trade:" },
+      ],
+      outputs: { decision: "deny" },
+    },
+    {
+      id: "5",
+      priority: 5,
+      conditions: [
+        { input: "role", op: "eq", value: "trader" },
+        {
+          input: "action",
+          op: "in",
+          value: [
+            "rules:evaluate",
+            "provision-account",
+            "profile-wizard",
+            "news:search",
+            "chart:bars",
+          ],
+        },
+      ],
+      outputs: { decision: "allow" },
+    },
+  ],
+};
+var dtAlrt01 = {
+  id: "DT-ALRT-01",
+  hit_policy: "FIRST",
+  default_outputs: { decision: "deliver" },
+  rows: [
+    {
+      id: "1",
+      priority: 1,
+      conditions: [{ input: "same_rule_fired_within_min", op: "lt", value: 15 }],
+      outputs: { decision: "suppress" },
+    },
+    {
+      id: "2",
+      priority: 2,
+      conditions: [{ input: "rule_fires_today", op: "gte", value: 20 }],
+      outputs: { decision: "suppress_and_pause_rule" },
+    },
+    {
+      id: "3",
+      priority: 3,
+      conditions: [{ input: "user_alerts_today", op: "gte", value: 100 }],
+      outputs: { decision: "suppress" },
+    },
+  ],
+};
+var dtRisk02 = {
+  id: "DT-RISK-02",
+  hit_policy: "COLLECT",
+  default_outputs: { flags: [] },
+  rows: [
+    {
+      id: "1",
+      priority: 1,
+      conditions: [{ input: "max_position_pct", op: "gt", value: 25 }],
+      outputs: { flag: "CONCENTRATION_POSITION" },
+    },
+    {
+      id: "2",
+      priority: 2,
+      conditions: [{ input: "max_sector_pct", op: "gt", value: 40 }],
+      outputs: { flag: "CONCENTRATION_SECTOR" },
+    },
+    {
+      id: "3",
+      priority: 3,
+      conditions: [{ input: "portfolio_beta", op: "gt", value: 1.4 }],
+      outputs: { flag: "HIGH_BETA_TILT" },
+    },
+    {
+      id: "4",
+      priority: 4,
+      conditions: [{ input: "cash_pct", op: "gt", value: 30 }],
+      outputs: { flag: "CASH_DRAG" },
+    },
+    {
+      id: "5",
+      priority: 5,
+      conditions: [
+        { input: "positions_count", op: "lt", value: 3 },
+        { input: "equity", op: "gt", value: 1e4 },
+      ],
+      outputs: { flag: "LOW_DIVERSIFICATION" },
+    },
+  ],
+};
+var dtSuit01 = {
+  id: "DT-SUIT-01",
+  hit_policy: "FIRST",
+  default_outputs: { suitability_tier: "standard" },
+  rows: [
+    {
+      id: "1",
+      priority: 1,
+      conditions: [{ input: "experience_level", op: "eq", value: "novice" }],
+      outputs: { suitability_tier: "conservative" },
+    },
+    {
+      id: "2",
+      priority: 2,
+      conditions: [{ input: "experience_level", op: "eq", value: "intermediate" }],
+      outputs: { suitability_tier: "standard" },
+    },
+    {
+      id: "3",
+      priority: 3,
+      conditions: [{ input: "experience_level", op: "eq", value: "advanced" }],
+      outputs: { suitability_tier: "full" },
+    },
+  ],
+};
+var dtSim01 = {
+  id: "DT-SIM-01",
+  hit_policy: "ALL",
+  default_outputs: { regime: "normal" },
+  rows: [
+    {
+      id: "1",
+      priority: 1,
+      conditions: [{ input: "beta_class", op: "any" }],
+      outputs: { gap_event_prob_per_day: 0.02, gap_range_pct: [1, 6] },
+    },
+    {
+      id: "2",
+      priority: 2,
+      conditions: [{ input: "beta_class", op: "eq", value: "high" }],
+      outputs: { vol_multiplier: 1.8 },
+    },
+    {
+      id: "3",
+      priority: 3,
+      conditions: [{ input: "beta_class", op: "eq", value: "low" }],
+      outputs: { vol_multiplier: 0.6 },
+    },
+    {
+      id: "4",
+      priority: 4,
+      conditions: [{ input: "news_sentiment_shock", op: "eq", value: true }],
+      outputs: { drift_nudge_bps_per_sentiment: 30 },
+    },
+  ],
+};
+var TABLES = {
+  "DT-VAL-01": dtVal01,
+  "DT-VAL-02": dtVal02,
+  "DT-RISK-01": dtRisk01,
+  "DT-HRS-01": dtHrs01,
+  "DT-EXEC-01": dtExec01,
+  "DT-FEE-01": dtFee01,
+  "DT-AI-01": dtAi01,
+  "DT-ENT-01": dtEnt01,
+  "DT-ALRT-01": dtAlrt01,
+  "DT-RISK-02": dtRisk02,
+  "DT-SUIT-01": dtSuit01,
+  "DT-SIM-01": dtSim01,
+};
+function baselineTable(key) {
+  const table = TABLES[key];
+  if (!table) {
+    throw new Error(`UNKNOWN_BASELINE_TABLE:${key}`);
+  }
+  return table;
 }
 
 // packages/rules-engine/src/evaluate-domain.ts
+function assembleDecisionTable(input) {
+  return {
+    id: input.tableKey,
+    hit_policy: input.hit_policy,
+    default_outputs: input.default_outputs,
+    rows: input.rows.map((row) => ({
+      id: row.row_key,
+      priority: row.priority,
+      conditions: row.conditions,
+      outputs: row.outputs,
+      effective_from: row.effective_from ?? null,
+      effective_to: row.effective_to ?? null,
+    })),
+  };
+}
 function resolveRulesServiceApiKey(env) {
   const key = env.API_KEY ?? env.INSFORGE_API_KEY;
   if (typeof key !== "string" || key.length === 0) {
     return null;
   }
   return key;
+}
+
+// insforge/functions/_shared/entitlements.ts
+function asRows(data) {
+  return Array.isArray(data) ? data : [];
+}
+async function loadUserRole(db, userId) {
+  const { data, error } = await db.from("user_roles").select("role").eq("user_id", userId);
+  if (error) {
+    throw new Error(error.message);
+  }
+  const row = asRows(data)[0];
+  return row?.role ?? null;
+}
+async function loadPublishedEntitlementsTable(db) {
+  const { data: bindings, error: bindErr } = await db
+    .from("rule_bindings")
+    .select("domain,table_id")
+    .eq("domain", "entitlements");
+  if (bindErr) {
+    throw new Error(bindErr.message);
+  }
+  const tableIds = asRows(bindings).map((row) => row.table_id);
+  if (tableIds.length === 0) {
+    return null;
+  }
+  const wanted = new Set(tableIds);
+  const { data: tables, error: tableErr } = await db
+    .from("decision_tables")
+    .select("id,table_key,version,hit_policy,default_outputs,status")
+    .eq("status", "published");
+  if (tableErr) {
+    throw new Error(tableErr.message);
+  }
+  const published = asRows(tables).find((row) => wanted.has(row.id));
+  if (!published) {
+    return null;
+  }
+  const { data: rows, error: rowErr } = await db
+    .from("decision_rows")
+    .select("*")
+    .eq("table_id", published.id);
+  if (rowErr) {
+    throw new Error(rowErr.message);
+  }
+  return assembleDecisionTable({
+    tableKey: published.table_key,
+    hit_policy: published.hit_policy,
+    default_outputs: published.default_outputs,
+    rows: asRows(rows).map((row) => ({
+      row_key: row.row_key,
+      priority: row.priority,
+      conditions: decisionConditionSchema.array().parse(row.conditions),
+      outputs: decisionOutputsSchema.parse(row.outputs),
+      effective_from: row.effective_from,
+      effective_to: row.effective_to,
+    })),
+  });
+}
+async function authorizeEdgeUser(input) {
+  return authorize({
+    userId: input.userId,
+    action: input.action,
+    ports: {
+      loadRole: (id) => loadUserRole(input.db, id),
+      evaluateEntitlements: async (ctx) => {
+        const table =
+          (await loadPublishedEntitlementsTable(input.db)) ?? baselineTable("DT-ENT-01");
+        return evaluate(table, ctx, /* @__PURE__ */ new Date());
+      },
+    },
+  });
 }
 
 // packages/rag/src/gateway.ts
@@ -5535,7 +6414,7 @@ function json(status, body) {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }
-function asRows(data) {
+function asRows2(data) {
   return Array.isArray(data) ? data : [];
 }
 async function search_news_src_default(req) {
@@ -5567,16 +6446,19 @@ async function search_news_src_default(req) {
   const userClient = createClient({ baseUrl, accessToken: token });
   const { data: userData } = await userClient.auth.getCurrentUser();
   const userId = userData?.user?.id;
-  const gate = authorize({ userId, action: "news:search" });
-  if (!gate.allowed || !userId) {
-    return json(401, { error: gate.reason ?? "UNAUTHENTICATED" });
-  }
   const apiKey = resolveRulesServiceApiKey({
     API_KEY: Deno.env.get("API_KEY"),
     INSFORGE_API_KEY: Deno.env.get("INSFORGE_API_KEY"),
   });
   if (!apiKey) {
     return json(500, { error: "API_KEY_MISSING" });
+  }
+  const admin = createAdminClient({ baseUrl, apiKey });
+  const gate = await authorizeEdgeUser({ db: admin.database, userId, action: "news:search" });
+  if (!gate.allowed || !userId) {
+    return json(gate.reason === "UNAUTHENTICATED" || !userId ? 401 : 403, {
+      error: gate.reason ?? "UNAUTHENTICATED",
+    });
   }
   const mode = (Deno.env.get("MERIDIAN_EMBEDDING_MODE") ?? "").trim().toLowerCase();
   const openRouterKey = Deno.env.get("OPENROUTER_API_KEY");
@@ -5604,7 +6486,6 @@ async function search_news_src_default(req) {
     }
     queryVector = embedded.vector;
   }
-  const admin = createAdminClient({ baseUrl, apiKey });
   const limit = parsed.data.limit ?? 10;
   const rpc = await admin.database.rpc("search_news_hybrid", {
     query_embedding: formatVectorLiteral(queryVector),
@@ -5626,7 +6507,7 @@ async function search_news_src_default(req) {
   return json(
     200,
     newsSearchResponseSchema.parse({
-      items: asRows(rpc.data),
+      items: asRows2(rpc.data),
     }),
   );
 }

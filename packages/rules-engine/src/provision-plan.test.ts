@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { authorize } from "./authorize";
+import { authorizeFromTable } from "./authorize";
+import { baselineTable } from "./baseline-tables";
 import { paperAccountSeed } from "./paper-account-seed";
 import {
   executeProvision,
@@ -70,7 +71,13 @@ describe("executeProvision idempotency", () => {
 
     const ports = {
       userId: USER,
-      authorize: (userId: string) => authorize({ userId, action: "provision-account" }),
+      authorize: (userId: string) =>
+        authorizeFromTable({
+          userId,
+          action: "provision-account",
+          role: "trader",
+          table: baselineTable("DT-ENT-01"),
+        }),
       load: async () => ({ profile: storedProfile, account: storedAccount }),
       insertProfile: async () => {
         profileInserts += 1;
@@ -106,7 +113,13 @@ describe("executeProvision idempotency", () => {
 
     const result = await executeProvision({
       userId: USER,
-      authorize: (userId: string) => authorize({ userId, action: "provision-account" }),
+      authorize: (userId: string) =>
+        authorizeFromTable({
+          userId,
+          action: "provision-account",
+          role: "trader",
+          table: baselineTable("DT-ENT-01"),
+        }),
       load: async () => ({ profile: storedProfile, account: storedAccount }),
       insertProfile: async () => {
         profileInserts += 1;
@@ -130,7 +143,13 @@ describe("executeProvision idempotency", () => {
     await expect(
       executeProvision({
         userId: "",
-        authorize: (userId: string) => authorize({ userId, action: "provision-account" }),
+        authorize: (userId: string) =>
+          authorizeFromTable({
+            userId,
+            action: "provision-account",
+            role: "trader",
+            table: baselineTable("DT-ENT-01"),
+          }),
         load: async () => ({ profile: null, account: null }),
         insertProfile: async () => profile(),
         insertAccount: async () => account(),

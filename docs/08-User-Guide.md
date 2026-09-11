@@ -55,7 +55,7 @@ It can also **act**: "add NVDA to my watchlist", "alert me if AAPL drops below 2
 Meridian Copilot provides information and analysis, not personalized financial advice.
 
 ## 7. For administrators
-`/admin/rules`: entitlement-gated spreadsheet editor (draft, side-by-side diff, history/rollback, simulate against recent `rule_audit` contexts, searchable evaluation traces). Publish applies immediately with no deploy. Traders are denied. `/admin/users`: role management. `/admin/audit`: tamper-evident audit trail of every action (compliance role has read-only access). `/admin/health`: feed and service status.
+`/admin/rules`: entitlement-gated spreadsheet editor (draft, side-by-side diff, history/rollback, simulate against recent `rule_audit` contexts, searchable evaluation traces). Publish applies immediately with no deploy. Traders are denied. `/admin/users`: admin-only directory — list accounts and assign **trader**, **admin**, or **compliance**. Role changes apply on the next request (the entitlement table is evaluated live; publishing a table change does not require a deploy). `/admin/audit`: tamper-evident audit trail of every action (compliance role has read-only access). `/admin/health`: feed and service status.
 
 ## 8. FAQ
 **Is my money real?** No — v1 is paper trading with simulated fills (realistic slippage and partial fills).

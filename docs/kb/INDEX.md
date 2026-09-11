@@ -46,7 +46,8 @@ PBI-023 embeds **news** (and later filings) for the copilot. It must **not** ing
 | 021 | [PBI-021](as-built/PBI-021.md) | screens 0013, SCR panel, parameterized `/functions/screener`, daily RSI in analytics-service; AC/TC ticks owned by QA |
 | 022 | [PBI-022](as-built/PBI-022.md) | alert_rules/alerts 0014, alert-runner, Watchlist Alerts tab, status-bar bell/toast; DT-ALRT-01 |
 | 023 | [PBI-023](as-built/PBI-023.md) | news_embeddings 0015, embed-worker, search-news hybrid RAG, News panel semantic search; not docs/kb |
-| 024–031 | _pending_ | Copy [`_template-as-built.md`](_template-as-built.md) when the PBI ships |
+| 024 | [PBI-024](as-built/PBI-024.md) | user_roles, authorize() DT-ENT-01, DT-AI-01 seed, /admin/users |
+| 025–031 | _pending_ | Copy [`_template-as-built.md`](_template-as-built.md) when the PBI ships |
 
 ## Architecture decision records
 

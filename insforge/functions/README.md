@@ -71,4 +71,11 @@ pnpm functions:bundle:search-news
 npx -y @insforge/cli functions deploy search-news --file insforge/functions/search-news.ts --name "Search news"
 ```
 
-`search-news` accepts `POST` `{ query, symbols?, since?, limit }`. User JWT + `authorize` `news:search`. Embeds the query, then `search_news_hybrid` (cosine + symbol/date filters). Writes `audit_log`. Gateway failures return 503 `SEARCH_UNAVAILABLE`.
+`search-news` accepts `POST` `{ query, symbols?, since?, limit }`. User JWT + `authorize` `news:search` via DT-ENT-01. Embeds the query, then `search_news_hybrid` (cosine + symbol/date filters). Writes `audit_log`. Gateway failures return 503 `SEARCH_UNAVAILABLE`.
+
+```bash
+pnpm functions:bundle:admin-users
+npx -y @insforge/cli functions deploy admin-users --file insforge/functions/admin-users.ts --name "Admin users"
+```
+
+`admin-users` accepts `POST` `{ op: "list" | "assign", user_id?, role? }`. User JWT + `authorize` `users:read` / `users:assign` (DT-ENT-01). Lists via `list_user_directory` (`project_admin`). Writes `audit_log`. Apply migration 0016 (`user_roles`) first. Optional seed: `MERIDIAN_BOOTSTRAP_ADMIN_USER_ID` with `pnpm seed:rules`.

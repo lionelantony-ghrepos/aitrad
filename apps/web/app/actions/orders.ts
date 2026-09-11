@@ -1,6 +1,6 @@
 "use server";
 
-import { authorize } from "@meridian/rules-engine";
+import { authorizeUser } from "@/lib/auth/authorize-user";
 import { canCancel, expandOrderGroup, seedTrailingOnCreate } from "@meridian/paper-engine";
 import type { ExecutionRecord, MatchTick, OrderLegRole, RuleAuditView } from "@meridian/schemas";
 import {
@@ -86,7 +86,11 @@ export async function loadOrderTicketContextAction(
   if (!session.ok) {
     return session;
   }
-  const gate = authorize({ userId: session.userId, action: "trade:preview" });
+  const gate = await authorizeUser({
+    userId: session.userId,
+    action: "trade:preview",
+    token: session.token,
+  });
   if (!gate.allowed) {
     return { ok: false, message: "Not allowed." };
   }
@@ -139,7 +143,11 @@ export async function previewOrderAction(input: {
   if (!session.ok) {
     return session;
   }
-  const gate = authorize({ userId: session.userId, action: "trade:preview" });
+  const gate = await authorizeUser({
+    userId: session.userId,
+    action: "trade:preview",
+    token: session.token,
+  });
   if (!gate.allowed) {
     return { ok: false, message: "Not allowed." };
   }
@@ -177,7 +185,11 @@ export async function submitOrderAction(input: {
   if (!session.ok) {
     return session;
   }
-  const gate = authorize({ userId: session.userId, action: "trade:create" });
+  const gate = await authorizeUser({
+    userId: session.userId,
+    action: "trade:create",
+    token: session.token,
+  });
   if (!gate.allowed) {
     return { ok: false, message: "Not allowed." };
   }
@@ -280,7 +292,11 @@ export async function cancelOrderAction(
   if (!session.ok) {
     return session;
   }
-  const gate = authorize({ userId: session.userId, action: "trade:cancel" });
+  const gate = await authorizeUser({
+    userId: session.userId,
+    action: "trade:cancel",
+    token: session.token,
+  });
   if (!gate.allowed) {
     return { ok: false, message: "Not allowed." };
   }

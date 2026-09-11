@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { rulesAdminRoleSchema } from "@meridian/schemas";
 import { isAuthStub, STUB_USER_COOKIE } from "@/lib/auth/mode";
-import { stubGetUser, stubPatchProfile } from "@/lib/auth/stub-store";
+import { stubGetUser, stubPatchProfile, stubSetRole } from "@/lib/auth/stub-store";
 
 export async function POST(request: Request): Promise<NextResponse> {
   if (!isAuthStub()) {
@@ -20,6 +20,11 @@ export async function POST(request: Request): Promise<NextResponse> {
   if (!persona.success) {
     return NextResponse.json({ error: "INVALID_PERSONA" }, { status: 400 });
   }
-  stubPatchProfile(userId, { persona: persona.data });
+  stubSetRole(userId, persona.data);
+  try {
+    stubPatchProfile(userId, { persona: persona.data });
+  } catch {
+    // Role is the entitlement source; persona is display-only.
+  }
   return NextResponse.json({ ok: true, persona: persona.data });
 }

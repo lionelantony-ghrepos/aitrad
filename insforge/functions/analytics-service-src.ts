@@ -22,7 +22,8 @@ import {
   type EquityCurveRange,
   type MarkedPositionInput,
 } from "../../packages/schemas/src/index.ts";
-import { authorize, resolveRulesServiceApiKey } from "../../packages/rules-engine/src/index.ts";
+import { resolveRulesServiceApiKey } from "../../packages/rules-engine/src/index.ts";
+import { authorizeEdgeUser } from "./_shared/entitlements.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -336,9 +337,19 @@ export default async function (req: Request): Promise<Response> {
   });
   const { data: userData } = await client.auth.getCurrentUser();
   const userId = userData?.user?.id as string | undefined;
-  const gate = authorize({ userId, action: "portfolio:read" });
+  const apiKey = resolveRulesServiceApiKey({
+    API_KEY: Deno.env.get("API_KEY"),
+    INSFORGE_API_KEY: Deno.env.get("INSFORGE_API_KEY"),
+  });
+  if (!apiKey) {
+    return json(500, { error: "API_KEY_MISSING" });
+  }
+  const admin = createAdminClient({ baseUrl, apiKey });
+  const gate = await authorizeEdgeUser({ db: admin.database, userId, action: "portfolio:read" });
   if (!gate.allowed || !userId) {
-    return json(401, { error: gate.reason ?? "UNAUTHENTICATED" });
+    return json(gate.reason === "UNAUTHENTICATED" || !userId ? 401 : 403, {
+      error: gate.reason ?? "UNAUTHENTICATED",
+    });
   }
 
   const parsed = analyticsPortfolioRequestSchema.safeParse({

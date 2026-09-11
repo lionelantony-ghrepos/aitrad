@@ -16,8 +16,11 @@ const cliTwinSql = readFileSync(
 
 describe("PBI-023 migration 0015 news embeddings", () => {
   it("lists 0015 after 0014", () => {
-    expect(LOCAL_MIGRATION_IDS[LOCAL_MIGRATION_IDS.length - 1]).toBe("0015");
+    expect(LOCAL_MIGRATION_IDS).toContain("0015");
     expect(LOCAL_MIGRATION_IDS).toContain("0014");
+    expect(LOCAL_MIGRATION_IDS.indexOf("0015")).toBeGreaterThan(
+      LOCAL_MIGRATION_IDS.indexOf("0014"),
+    );
   });
 
   it("creates pgvector news_embeddings, ivfflat, dead-letter, and hybrid search", () => {
