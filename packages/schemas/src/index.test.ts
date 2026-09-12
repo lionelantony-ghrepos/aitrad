@@ -9,6 +9,7 @@ import {
   packageName,
   profilePatchSchema,
   profileInsertSchema,
+  accountPatchSchema,
   profileWizardSchema,
   provisionResultSchema,
   publicInsforgeEnvSchema,
@@ -17,6 +18,7 @@ import {
   workspaceLayoutV1Schema,
   commandRecentsV1Schema,
   decisionTableSchema,
+  orderDraftSchema,
 } from "./index";
 
 describe("@meridian/schemas", () => {
@@ -85,6 +87,12 @@ describe("@meridian/schemas", () => {
       created: { profile: true, account: true },
     });
     expect(parsed.account.cash_balance).toBe(2500);
+  });
+
+  it("rejects client account patches that include cash fields", () => {
+    expect(accountPatchSchema.safeParse({ cash_balance: 1 }).success).toBe(false);
+    expect(accountPatchSchema.safeParse({ reserved_cash: 0 }).success).toBe(false);
+    expect(accountPatchSchema.parse({ currency: "USD" }).currency).toBe("USD");
   });
 
   it("parses mock instrument, bar, and quote DTOs", () => {
@@ -187,6 +195,18 @@ describe("@meridian/schemas", () => {
         created_at: "2026-09-04T00:00:00.000Z",
       }).sort_order,
     ).toBe(0);
+  });
+
+  it("parses an order draft", () => {
+    expect(
+      orderDraftSchema.parse({
+        symbol: "AAPL",
+        side: "buy",
+        qty: 1,
+        order_type: "market",
+        tif: "DAY",
+      }).symbol,
+    ).toBe("AAPL");
   });
 
   it("parses decision tables and rejects incomplete payloads", () => {

@@ -3,6 +3,10 @@ export const MIN_DAILY_BARS_PER_INSTRUMENT = 1250;
 export const MINUTE_BARS_PER_INSTRUMENT = 1950;
 export const EXPECTED_MINUTE_BARS_TOTAL = EXPECTED_INSTRUMENTS * MINUTE_BARS_PER_INSTRUMENT;
 
+export const EXPECTED_NEWS_ITEMS = 500;
+export const EXPECTED_NEWS_EMBEDDINGS = 500;
+export const EXPECTED_FUNDAMENTALS = 150;
+
 export type SeedCounts = {
   instruments: number;
   dailyBars: number;
@@ -10,6 +14,9 @@ export type SeedCounts = {
   quotes: number;
   minDailyPerInstrument: number;
   minMinutePerInstrument: number;
+  newsItems?: number;
+  newsEmbeddings?: number;
+  fundamentals?: number;
 };
 
 export function evaluateSeedCounts(counts: SeedCounts): { ok: boolean; lines: string[] } {
@@ -21,13 +28,25 @@ export function evaluateSeedCounts(counts: SeedCounts): { ok: boolean; lines: st
     `min_daily_per_instrument ${counts.minDailyPerInstrument} (expected >= ${MIN_DAILY_BARS_PER_INSTRUMENT})`,
     `min_1m_per_instrument ${counts.minMinutePerInstrument} (expected ${MINUTE_BARS_PER_INSTRUMENT})`,
   ];
-  const ok =
+  let ok =
     counts.instruments === EXPECTED_INSTRUMENTS &&
     counts.dailyBars >= EXPECTED_INSTRUMENTS * MIN_DAILY_BARS_PER_INSTRUMENT &&
     counts.minuteBars === EXPECTED_MINUTE_BARS_TOTAL &&
     counts.quotes === EXPECTED_INSTRUMENTS &&
     counts.minDailyPerInstrument >= MIN_DAILY_BARS_PER_INSTRUMENT &&
     counts.minMinutePerInstrument === MINUTE_BARS_PER_INSTRUMENT;
+  if (counts.newsItems !== undefined) {
+    lines.push(`news_items ${counts.newsItems} (expected ${EXPECTED_NEWS_ITEMS})`);
+    ok = ok && counts.newsItems === EXPECTED_NEWS_ITEMS;
+  }
+  if (counts.newsEmbeddings !== undefined) {
+    lines.push(`news_embeddings ${counts.newsEmbeddings} (expected ${EXPECTED_NEWS_EMBEDDINGS})`);
+    ok = ok && counts.newsEmbeddings === EXPECTED_NEWS_EMBEDDINGS;
+  }
+  if (counts.fundamentals !== undefined) {
+    lines.push(`fundamentals ${counts.fundamentals} (expected ${EXPECTED_FUNDAMENTALS})`);
+    ok = ok && counts.fundamentals === EXPECTED_FUNDAMENTALS;
+  }
   return { ok, lines };
 }
 
@@ -42,5 +61,8 @@ SELECT
   ) d), 0) AS min_daily_per_instrument,
   COALESCE((SELECT MIN(cnt)::int FROM (
     SELECT COUNT(*) AS cnt FROM public.market_bars WHERE timeframe = '1m' GROUP BY instrument_id
-  ) m), 0) AS min_minute_per_instrument
+  ) m), 0) AS min_minute_per_instrument,
+  (SELECT COUNT(*)::int FROM public.news_items) AS news_items,
+  (SELECT COUNT(*)::int FROM public.news_embeddings) AS news_embeddings,
+  (SELECT COUNT(*)::int FROM public.fundamentals) AS fundamentals
 `.trim();

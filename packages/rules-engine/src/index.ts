@@ -23,7 +23,17 @@ export {
   type TraceEntry,
 } from "./evaluate";
 
-export { authorize } from "./authorize";
+export {
+  authorize,
+  authorizeFromTable,
+  authorizeResultFromOutcome,
+  decisionFromOutcome,
+  entitlementHttpStatus,
+  type AuthorizePorts,
+  type AuthorizeResult,
+  type EntitlementDecision,
+} from "./authorize";
+export { handleAdminUsersRequest, type AdminUsersPorts } from "./admin-users";
 export { paperAccountSeed } from "./paper-account-seed";
 export {
   executeProvision,
@@ -66,6 +76,21 @@ export {
   requiredActionForAdminOp,
   simulateDraftAgainstAudits,
 } from "./rules-admin";
+export { compileAlertTemplate, defaultAlertName } from "./alert-templates";
+export {
+  alertConditionMatched,
+  alertingDecisionFromOutcome,
+  buildAlertMarketFacts,
+  buildAlertThrottleFacts,
+  minutesSince,
+  runAlertCycle,
+  utcDay,
+  type AlertFireDraft,
+  type AlertMarketContext,
+  type AlertRuleSnapshot,
+  type AlertRuleUpdate,
+  type EvaluateAlerting,
+} from "./alert-cycle";
 export {
   createRulesAdminMemory,
   memoryAppendAudit,

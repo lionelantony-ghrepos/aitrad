@@ -106,6 +106,31 @@ export async function runRulesSeed(): Promise<{ tableKeys: readonly string[]; do
     }
   }
 
+  const bootstrapAdminId = process.env.MERIDIAN_BOOTSTRAP_ADMIN_USER_ID;
+  if (bootstrapAdminId) {
+    const existing = await must(
+      "user_roles bootstrap select",
+      await admin.database.from("user_roles").select("user_id").eq("user_id", bootstrapAdminId),
+    );
+    if (Array.isArray(existing) && existing.length > 0) {
+      const update = await admin.database
+        .from("user_roles")
+        .update({ role: "admin" })
+        .eq("user_id", bootstrapAdminId);
+      if (update.error) {
+        throw new Error(`user_roles bootstrap update: ${update.error.message}`);
+      }
+    } else {
+      const insert = await admin.database
+        .from("user_roles")
+        .insert([{ user_id: bootstrapAdminId, role: "admin" }]);
+      if (insert.error) {
+        throw new Error(`user_roles bootstrap insert: ${insert.error.message}`);
+      }
+    }
+    process.stdout.write("Assigned bootstrap admin role.\n");
+  }
+
   process.stdout.write(
     `Seeded ${BASELINE_TABLE_KEYS.length} published tables across ${domains.length} domains.\n`,
   );

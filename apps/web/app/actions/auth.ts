@@ -2,7 +2,8 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { authorize, isProfileWizardComplete, profileWizardPatch } from "@meridian/rules-engine";
+import { isProfileWizardComplete, profileWizardPatch } from "@meridian/rules-engine";
+import { authorizeUser } from "@/lib/auth/authorize-user";
 import { credentialsSchema, profileWizardSchema } from "@meridian/schemas";
 import { createAuditLogRepository } from "@/lib/api/audit-log";
 import { createRecordsClient } from "@/lib/api/client";
@@ -151,7 +152,11 @@ export async function completeWizardAction(formData: FormData): Promise<AuthActi
 
   const user = await getSessionUser();
   const token = await getAccessToken();
-  const gate = authorize({ userId: user?.id, action: "profile-wizard" });
+  const gate = await authorizeUser({
+    userId: user?.id,
+    action: "profile-wizard",
+    token,
+  });
   if (!user || !token || !gate.allowed) {
     return { ok: false, message: "You must be signed in." };
   }
@@ -164,17 +169,22 @@ export async function completeWizardAction(formData: FormData): Promise<AuthActi
     redirect("/workspace");
   }
 
+  let mine;
+  try {
+    const provisioned = await provisionAccountForUser({ userId: user.id, accessToken: token });
+    mine = provisioned.profile;
+  } catch {
+    return { ok: false, message: "Profile is not provisioned." };
+  }
+  if (!mine) {
+    return { ok: false, message: "Profile is not provisioned." };
+  }
   const env = readPublicInsforgeEnv();
   const records = createRecordsClient({
     baseUrl: env.baseUrl,
     getAccessToken: () => token,
   });
   const profiles = createProfilesRepository(records);
-  const rows = await profiles.listMine();
-  const mine = rows[0];
-  if (!mine) {
-    return { ok: false, message: "Profile is not provisioned." };
-  }
   await profiles.updateById(mine.id, patch);
   await createAuditLogRepository(records).insert({
     user_id: user.id,

@@ -399,16 +399,16 @@ export default async function (req: Request): Promise<Response> {
       },
       async loadCallerRole(id) {
         const { data, error } = await admin.database
-          .from("profiles")
-          .select("persona")
+          .from("user_roles")
+          .select("role")
           .eq("user_id", id);
         if (error) {
           throw new Error(error.message);
         }
         const row = Array.isArray(data)
-          ? (data[0] as { persona?: string | null } | undefined)
+          ? (data[0] as { role?: string | null } | undefined)
           : undefined;
-        return row?.persona ?? null;
+        return row?.role ?? null;
       },
       async listCatalog() {
         const { data, error } = await admin.database

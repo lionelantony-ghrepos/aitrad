@@ -169,7 +169,13 @@ export const dtFee01: DecisionTable = {
       id: "2",
       priority: 2,
       conditions: [{ input: "side", op: "eq", value: "sell" }],
-      outputs: { sec_fee: "notional_x_sec_rate", taf: "qty_x_taf_capped" },
+      outputs: {
+        sec_fee: "notional_x_sec_rate",
+        taf: "qty_x_taf_capped",
+        sec_rate: 0.0000278,
+        taf_per_share: 0.000166,
+        taf_cap: 8.3,
+      },
     },
     {
       id: "3",

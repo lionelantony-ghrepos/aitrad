@@ -68,6 +68,9 @@ describe("TC-010-01 fixture tables doc 05 §7 (AC-010-01)", () => {
       commission_usd: 0,
       sec_fee: "notional_x_sec_rate",
       taf: "qty_x_taf_capped",
+      sec_rate: 0.0000278,
+      taf_per_share: 0.000166,
+      taf_cap: 8.3,
       data_fee_monthly: 0,
     });
   });

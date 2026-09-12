@@ -35,7 +35,20 @@ PBI-023 embeds **news** (and later filings) for the copilot. It must **not** ing
 | 010 | [PBI-010](as-built/PBI-010.md) | `@meridian/rules-engine` evaluate/compile; Zod in schemas |
 | 011 | [PBI-011](as-built/PBI-011.md) | Rules storage 0005, `rules-service`, seed-rules, publish cache |
 | 012 | [PBI-012](as-built/PBI-012.md) | `/admin/rules` draft/diff/simulate/publish, DT-ENT-01 gate |
-| 013–031 | _pending_ | Copy [`_template-as-built.md`](_template-as-built.md) when the PBI ships |
+| 013 | [PBI-013](as-built/PBI-013.md) | Order ticket, `/preview` + `/orders`, notional↔shares |
+| 014 | [PBI-014](as-built/PBI-014.md) | Order-service pipeline, FSM, admin-only BP reserve, DT-HRS-01 |
+| 015 | [PBI-015](as-built/PBI-015.md) | Paper match(), matching-runner, apply_paper_fill, DT-EXEC-01 |
+| 016 | [PBI-016](as-built/PBI-016.md) | Bracket/OCO groups, trailing ratchet, ticket Bracket tab |
+| 017 | [PBI-017](as-built/PBI-017.md) | Blotter: virtualized table, live `orders:{userId}`, cancel/modify/explain |
+| 018 | [PBI-018](as-built/PBI-018.md) | Portfolio panel, analytics-service, snapshot cron |
+| 019 | [PBI-019](as-built/PBI-019.md) | news_items, mock generator, news-ticker, News panel; AC/TC ticks owned by QA |
+| 020 | [PBI-020](as-built/PBI-020.md) | fundamentals 0012, DES panel, seed hydrate from fundamentals.json; AC/TC ticks owned by QA |
+| 021 | [PBI-021](as-built/PBI-021.md) | screens 0013, SCR panel, parameterized `/functions/screener`, daily RSI in analytics-service; AC/TC ticks owned by QA |
+| 022 | [PBI-022](as-built/PBI-022.md) | alert_rules/alerts 0014, alert-runner, Watchlist Alerts tab, status-bar bell/toast; DT-ALRT-01 |
+| 023 | [PBI-023](as-built/PBI-023.md) | news_embeddings 0015, embed-worker, search-news hybrid RAG, News panel semantic search; not docs/kb |
+| 024 | [PBI-024](as-built/PBI-024.md) | user_roles, authorize() DT-ENT-01, DT-AI-01 seed, /admin/users |
+| 025 | [PBI-025](as-built/PBI-025.md) | Copilot chat, read tools, SSE orchestrator; migrations 0017–0018 (session IDOR + INSERT RLS) |
+| 026–031 | _pending_ | Copy [`_template-as-built.md`](_template-as-built.md) when the PBI ships |
 
 ## Architecture decision records
 
@@ -43,6 +56,7 @@ PBI-023 embeds **news** (and later filings) for the copilot. It must **not** ing
 | --- | --- |
 | [0001](adr/0001-docs-as-code-knowledge-layer.md) | Docs-as-code knowledge layer beside the spec |
 | [0002](adr/0002-decision-condition-negate.md) | Optional `negate` on decision-table condition cells |
+| [0003](adr/0003-openrouter-embeddings-gateway.md) | Embeddings via OpenRouter key provisioned by InsForge Model Gateway |
 
 Add further ADRs from [`_template-adr.md`](_template-adr.md) only for durable choices not already in doc 02.
 

@@ -5,14 +5,19 @@ import { fileURLToPath } from "node:url";
 import { createAdminClient } from "@insforge/sdk";
 import {
   generateInstrumentHistory,
+  generateNewsBackfill,
+  hydrateFundamentalsUniverse,
   marketCalendarSeedRows,
+  parseFundamentalsJson,
   parseInstrumentsJson,
+  parseNewsTemplatesJson,
   quoteFromHistory,
   SEED_COUNT_SQL,
   evaluateSeedCounts,
   type OhlcvBar,
   type SeedCounts,
 } from "@meridian/mock-data";
+import { mergeNewsCorpusWithRagFixtures } from "@meridian/rag";
 import { seedEnvSchema } from "@meridian/schemas";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -63,6 +68,9 @@ function querySeedCounts(): SeedCounts {
     quotes: Number(row.quotes),
     minDailyPerInstrument: Number(row.min_daily_per_instrument),
     minMinutePerInstrument: Number(row.min_minute_per_instrument),
+    newsItems: Number(row.news_items),
+    newsEmbeddings: Number(row.news_embeddings),
+    fundamentals: Number(row.fundamentals),
   };
 }
 
@@ -162,6 +170,77 @@ export async function runUniverseSeed(): Promise<void> {
   await upsertBatch(admin.database, "market_bars", barRows, "instrument_id,timeframe,ts");
   process.stdout.write(`Upserting ${quoteRows.length} quotes_latest…\n`);
   await upsertBatch(admin.database, "quotes_latest", quoteRows, "instrument_id");
+
+  const templates = parseNewsTemplatesJson(
+    JSON.parse(
+      readFileSync(path.join(repoRoot, "mock_data", "news-templates.json"), "utf8"),
+    ) as unknown,
+  );
+  const newsRows = mergeNewsCorpusWithRagFixtures(
+    generateNewsBackfill({ universe, templates }),
+  ).map((row) => ({
+    id: row.id,
+    ts: row.ts,
+    headline: row.headline,
+    body: row.body,
+    source: row.source,
+    symbols: row.symbols,
+    sector: row.sector,
+    sentiment: row.sentiment,
+    event_type: row.event_type,
+  }));
+  const fundamentalsFile = parseFundamentalsJson(
+    JSON.parse(
+      readFileSync(path.join(repoRoot, "mock_data", "fundamentals.json"), "utf8"),
+    ) as unknown,
+  );
+  const fundamentalsRows = hydrateFundamentalsUniverse(universe, fundamentalsFile).map((row) => {
+    const id = idBySymbol.get(row.symbol);
+    if (!id) {
+      throw new Error(`MISSING_INSTRUMENT_ID:${row.symbol}`);
+    }
+    return {
+      instrument_id: id,
+      metrics: row.metrics,
+      updated_at: new Date().toISOString(),
+    };
+  });
+  process.stdout.write(`Upserting ${fundamentalsRows.length} fundamentals…\n`);
+  await upsertBatch(admin.database, "fundamentals", fundamentalsRows, "instrument_id");
+
+  process.stdout.write(`Upserting ${newsRows.length} news_items…\n`);
+  await upsertBatch(admin.database, "news_items", newsRows, "id");
+
+  const functionsOrigin = env.INSFORGE_URL.replace(/\/+$/, "");
+  process.stdout.write("Backfilling news_embeddings via embed-worker…\n");
+  for (let i = 0; i < 80; i += 1) {
+    const response = await fetch(`${functionsOrigin}/functions/embed-worker`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${env.INSFORGE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ op: "backfill" }),
+    });
+    const payload = (await response.json().catch(() => null)) as {
+      scanned?: number;
+      embedded?: number;
+      error?: string;
+    } | null;
+    if (response.status === 504) {
+      process.stdout.write("  embed-worker timeout, retrying smaller batch…\n");
+      continue;
+    }
+    if (!response.ok) {
+      throw new Error(`EMBED_WORKER_${response.status}:${payload?.error ?? "failed"}`);
+    }
+    process.stdout.write(
+      `  embed-worker scanned=${payload?.scanned ?? "?"} embedded=${payload?.embedded ?? "?"}\n`,
+    );
+    if ((payload?.scanned ?? 0) === 0) {
+      break;
+    }
+  }
 
   process.stdout.write("SQL count check:\n");
   process.stdout.write(`${SEED_COUNT_SQL}\n`);

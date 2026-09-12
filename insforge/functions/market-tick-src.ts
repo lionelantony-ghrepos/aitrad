@@ -13,6 +13,7 @@ import {
   type FeedMinuteBar,
   type FeedQuote,
 } from "../../packages/mock-data/src/feed.ts";
+import { newsShocksForSymbols } from "../../packages/mock-data/src/news.ts";
 
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -175,6 +176,27 @@ export default async function (req: Request): Promise<Response> {
   }
 
   const nowIso = new Date().toISOString();
+  const newsSince = new Date(Date.parse(nowIso) - 120_000).toISOString();
+  let newsShocks: { symbol: string; sentiment: number }[] = [];
+  const { data: newsData, error: newsErr } = await admin.database
+    .from("news_items")
+    .select("ts,symbols,sentiment")
+    .gte("ts", newsSince);
+  if (newsErr && !/news_items/i.test(newsErr.message)) {
+    return json(500, { error: newsErr.message });
+  }
+  if (!newsErr) {
+    newsShocks = newsShocksForSymbols(
+      asRows<{ ts: string; symbols: string[] | null; sentiment: number | string }>(newsData).map(
+        (row) => ({
+          ts: row.ts,
+          symbols: Array.isArray(row.symbols) ? row.symbols : [],
+          sentiment: Number(row.sentiment),
+        }),
+      ),
+    );
+  }
+
   const result = runFeedInvocation({
     nowIso,
     intervalSeconds,
@@ -183,6 +205,7 @@ export default async function (req: Request): Promise<Response> {
     instruments,
     quotes,
     minuteBars,
+    newsShocks,
   });
 
   if (result.quotes.length > 0) {
@@ -245,6 +268,66 @@ export default async function (req: Request): Promise<Response> {
       .is("user_id", null);
   }
 
+  const matchTicks = result.publishes.flat().map((q) => ({
+    ...q,
+    symbol: symbolById.get(q.instrument_id),
+  }));
+  let matching: { ok: boolean; fills?: number } | { ok: false; error: string } = { ok: true };
+  if (matchTicks.length > 0) {
+    try {
+      const matchRes = await fetch(
+        `${(Deno.env.get("INSFORGE_INTERNAL_URL") ?? Deno.env.get("INSFORGE_BASE_URL") ?? "").replace(/\/+$/, "")}/functions/matching-runner`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${expected}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ ticks: matchTicks }),
+        },
+      );
+      const matchBody: unknown = await matchRes.json();
+      if (!matchRes.ok) {
+        matching = { ok: false, error: `MATCHING_${matchRes.status}` };
+      } else if (matchBody && typeof matchBody === "object" && "fills" in matchBody) {
+        matching = { ok: true, fills: Number((matchBody as { fills: unknown }).fills) };
+      }
+    } catch (error) {
+      matching = {
+        ok: false,
+        error: error instanceof Error ? error.message : "MATCHING_UNAVAILABLE",
+      };
+    }
+  }
+
+  let alerting: { ok: boolean; fired?: number } | { ok: false; error: string } = { ok: true };
+  if (matchTicks.length > 0) {
+    try {
+      const alertRes = await fetch(
+        `${(Deno.env.get("INSFORGE_INTERNAL_URL") ?? Deno.env.get("INSFORGE_BASE_URL") ?? "").replace(/\/+$/, "")}/functions/alert-runner`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${expected}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ ticks: matchTicks }),
+        },
+      );
+      const alertBody: unknown = await alertRes.json();
+      if (!alertRes.ok) {
+        alerting = { ok: false, error: `ALERT_RUNNER_${alertRes.status}` };
+      } else if (alertBody && typeof alertBody === "object" && "fired" in alertBody) {
+        alerting = { ok: true, fired: Number((alertBody as { fired: unknown }).fired) };
+      }
+    } catch (error) {
+      alerting = {
+        ok: false,
+        error: error instanceof Error ? error.message : "ALERT_RUNNER_UNAVAILABLE",
+      };
+    }
+  }
+
   await admin.database.from("audit_log").insert([
     {
       action: "market-tick",
@@ -255,6 +338,8 @@ export default async function (req: Request): Promise<Response> {
         published: result.publishes.length,
         paused: flags.paused,
         consumeForcePrice: result.consumeForcePrice,
+        matching,
+        alerting,
       },
     },
   ]);
@@ -264,5 +349,7 @@ export default async function (req: Request): Promise<Response> {
     ticksApplied: result.ticksApplied,
     published: result.publishes.length,
     paused: flags.paused,
+    matching,
+    alerting,
   });
 }

@@ -8,6 +8,7 @@ export { createMarketCalendarRepository } from "./market-calendar";
 export { createAuditLogRepository } from "./audit-log";
 export { createFeatureFlagsRepository } from "./feature-flags";
 export {
+  containsArrayFilter,
   eqFilter,
   inFilter,
   ilikeContainsFilter,
@@ -21,3 +22,26 @@ export { planMigrationApply, LOCAL_MIGRATION_IDS } from "./migrations";
 export { functionsUrl } from "./functions";
 export { provisionAccountForUser } from "./provision";
 export { invokeEvaluateDomain, rulesServiceUrl } from "./rules-service";
+export {
+  invokeOrderCancel,
+  invokeOrderCreate,
+  invokeOrderPreview,
+  orderServiceUrl,
+} from "./order-service";
+export { createOrdersRepository } from "./orders";
+export { createExecutionsRepository } from "./executions";
+export { createRuleAuditRepository } from "./rule-audit";
+export { createPositionsRepository, createPortfolioSnapshotsRepository } from "./positions";
+export { createNewsItemsRepository } from "./news-items";
+export { searchNewsServiceUrl, invokeSearchNews } from "./search-news";
+export { createFundamentalsRepository } from "./fundamentals";
+export { createScreensRepository } from "./screens";
+export { createAlertRulesRepository, createAlertsRepository } from "./alerts";
+export { copilotOrchestratorUrl, invokeCopilotOrchestrator, parseSseBlock } from "./copilot";
+export { createCopilotSessionsRepository } from "./copilot-sessions";
+export { screenerServiceUrl, invokeScreenerRun } from "./screener";
+export {
+  analyticsServiceUrl,
+  invokeAnalyticsPortfolio,
+  invokeAnalyticsSnapshot,
+} from "./analytics-service";

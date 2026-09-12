@@ -16,3 +16,73 @@ npx -y @insforge/cli functions deploy rules-service --file insforge/functions/ru
 ```
 
 `rules-service` evaluates `evaluateDomain(domain, context)` against published tables (in-memory cache, invalidated by realtime `rules:published` or service-only `op: "invalidate"` / `op: "publish"`). User JWTs may evaluate only; they cannot supply `clock`. Missing `API_KEY` / `INSFORGE_API_KEY` fails closed. Every evaluation writes `rule_audit` and `audit_log`. Seed baseline tables with `pnpm seed:rules`.
+
+```bash
+pnpm functions:bundle:order-service
+npx -y @insforge/cli functions deploy order-service --file insforge/functions/order-service.ts --name "Order service"
+```
+
+`order-service` accepts `POST` `{ op: "preview" | "create" | "cancel", … }` (paths `/preview`, `/orders`, `/orders/:id/cancel`). Rule facts use `quotes_latest.last` via `lastPriceForRuleFacts` (client `last_price` is ignored). Preview evaluates DT-VAL-01, DT-RISK-01, DT-HRS-01, and DT-FEE-01 via `rules-service` and writes only `rule_audit`. Create evaluates those domains in order, then uses `createAdminClient` (`API_KEY` / `INSFORGE_API_KEY`) to reserve buying power (`reserve_buying_power` row lock + `p_user_id`), insert `accepted` or `rejected`, and publish `orders:{userId}`. Authenticated JWTs cannot EXECUTE reserve/release/publish. Cancel is FSM-guarded (`accepted` / `working` / `partially_filled`) and also uses the admin writer.
+
+```bash
+pnpm functions:bundle:matching-runner
+npx -y @insforge/cli functions deploy matching-runner --file insforge/functions/matching-runner.ts --name "Matching runner"
+```
+
+`matching-runner` is service-key only. On each tick batch it promotes `accepted` → `working`, evaluates `execution_sim` (DT-EXEC-01), and applies fills through `apply_paper_fill` (executions, positions, cash, reserve release). It publishes `orders:{userId}` and `positions:{userId}` and writes `audit_log` per fill. `market-tick` invokes it after publishing quotes; feed test mode (`feed.paused` + `feed.force_price`) is the integration path for a limit cross.
+
+```bash
+pnpm functions:bundle:analytics-service
+npx -y @insforge/cli functions deploy analytics-service --file insforge/functions/analytics-service.ts --name "Analytics service"
+```
+
+`analytics-service` accepts `POST` `{ op: "portfolio" | "snapshot" | "rsi" }` (paths `/portfolio`, `/snapshot`, `/rsi`). `/portfolio` is a user JWT read (`authorize` `portfolio:read`) that marks positions against `quotes_latest` with P&L from `@meridian/schemas/analytics`. `/snapshot` is service-key only: after the NYSE close minute it inserts one `portfolio_snapshots` row per account (idempotent on `account_id + as_of_date`) and writes `audit_log`. Schedule the snapshot op at or after the close (interval syntax; the handler no-ops while the session is OPEN). `/rsi` (service-key) precomputes Wilder RSI(14) from daily `market_bars` into `instrument_daily_rsi` via `@meridian/indicators` (`rsi14Last`); the snapshot job also refreshes RSI after a successful close write.
+
+```bash
+pnpm functions:bundle:screener
+npx -y @insforge/cli functions deploy screener --file insforge/functions/screener.ts --name "Screener"
+```
+
+`screener` accepts `POST` `{ op: "run" | "count", criteria, sort? }`. User JWT + `authorize` `screener:run`. Criteria are Zod-validated and compiled to parameterized SQL (`($1->>n)` binds only). The compiled query is executed with `exec_screener(p_sql, p_params)` (project_admin). Result rows are capped by the compiler LIMIT guard. Writes `audit_log` on each run.
+
+```bash
+pnpm functions:bundle:alert-runner
+npx -y @insforge/cli functions deploy alert-runner --file insforge/functions/alert-runner.ts --name "Alert runner"
+```
+
+`alert-runner` is service-key only. It loads active `alert_rules`, builds quote / RSI / news-sentiment facts, evaluates each rule's condition with `@meridian/rules-engine`, then `evaluateDomain('alerting')` (DT-ALRT-01) for delivery. Inserts `alerts`, writes `audit_log`, and publishes `alerts:{userId}`. `market-tick` and `news-ticker` invoke it after their batches.
+
+```bash
+pnpm functions:bundle:news-ticker
+npx -y @insforge/cli functions deploy news-ticker --file insforge/functions/news-ticker.ts --name "News ticker"
+```
+
+`news-ticker` is service-key only. It advances simulated time with `feed.speed` / `feed.paused`, writes 1–5 `news_items` per simulated 5 minutes from `mock_data/news-templates.json`, publishes realtime `news` / `news_batch`, and writes `audit_log`. After each burst it invokes `embed-worker` (best-effort) and `alert-runner`. Schedule `POST /functions/news-ticker` (interval syntax; `NEWS_TICKER_INTERVAL_SECONDS`). `market-tick` applies DT-SIM-01 news-sentiment drift nudges from recent items.
+
+```bash
+pnpm functions:bundle:embed-worker
+npx -y @insforge/cli functions deploy embed-worker --file insforge/functions/embed-worker.ts --name "Embed worker"
+```
+
+`embed-worker` is service-key only. It polls pending `news_items` (no embedding row, not dead-lettered), calls the InsForge Model Gateway embeddings path (`OPENROUTER_API_KEY` / `OPENROUTER_EMBEDDING_MODEL`), upserts `news_embeddings`, and on repeated gateway failures writes `news_embed_dead_letters`. `op: "backfill"` uses a larger batch. `MERIDIAN_EMBEDDING_MODE=hash` is for local seed without a gateway. Corpus is `news_items` only.
+
+```bash
+pnpm functions:bundle:search-news
+npx -y @insforge/cli functions deploy search-news --file insforge/functions/search-news.ts --name "Search news"
+```
+
+`search-news` accepts `POST` `{ query, symbols?, since?, limit }`. User JWT + `authorize` `news:search` via DT-ENT-01. Embeds the query, then `search_news_hybrid` (cosine + symbol/date filters). Writes `audit_log`. Gateway failures return 503 `SEARCH_UNAVAILABLE`.
+
+```bash
+pnpm functions:bundle:admin-users
+npx -y @insforge/cli functions deploy admin-users --file insforge/functions/admin-users.ts --name "Admin users"
+```
+
+`admin-users` accepts `POST` `{ op: "list" | "assign", user_id?, role? }`. User JWT + `authorize` `users:read` / `users:assign` (DT-ENT-01). Lists via `list_user_directory` (`project_admin`). Writes `audit_log`. Apply migration 0016 (`user_roles`) first. Optional seed: `MERIDIAN_BOOTSTRAP_ADMIN_USER_ID` with `pnpm seed:rules`.
+
+```bash
+pnpm functions:bundle:copilot-orchestrator
+npx -y @insforge/cli functions deploy copilot-orchestrator --file insforge/functions/copilot-orchestrator.ts --name "Copilot orchestrator"
+```
+
+`copilot-orchestrator` accepts `POST` `{ session_id?, message, active_symbol? }` (user JWT). `authorize` `copilot:chat`. Evaluates `ai_action_policy` (DT-AI-01) with `messages_today`. Streams SSE tool/token events. Read tools: `get_quote`, `get_bars`, `search_news`, `get_fundamentals`, `screen_instruments`, `get_portfolio`, `explain_rule_decision`. Each tool writes `audit_log`. Apply migration 0017 first. `MERIDIAN_COPILOT_LLM=fake` uses the scripted transcript.

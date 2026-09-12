@@ -5,7 +5,7 @@ import type { Account, SessionUser } from "@meridian/schemas";
 import { tryReadPublicInsforgeEnv } from "../insforge/env";
 import { createInsForgeServerClient } from "../insforge/server";
 import { isAuthStub, STUB_USER_COOKIE } from "./mode";
-import { stubGetUser, stubLoadProvision } from "./stub-store";
+import { stubGetRole, stubGetUser, stubLoadProvision } from "./stub-store";
 
 export type AuthContext = {
   user: SessionUser;
@@ -62,7 +62,7 @@ export async function loadAuthContext(): Promise<AuthContext | null> {
       accessToken,
       account: loaded.account,
       wizardComplete: isProfileWizardComplete(loaded.profile),
-      role: loaded.profile?.persona ?? "trader",
+      role: stubGetRole(user.id),
     };
   }
 
@@ -86,8 +86,13 @@ export async function loadAuthContext(): Promise<AuthContext | null> {
     .from("accounts")
     .select("*")
     .eq("user_id", user.id);
+  const { data: roles } = await client.database
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", user.id);
   const profile = Array.isArray(profiles) ? (profiles[0] ?? null) : null;
   const account = Array.isArray(accounts) ? (accounts[0] ?? null) : null;
+  const roleRow = Array.isArray(roles) ? (roles[0] as { role?: string } | undefined) : undefined;
   return {
     user,
     accessToken,
@@ -95,9 +100,6 @@ export async function loadAuthContext(): Promise<AuthContext | null> {
     wizardComplete: isProfileWizardComplete(
       profile as { display_name: string | null; experience_level: string | null } | null,
     ),
-    role:
-      profile && typeof profile === "object" && "persona" in profile
-        ? String((profile as { persona?: string | null }).persona ?? "trader")
-        : "trader",
+    role: roleRow?.role ?? "trader",
   };
 }

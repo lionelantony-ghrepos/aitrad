@@ -15,6 +15,7 @@ import {
   searchInstrumentsAction,
 } from "@/app/actions/watchlists";
 import { loadStoredLayout, persistSelectedWatchlistId } from "@/lib/layout-storage";
+import { WATCHLIST_CHANGED_EVENT } from "@/lib/watchlist/changed";
 import { useQuotes } from "@/lib/quotes/use-quotes";
 import { createInsforgeQuotesTransport, createWindowQuotesTransport } from "@/lib/quotes/transport";
 import { useSymbolContext } from "@/lib/symbol-context";
@@ -22,6 +23,8 @@ import { useWorkspaceRuntime } from "@/lib/workspace-runtime";
 import { netChange, pctChange } from "@/lib/watchlist/quote-change";
 import { compareWatchlistRows, type WatchlistSortKey } from "@/lib/watchlist/sort";
 import { WatchlistSparkline } from "./watchlist-sparkline";
+import { WatchlistAlertsTab } from "./watchlist-alerts-tab";
+import { OPEN_WATCHLIST_ALERTS_EVENT } from "@/lib/alerts/events";
 
 function formatPx(value: number | null): string {
   if (value === null) {
@@ -61,6 +64,8 @@ export function WatchlistPanel(props: IDockviewPanelProps): React.JSX.Element {
   const [sortKey, setSortKey] = useState<WatchlistSortKey>("symbol");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [menu, setMenu] = useState<MenuState>(null);
+  const [pane, setPane] = useState<"list" | "alerts">("list");
+  const [alertSymbol, setAlertSymbol] = useState<string | null>(null);
 
   const loadLists = useCallback(async () => {
     const result = await listWatchlistsAction();
@@ -86,6 +91,30 @@ export function WatchlistPanel(props: IDockviewPanelProps): React.JSX.Element {
     void loadLists();
   }, [loadLists]);
 
+  const loadItems = useCallback(async (watchlistId: string) => {
+    const result = await listWatchlistItemsAction(watchlistId);
+    if (!result.ok) {
+      setError(result.message);
+      return;
+    }
+    setItems(result.data);
+    const ids = result.data.map((row) => row.instrument_id);
+    const [inst, quotes] = await Promise.all([
+      resolveInstrumentsAction(ids),
+      listQuotesAction(ids),
+    ]);
+    if (inst.ok) {
+      const map: Record<string, Instrument> = {};
+      for (const row of inst.data) {
+        map[row.id] = row;
+      }
+      setInstruments(map);
+    }
+    if (quotes.ok) {
+      setSeedQuotes(quotes.data);
+    }
+  }, []);
+
   useEffect(() => {
     if (!selectedId) {
       setItems([]);
@@ -94,30 +123,26 @@ export function WatchlistPanel(props: IDockviewPanelProps): React.JSX.Element {
     if (typeof window !== "undefined") {
       persistSelectedWatchlistId(window.localStorage, selectedId);
     }
-    void (async () => {
-      const result = await listWatchlistItemsAction(selectedId);
-      if (!result.ok) {
-        setError(result.message);
-        return;
+    void loadItems(selectedId);
+  }, [selectedId, loadItems]);
+
+  useEffect(() => {
+    const onChanged = () => {
+      if (selectedId) {
+        void loadItems(selectedId);
       }
-      setItems(result.data);
-      const ids = result.data.map((row) => row.instrument_id);
-      const [inst, quotes] = await Promise.all([
-        resolveInstrumentsAction(ids),
-        listQuotesAction(ids),
-      ]);
-      if (inst.ok) {
-        const map: Record<string, Instrument> = {};
-        for (const row of inst.data) {
-          map[row.id] = row;
-        }
-        setInstruments(map);
-      }
-      if (quotes.ok) {
-        setSeedQuotes(quotes.data);
-      }
-    })();
-  }, [selectedId]);
+    };
+    window.addEventListener(WATCHLIST_CHANGED_EVENT, onChanged);
+    return () => window.removeEventListener(WATCHLIST_CHANGED_EVENT, onChanged);
+  }, [loadItems, selectedId]);
+
+  useEffect(() => {
+    const onOpen = (): void => {
+      setPane("alerts");
+    };
+    window.addEventListener(OPEN_WATCHLIST_ALERTS_EVENT, onOpen);
+    return () => window.removeEventListener(OPEN_WATCHLIST_ALERTS_EVENT, onOpen);
+  }, []);
 
   const symbols = useMemo(() => {
     return items
@@ -303,142 +328,186 @@ export function WatchlistPanel(props: IDockviewPanelProps): React.JSX.Element {
           </button>
         ) : null}
       </div>
-      <form className="flex gap-1 border-b border-border p-1" onSubmit={(e) => void onCreate(e)}>
-        <input
-          className="min-w-0 flex-1 border border-input bg-card px-1 text-foreground"
-          data-testid="watchlist-name"
-          value={newName}
-          onChange={(e) => setNewName(e.target.value)}
-          aria-label="New list name"
-        />
-        <button
-          type="submit"
-          className="bg-primary px-1 text-primary-foreground"
-          data-testid="watchlist-create"
-        >
-          Create
-        </button>
-      </form>
-      <div className="relative border-b border-border p-1">
-        <input
-          className="w-full border border-input bg-card px-1 text-foreground"
-          data-testid="watchlist-search"
-          placeholder="Add symbol"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          disabled={!selectedId}
-        />
-        {suggestions.length > 0 ? (
-          <ul className="absolute z-10 mt-0.5 w-full border border-border bg-card">
-            {suggestions.map((instrument) => (
-              <li key={instrument.id}>
-                <button
-                  type="button"
-                  className="w-full px-1 py-0.5 text-left hover:bg-muted"
-                  data-testid={`instrument-option-${instrument.symbol}`}
-                  onClick={() => void onAdd(instrument)}
-                >
-                  <span className="font-mono text-primary">{instrument.symbol}</span>{" "}
-                  {instrument.name}
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : null}
-      </div>
-      {error ? (
-        <p className="px-1 text-down" data-testid="watchlist-error">
-          {error}
-        </p>
-      ) : null}
-      {lists.length === 0 ? (
-        <p className="p-1 text-muted-foreground">No lists yet. Create one to add symbols.</p>
-      ) : rows.length === 0 ? (
-        <p className="p-1 text-muted-foreground">Empty list. Search to add a symbol.</p>
-      ) : (
-        <div className="min-h-0 flex-1 overflow-auto">
-          <table className="w-full border-collapse font-mono tabular-nums">
-            <thead className="sticky top-0 bg-card text-muted-foreground">
-              <tr>
-                {(
-                  [
-                    ["symbol", "Sym"],
-                    ["last", "Last"],
-                    ["netChange", "Net"],
-                    ["pctChange", "%"],
-                    ["volume", "Vol"],
-                  ] as const
-                ).map(([key, label]) => (
-                  <th key={key} className="cursor-pointer px-1 text-left font-sans font-medium">
-                    <button type="button" onClick={() => toggleSort(key)}>
-                      {label}
-                    </button>
-                  </th>
-                ))}
-                <th className="px-1 text-left font-sans font-medium">Bid/Ask</th>
-                <th className="px-1 text-left font-sans font-medium">Trend</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => {
-                const tone =
-                  row.netChange === null ? "" : row.netChange >= 0 ? "text-up" : "text-down";
-                const flashClass =
-                  row.flash === "up" ? "flash-up" : row.flash === "down" ? "flash-down" : "";
-                return (
-                  <tr
-                    key={row.item.id}
-                    data-testid={`watchlist-row-${row.symbol}`}
-                    data-instrument-id={row.item.instrument_id}
-                    className="cursor-pointer hover:bg-muted"
-                    onClick={() => setActiveSymbol(row.symbol)}
-                    onContextMenu={(event) => {
-                      event.preventDefault();
-                      setMenu({
-                        x: event.clientX,
-                        y: event.clientY,
-                        itemId: row.item.id,
-                        symbol: row.symbol,
-                      });
-                    }}
-                  >
-                    <td className="px-1 text-primary">{row.symbol}</td>
-                    <td
-                      className={`px-1 ${tone} ${flashClass}`}
-                      data-flash={row.flash ?? undefined}
-                      data-testid={`watchlist-last-${row.symbol}`}
-                    >
-                      {formatPx(row.last)}
-                    </td>
-                    <td className={`px-1 ${tone}`}>{formatPx(row.netChange)}</td>
-                    <td className={`px-1 ${tone}`}>{formatPct(row.pctChange)}</td>
-                    <td className="px-1">
-                      {row.volume === null ? "—" : Math.round(row.volume).toLocaleString()}
-                    </td>
-                    <td className="px-1">
-                      {formatPx(row.bid)}/{formatPx(row.ask)}
-                    </td>
-                    <td className="px-1">
-                      <WatchlistSparkline points={row.sparkline} />
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-      {menu ? (
+      <div className="flex gap-1 border-b border-border px-1 py-0.5">
         <button
           type="button"
-          className="fixed z-50 border border-border bg-card px-2 py-1"
-          style={{ left: menu.x, top: menu.y }}
-          data-testid="watchlist-remove"
-          onClick={() => void onRemove(menu.itemId)}
+          className={pane === "list" ? "text-primary" : "text-muted-foreground"}
+          data-testid="watchlist-pane-list"
+          onClick={() => setPane("list")}
         >
-          Remove {menu.symbol}
+          List
         </button>
-      ) : null}
+        <button
+          type="button"
+          className={pane === "alerts" ? "text-primary" : "text-muted-foreground"}
+          data-testid="watchlist-pane-alerts"
+          onClick={() => setPane("alerts")}
+        >
+          Alerts
+        </button>
+      </div>
+      {pane === "alerts" ? (
+        <WatchlistAlertsTab defaultSymbol={alertSymbol} />
+      ) : (
+        <>
+          <form
+            className="flex gap-1 border-b border-border p-1"
+            onSubmit={(e) => void onCreate(e)}
+          >
+            <input
+              className="min-w-0 flex-1 border border-input bg-card px-1 text-foreground"
+              data-testid="watchlist-name"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              aria-label="New list name"
+            />
+            <button
+              type="submit"
+              className="bg-primary px-1 text-primary-foreground"
+              data-testid="watchlist-create"
+            >
+              Create
+            </button>
+          </form>
+          <div className="relative border-b border-border p-1">
+            <input
+              className="w-full border border-input bg-card px-1 text-foreground"
+              data-testid="watchlist-search"
+              placeholder="Add symbol"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              disabled={!selectedId}
+            />
+            {suggestions.length > 0 ? (
+              <ul className="absolute z-10 mt-0.5 w-full border border-border bg-card">
+                {suggestions.map((instrument) => (
+                  <li key={instrument.id}>
+                    <button
+                      type="button"
+                      className="w-full px-1 py-0.5 text-left hover:bg-muted"
+                      data-testid={`instrument-option-${instrument.symbol}`}
+                      onClick={() => void onAdd(instrument)}
+                    >
+                      <span className="font-mono text-primary">{instrument.symbol}</span>{" "}
+                      {instrument.name}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+          {error ? (
+            <p className="px-1 text-down" data-testid="watchlist-error">
+              {error}
+            </p>
+          ) : null}
+          {lists.length === 0 ? (
+            <p className="p-1 text-muted-foreground">No lists yet. Create one to add symbols.</p>
+          ) : rows.length === 0 ? (
+            <p className="p-1 text-muted-foreground">Empty list. Search to add a symbol.</p>
+          ) : (
+            <div className="min-h-0 flex-1 overflow-auto">
+              <table className="w-full border-collapse font-mono tabular-nums">
+                <thead className="sticky top-0 bg-card text-muted-foreground">
+                  <tr>
+                    {(
+                      [
+                        ["symbol", "Sym"],
+                        ["last", "Last"],
+                        ["netChange", "Net"],
+                        ["pctChange", "%"],
+                        ["volume", "Vol"],
+                      ] as const
+                    ).map(([key, label]) => (
+                      <th key={key} className="cursor-pointer px-1 text-left font-sans font-medium">
+                        <button type="button" onClick={() => toggleSort(key)}>
+                          {label}
+                        </button>
+                      </th>
+                    ))}
+                    <th className="px-1 text-left font-sans font-medium">Bid/Ask</th>
+                    <th className="px-1 text-left font-sans font-medium">Trend</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((row) => {
+                    const tone =
+                      row.netChange === null ? "" : row.netChange >= 0 ? "text-up" : "text-down";
+                    const flashClass =
+                      row.flash === "up" ? "flash-up" : row.flash === "down" ? "flash-down" : "";
+                    return (
+                      <tr
+                        key={row.item.id}
+                        data-testid={`watchlist-row-${row.symbol}`}
+                        data-instrument-id={row.item.instrument_id}
+                        className="cursor-pointer hover:bg-muted"
+                        onClick={() => setActiveSymbol(row.symbol)}
+                        onContextMenu={(event) => {
+                          event.preventDefault();
+                          setMenu({
+                            x: event.clientX,
+                            y: event.clientY,
+                            itemId: row.item.id,
+                            symbol: row.symbol,
+                          });
+                        }}
+                      >
+                        <td className="px-1 text-primary">{row.symbol}</td>
+                        <td
+                          className={`px-1 ${tone} ${flashClass}`}
+                          data-flash={row.flash ?? undefined}
+                          data-testid={`watchlist-last-${row.symbol}`}
+                        >
+                          {formatPx(row.last)}
+                        </td>
+                        <td className={`px-1 ${tone}`}>{formatPx(row.netChange)}</td>
+                        <td className={`px-1 ${tone}`}>{formatPct(row.pctChange)}</td>
+                        <td className="px-1">
+                          {row.volume === null ? "—" : Math.round(row.volume).toLocaleString()}
+                        </td>
+                        <td className="px-1">
+                          {formatPx(row.bid)}/{formatPx(row.ask)}
+                        </td>
+                        <td className="px-1">
+                          <WatchlistSparkline points={row.sparkline} />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {menu ? (
+            <div
+              className="fixed z-50 flex flex-col border border-border bg-card"
+              style={{ left: menu.x, top: menu.y }}
+            >
+              <button
+                type="button"
+                className="px-2 py-1 text-left hover:bg-muted"
+                data-testid="watchlist-create-alert"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setAlertSymbol(menu.symbol);
+                  setPane("alerts");
+                  setMenu(null);
+                }}
+              >
+                Create alert {menu.symbol}
+              </button>
+              <button
+                type="button"
+                className="px-2 py-1 text-left hover:bg-muted"
+                data-testid="watchlist-remove"
+                onClick={() => void onRemove(menu.itemId)}
+              >
+                Remove {menu.symbol}
+              </button>
+            </div>
+          ) : null}
+        </>
+      )}
     </div>
   );
 }

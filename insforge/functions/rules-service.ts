@@ -1,3 +1,14 @@
+// rewritten for InsForge worker (new Function — no import/export)
+function createAdminClient(config) {
+  const raw = config ?? {};
+  const apiKey = typeof raw.apiKey === "string" ? raw.apiKey.trim() : "";
+  if (!apiKey) {
+    throw new Error("Missing apiKey. Pass apiKey to createAdminClient().");
+  }
+  const clientConfig = { ...raw };
+  delete clientConfig.apiKey;
+  return createClient({ ...clientConfig, accessToken: apiKey, isServerMode: true });
+}
 // bundled from insforge/functions/rules-service-src.ts
 
 var __defProp = Object.defineProperty;
@@ -6,8 +17,6 @@ var __export = (target, all) => {
 };
 
 // insforge/functions/rules-service-src.ts
-import { createAdminClient, createClient } from "npm:@insforge/sdk";
-
 // node_modules/.pnpm/zod@3.25.76/node_modules/zod/v3/external.js
 var external_exports = {};
 __export(external_exports, {
@@ -4117,19 +4126,25 @@ var profileSchema = external_exports.object({
   created_at: timestamptzSchema,
   updated_at: timestamptzSchema,
 });
-var profileInsertSchema = external_exports.object({
-  user_id: uuidSchema,
-  display_name: external_exports.string().nullable().optional(),
+var profileInsertSchema = external_exports
+  .object({
+    user_id: uuidSchema,
+    display_name: external_exports.string().nullable().optional(),
+    experience_level: experienceLevelSchema.nullable().optional(),
+    suitability_tier: suitabilityTierSchema.nullable().optional(),
+    objectives: external_exports.string().nullable().optional(),
+  })
+  .strict();
+var profileAdminInsertSchema = profileInsertSchema.extend({
   persona: external_exports.string().nullable().optional(),
-  experience_level: experienceLevelSchema.nullable().optional(),
-  suitability_tier: suitabilityTierSchema.nullable().optional(),
-  objectives: external_exports.string().nullable().optional(),
 });
-var profilePatchSchema = profileInsertSchema.omit({ user_id: true }).partial();
+var profilePatchSchema = profileInsertSchema.omit({ user_id: true }).partial().strict();
+var profileAdminPatchSchema = profileAdminInsertSchema.omit({ user_id: true }).partial().strict();
 var accountSchema = external_exports.object({
   id: uuidSchema,
   user_id: uuidSchema,
   cash_balance: numericSchema,
+  reserved_cash: numericSchema.optional(),
   currency: external_exports.string().min(1),
   created_at: timestamptzSchema,
   updated_at: timestamptzSchema,
@@ -4137,12 +4152,14 @@ var accountSchema = external_exports.object({
 var accountInsertSchema = external_exports.object({
   user_id: uuidSchema,
   cash_balance: numericSchema.optional(),
+  reserved_cash: numericSchema.optional(),
   currency: external_exports.string().min(1).optional(),
 });
-var accountPatchSchema = external_exports.object({
-  cash_balance: numericSchema.optional(),
-  currency: external_exports.string().min(1).optional(),
-});
+var accountPatchSchema = external_exports
+  .object({
+    currency: external_exports.string().min(1).optional(),
+  })
+  .strict();
 var instrumentStatusSchema = external_exports.enum(["active", "halted", "delisted"]);
 var marketCapBandSchema = external_exports.enum(["mega", "large", "mid", "small", "micro"]);
 var betaClassSchema = external_exports.enum(["low", "medium", "high"]);
@@ -4550,6 +4567,852 @@ var rulesAdminPublishResponseSchema = external_exports.object({
   event: external_exports.literal("rules:published"),
 });
 
+// packages/schemas/src/orders.ts
+var orderSideSchema = external_exports.enum(["buy", "sell"]);
+var orderTypeSchema = external_exports.enum(["market", "limit", "stop", "stop_limit"]);
+var tifSchema = external_exports.enum(["DAY", "GTC", "IOC"]);
+var qtyModeSchema = external_exports.enum(["shares", "notional"]);
+var orderGroupTypeSchema = external_exports.enum(["bracket", "oco"]);
+var orderLegRoleSchema = external_exports.enum([
+  "entry",
+  "take_profit",
+  "stop_loss",
+  "oco_a",
+  "oco_b",
+]);
+var trailTypeSchema = external_exports.enum(["percent", "amount"]);
+var orderStatusSchema = external_exports.enum([
+  "draft",
+  "validated",
+  "accepted",
+  "working",
+  "partially_filled",
+  "filled",
+  "cancelled",
+  "rejected",
+  "expired",
+]);
+var orderDraftSchema = external_exports
+  .object({
+    symbol: external_exports.string().min(1),
+    side: orderSideSchema,
+    qty: external_exports.number().finite(),
+    order_type: orderTypeSchema,
+    limit_price: external_exports.number().finite().nullable().optional(),
+    stop_price: external_exports.number().finite().nullable().optional(),
+    tif: tifSchema,
+    group_type: orderGroupTypeSchema.nullable().optional(),
+    tp_price: external_exports.number().finite().nullable().optional(),
+    sl_price: external_exports.number().finite().nullable().optional(),
+    trail_type: trailTypeSchema.nullable().optional(),
+    trail_value: external_exports.number().finite().nullable().optional(),
+  })
+  .strict();
+var orderPreviewRequestSchema = external_exports
+  .object({
+    op: external_exports.literal("preview").optional(),
+    draft: orderDraftSchema,
+    last_price: numericSchema,
+  })
+  .strict();
+var orderPreviewRuleSchema = external_exports.object({
+  table_key: external_exports.string().min(1),
+  passed: external_exports.boolean(),
+  decision: external_exports.string().min(1),
+  reason: external_exports.string().min(1),
+  reason_code: external_exports.string().min(1).optional(),
+});
+var orderFeeBreakdownSchema = external_exports.object({
+  commission_usd: numericSchema,
+  sec_fee: numericSchema,
+  taf: numericSchema,
+  data_fee_monthly: numericSchema.optional(),
+});
+var orderPreviewResponseSchema = external_exports.object({
+  passed: external_exports.boolean(),
+  buying_power: numericSchema,
+  last_price: numericSchema,
+  qty: numericSchema,
+  order_notional: numericSchema,
+  estimated_fees: numericSchema,
+  est_total: numericSchema,
+  fees: orderFeeBreakdownSchema,
+  rules: external_exports.array(orderPreviewRuleSchema),
+  validation_outcome: external_exports.union([
+    external_exports.record(external_exports.unknown()),
+    external_exports.array(external_exports.record(external_exports.unknown())),
+  ]),
+  risk_outcome: external_exports.union([
+    external_exports.record(external_exports.unknown()),
+    external_exports.array(external_exports.record(external_exports.unknown())),
+  ]),
+  fee_outcome: external_exports.record(external_exports.unknown()),
+  hours_outcome: external_exports
+    .union([
+      external_exports.record(external_exports.unknown()),
+      external_exports.array(external_exports.record(external_exports.unknown())),
+    ])
+    .default({}),
+});
+var orderCreateRequestSchema = external_exports
+  .object({
+    op: external_exports.literal("create").optional(),
+    draft: orderDraftSchema,
+    last_price: numericSchema,
+  })
+  .strict();
+var orderRecordSchema = external_exports.object({
+  id: uuidSchema,
+  user_id: uuidSchema,
+  account_id: uuidSchema,
+  instrument_id: uuidSchema,
+  symbol: external_exports.string().min(1),
+  side: orderSideSchema,
+  qty: numericSchema,
+  filled_qty: numericSchema,
+  order_type: orderTypeSchema,
+  limit_price: numericSchema.nullable(),
+  stop_price: numericSchema.nullable(),
+  tif: tifSchema,
+  status: orderStatusSchema,
+  reject_reason: external_exports.string().nullable(),
+  rule_audit_id: external_exports.string().nullable(),
+  parent_order_id: uuidSchema.nullable().optional(),
+  group_id: uuidSchema.nullable().optional(),
+  group_type: orderGroupTypeSchema.nullable().optional(),
+  leg_role: orderLegRoleSchema.nullable().optional(),
+  group_activated: external_exports.boolean().optional(),
+  trail_type: trailTypeSchema.nullable().optional(),
+  trail_value: numericSchema.nullable().optional(),
+  high_water_mark: numericSchema.nullable().optional(),
+  reserved_amount: numericSchema.optional(),
+  stop_triggered: external_exports.boolean().optional(),
+  created_at: timestamptzSchema,
+  updated_at: timestamptzSchema,
+});
+var orderCreateResponseSchema = external_exports.object({
+  order: orderRecordSchema,
+  preview: orderPreviewResponseSchema,
+});
+var orderCancelRequestSchema = external_exports
+  .object({
+    op: external_exports.literal("cancel").optional(),
+    order_id: uuidSchema.optional(),
+  })
+  .strict();
+var orderCancelResponseSchema = external_exports.object({
+  order: orderRecordSchema,
+});
+var orderRealtimeEventSchema = external_exports.object({
+  id: uuidSchema,
+  status: orderStatusSchema.optional(),
+  symbol: external_exports.string().min(1).optional(),
+  reject_reason: external_exports.string().nullable().optional(),
+  rule_audit_id: external_exports.string().nullable().optional(),
+});
+var blotterTabSchema = external_exports.enum(["working", "filled", "rejected", "all"]);
+var blotterSideFilterSchema = external_exports.enum(["all", "buy", "sell"]);
+var blotterFiltersSchema = external_exports
+  .object({
+    symbol: external_exports.string(),
+    side: blotterSideFilterSchema,
+    status: external_exports.union([external_exports.literal("all"), orderStatusSchema]),
+    dateFrom: external_exports.string(),
+    dateTo: external_exports.string(),
+  })
+  .strict();
+var executionRecordSchema = external_exports.object({
+  id: uuidSchema,
+  order_id: uuidSchema,
+  user_id: uuidSchema,
+  account_id: uuidSchema,
+  instrument_id: uuidSchema,
+  symbol: external_exports.string().min(1),
+  side: orderSideSchema,
+  qty: numericSchema,
+  price: numericSchema,
+  created_at: timestamptzSchema,
+});
+var positionRecordSchema = external_exports.object({
+  id: uuidSchema,
+  user_id: uuidSchema,
+  account_id: uuidSchema,
+  instrument_id: uuidSchema,
+  symbol: external_exports.string().min(1),
+  qty: numericSchema,
+  avg_cost: numericSchema,
+  realized_pnl: numericSchema,
+  created_at: timestamptzSchema,
+  updated_at: timestamptzSchema,
+});
+var portfolioSnapshotSchema = external_exports.object({
+  id: uuidSchema,
+  user_id: uuidSchema,
+  account_id: uuidSchema,
+  as_of_date: external_exports.string().min(1),
+  equity: numericSchema,
+  cash: numericSchema,
+  buying_power: numericSchema,
+  created_at: timestamptzSchema,
+});
+var execConfigSchema = external_exports.object({
+  slippage_bps: numericSchema,
+  liquidity_cap: numericSchema.optional(),
+  liquidity_cap_pct_adv: numericSchema.optional(),
+  tick_size: numericSchema.optional(),
+});
+var matchTickSchema = external_exports.object({
+  instrument_id: uuidSchema.optional(),
+  symbol: external_exports.string().min(1).optional(),
+  last: numericSchema,
+  bid: numericSchema.optional(),
+  ask: numericSchema.optional(),
+  ts: timestamptzSchema.optional(),
+});
+var workingOrderMatchSchema = external_exports.object({
+  id: external_exports.string().min(1),
+  side: orderSideSchema,
+  qty: numericSchema,
+  filled_qty: numericSchema,
+  order_type: orderTypeSchema,
+  limit_price: numericSchema.nullable().optional(),
+  stop_price: numericSchema.nullable().optional(),
+  stop_triggered: external_exports.boolean().optional(),
+  tif: tifSchema.optional(),
+  created_at: timestamptzSchema.optional(),
+  group_id: external_exports.string().min(1).nullable().optional(),
+  group_type: orderGroupTypeSchema.nullable().optional(),
+  leg_role: orderLegRoleSchema.nullable().optional(),
+  group_activated: external_exports.boolean().optional(),
+  trail_type: trailTypeSchema.nullable().optional(),
+  trail_value: numericSchema.nullable().optional(),
+  high_water_mark: numericSchema.nullable().optional(),
+});
+var matchFillSchema = external_exports.object({
+  order_id: external_exports.string().min(1),
+  side: orderSideSchema,
+  qty: numericSchema,
+  price: numericSchema,
+});
+var matchingRunnerRequestSchema = external_exports
+  .object({
+    ticks: external_exports.array(quoteTickSchema).optional(),
+  })
+  .strict();
+var matchingRunnerResponseSchema = external_exports.object({
+  ticks: external_exports.number().int().nonnegative(),
+  promoted: external_exports.number().int().nonnegative(),
+  fills: external_exports.number().int().nonnegative(),
+  triggered: external_exports.number().int().nonnegative(),
+});
+
+// packages/schemas/src/analytics.ts
+var equityCurveRangeSchema = external_exports.enum(["1M", "3M", "1Y"]);
+var portfolioPositionViewSchema = external_exports.object({
+  id: uuidSchema,
+  instrument_id: uuidSchema,
+  symbol: external_exports.string().min(1),
+  sector: external_exports.string().nullable(),
+  qty: numericSchema,
+  avg_cost: numericSchema,
+  last: numericSchema,
+  prev_close: numericSchema,
+  market_value: numericSchema,
+  unrealized_pnl: numericSchema,
+  realized_pnl: numericSchema,
+  day_pnl: numericSchema,
+  weight_pct: numericSchema,
+  unrealized_pnl_pct: numericSchema,
+});
+var portfolioAccountViewSchema = external_exports.object({
+  account_id: uuidSchema,
+  cash: numericSchema,
+  reserved_cash: numericSchema,
+  buying_power: numericSchema,
+  equity: numericSchema,
+  day_pnl: numericSchema,
+  currency: external_exports.string().min(1),
+});
+var allocationSliceSchema = external_exports.object({
+  key: external_exports.string().min(1),
+  market_value: numericSchema,
+  weight_pct: numericSchema,
+});
+var portfolioResponseSchema = external_exports.object({
+  account: portfolioAccountViewSchema,
+  positions: external_exports.array(portfolioPositionViewSchema),
+  allocations: external_exports.object({
+    by_position: external_exports.array(allocationSliceSchema),
+    by_sector: external_exports.array(allocationSliceSchema),
+  }),
+  snapshots: external_exports.array(portfolioSnapshotSchema),
+});
+var analyticsPortfolioRequestSchema = external_exports
+  .object({
+    op: external_exports.literal("portfolio").optional(),
+    range: equityCurveRangeSchema.optional(),
+  })
+  .strict();
+var analyticsSnapshotRequestSchema = external_exports
+  .object({
+    op: external_exports.literal("snapshot").optional(),
+    force: external_exports.boolean().optional(),
+    as_of_date: external_exports
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .optional(),
+  })
+  .strict();
+var analyticsSnapshotResponseSchema = external_exports.object({
+  written: external_exports.number().int().nonnegative(),
+  skipped: external_exports.boolean(),
+  as_of_date: external_exports.string().nullable(),
+});
+var analyticsRsiRequestSchema = external_exports
+  .object({
+    op: external_exports.literal("rsi").optional(),
+  })
+  .strict();
+var analyticsRsiResponseSchema = external_exports.object({
+  written: external_exports.number().int().nonnegative(),
+});
+
+// packages/schemas/src/news.ts
+var newsEventTypeSchema = external_exports.enum([
+  "earnings",
+  "analyst",
+  "macro",
+  "product",
+  "regulatory",
+  "mna",
+]);
+var newsHeadlineTemplateSchema = external_exports.object({
+  headline: external_exports.string().min(1),
+  sentiment: external_exports.tuple([external_exports.number(), external_exports.number()]),
+});
+var newsTemplatesFileSchema = external_exports
+  .object({
+    earnings: external_exports.array(newsHeadlineTemplateSchema).min(1),
+    analyst: external_exports.array(newsHeadlineTemplateSchema).min(1),
+    macro: external_exports.array(newsHeadlineTemplateSchema).min(1),
+    product: external_exports.array(newsHeadlineTemplateSchema).min(1),
+    regulatory: external_exports.array(newsHeadlineTemplateSchema).min(1),
+    mna: external_exports.array(newsHeadlineTemplateSchema).min(1),
+    fills: external_exports.record(external_exports.array(external_exports.string().min(1))),
+  })
+  .strict();
+var newsItemSchema = external_exports.object({
+  id: uuidSchema,
+  ts: timestamptzSchema,
+  headline: external_exports.string().min(1),
+  body: external_exports.string().min(1),
+  source: external_exports.string().min(1),
+  symbols: external_exports.array(external_exports.string().min(1)),
+  sector: external_exports.string().nullable(),
+  sentiment: numericSchema.refine((value) => value >= -1 && value <= 1, "sentiment"),
+  event_type: newsEventTypeSchema,
+});
+var newsItemInsertSchema = newsItemSchema.omit({ id: true }).extend({
+  id: uuidSchema.optional(),
+});
+var newsRealtimeBatchSchema = external_exports.object({
+  ts: timestamptzSchema,
+  items: external_exports.array(newsItemSchema).min(1),
+});
+
+// packages/schemas/src/news-search.ts
+var NEWS_SEARCH_LIMIT = 50;
+var newsSearchRequestSchema = external_exports.object({
+  query: external_exports.string().trim().min(1).max(500),
+  symbols: external_exports.array(external_exports.string().min(1)).max(32).optional(),
+  since: timestamptzSchema.optional(),
+  limit: external_exports.number().int().min(1).max(NEWS_SEARCH_LIMIT).optional(),
+});
+var newsSearchHitSchema = newsItemSchema.extend({
+  score: numericSchema,
+});
+var newsSearchResponseSchema = external_exports.object({
+  items: external_exports.array(newsSearchHitSchema),
+});
+var embedWorkerRequestSchema = external_exports.object({
+  op: external_exports.enum(["cycle", "backfill"]).default("cycle"),
+  news_ids: external_exports.array(uuidSchema).max(200).optional(),
+});
+var embedWorkerResponseSchema = external_exports.object({
+  scanned: external_exports.number().int().nonnegative(),
+  embedded: external_exports.number().int().nonnegative(),
+  retried: external_exports.number().int().nonnegative(),
+  dead_lettered: external_exports.number().int().nonnegative(),
+});
+var newsEmbedDeadLetterSchema = external_exports.object({
+  news_id: uuidSchema,
+  attempts: external_exports.number().int().nonnegative(),
+  last_error: external_exports.string().min(1),
+  last_http_status: external_exports.number().int().nullable(),
+  dead: external_exports.boolean(),
+  updated_at: timestamptzSchema,
+});
+
+// packages/schemas/src/fundamentals.ts
+var analystRatingsSchema = external_exports.object({
+  buy: external_exports.coerce.number().int().nonnegative(),
+  hold: external_exports.coerce.number().int().nonnegative(),
+  sell: external_exports.coerce.number().int().nonnegative(),
+});
+var fourPeriodSeriesSchema = external_exports.object({
+  labels: external_exports.tuple([
+    external_exports.string(),
+    external_exports.string(),
+    external_exports.string(),
+    external_exports.string(),
+  ]),
+  values: external_exports.tuple([numericSchema, numericSchema, numericSchema, numericSchema]),
+});
+var fundamentalsValuationSchema = external_exports.object({
+  pe: numericSchema.optional(),
+  market_cap_b: numericSchema.optional(),
+  shares_out_m: numericSchema.optional(),
+  expense_ratio: numericSchema.optional(),
+  aum_b: numericSchema.optional(),
+});
+var fundamentalsIncomeSchema = external_exports.object({
+  eps_ttm: numericSchema.optional(),
+  revenue_b: numericSchema.optional(),
+  revenue_growth_pct: numericSchema.optional(),
+  next_earnings: external_exports.string().min(1).optional(),
+  revenue_periods: fourPeriodSeriesSchema,
+  eps_periods: fourPeriodSeriesSchema,
+});
+var fundamentalsMarginsSchema = external_exports.object({
+  gross_margin_pct: numericSchema.optional(),
+  net_margin_pct: numericSchema.optional(),
+});
+var fundamentalsDividendsSchema = external_exports.object({
+  dividend_yield: numericSchema,
+});
+var fundamentalsRangesSchema = external_exports.object({
+  week52_low: numericSchema,
+  week52_high: numericSchema,
+});
+var fundamentalsMetricsSchema = external_exports
+  .object({
+    valuation: fundamentalsValuationSchema,
+    income: fundamentalsIncomeSchema,
+    margins: fundamentalsMarginsSchema,
+    dividends: fundamentalsDividendsSchema,
+    ranges: fundamentalsRangesSchema,
+    analyst: analystRatingsSchema,
+  })
+  .strict();
+var fundamentalsRecordSchema = external_exports.object({
+  instrument_id: uuidSchema,
+  metrics: fundamentalsMetricsSchema,
+  updated_at: timestamptzSchema,
+});
+var fundamentalsRecordInsertSchema = external_exports.object({
+  instrument_id: uuidSchema,
+  metrics: fundamentalsMetricsSchema,
+  updated_at: timestamptzSchema.optional(),
+});
+var fundamentalsFileMetricsSchema = external_exports
+  .object({
+    pe: numericSchema.optional(),
+    eps_ttm: numericSchema.optional(),
+    revenue_b: numericSchema.optional(),
+    revenue_growth_pct: numericSchema.optional(),
+    gross_margin_pct: numericSchema.optional(),
+    net_margin_pct: numericSchema.optional(),
+    dividend_yield: numericSchema.optional(),
+    shares_out_m: numericSchema.optional(),
+    week52_low: numericSchema.optional(),
+    week52_high: numericSchema.optional(),
+    analyst: analystRatingsSchema.optional(),
+    next_earnings: external_exports.string().min(1).optional(),
+    expense_ratio: numericSchema.optional(),
+    aum_b: numericSchema.optional(),
+    valuation: fundamentalsValuationSchema.optional(),
+    income: fundamentalsIncomeSchema.partial().optional(),
+    margins: fundamentalsMarginsSchema.optional(),
+    dividends: fundamentalsDividendsSchema.optional(),
+    ranges: fundamentalsRangesSchema.optional(),
+  })
+  .passthrough();
+var fundamentalsFileRowSchema = external_exports.object({
+  symbol: external_exports.string().min(1),
+  metrics: fundamentalsFileMetricsSchema,
+});
+var fundamentalsFileSchema = external_exports.array(fundamentalsFileRowSchema);
+var desPeerSchema = external_exports.object({
+  symbol: external_exports.string().min(1),
+  name: external_exports.string().min(1),
+  instrument_id: uuidSchema,
+  last: numericSchema.nullable(),
+  market_cap_b: numericSchema.nullable(),
+});
+var desProfileSchema = external_exports.object({
+  instrument: instrumentSchema,
+  quote: quotesLatestSchema.nullable(),
+  fundamentals: fundamentalsRecordSchema,
+  peers: external_exports.array(desPeerSchema),
+});
+
+// packages/schemas/src/screener.ts
+var screenerCombinatorSchema = external_exports.enum(["and", "or"]);
+var screenerFieldIdSchema = external_exports.enum([
+  "sector",
+  "market_cap_band",
+  "pe",
+  "dividend_yield",
+  "pct_chg",
+  "volume",
+  "rsi_14",
+  "week52_proximity",
+]);
+var screenerSortColumnSchema = external_exports.enum([
+  "symbol",
+  "name",
+  "sector",
+  "market_cap_band",
+  "pe",
+  "dividend_yield",
+  "pct_chg",
+  "volume",
+  "rsi_14",
+  "week52_proximity",
+  "last",
+]);
+var screenerSortDirSchema = external_exports.enum(["asc", "desc"]);
+var STRING_OPS = ["eq", "neq", "in", "not_in", "regex", "is_null", "any"];
+var NUMBER_OPS = ["eq", "neq", "lt", "lte", "gt", "gte", "between", "is_null", "any"];
+var ENUM_OPS = ["eq", "neq", "in", "not_in", "is_null", "any"];
+var SCREENER_FIELD_REGISTRY = {
+  sector: {
+    id: "sector",
+    label: "Sector",
+    type: "string",
+    operators: STRING_OPS,
+    sqlExpr: "i.sector",
+  },
+  market_cap_band: {
+    id: "market_cap_band",
+    label: "Market cap band",
+    type: "enum",
+    operators: ENUM_OPS,
+    sqlExpr: "i.market_cap_band",
+  },
+  pe: {
+    id: "pe",
+    label: "P/E",
+    type: "number",
+    operators: NUMBER_OPS,
+    sqlExpr: "(f.metrics->'valuation'->>'pe')::numeric",
+  },
+  dividend_yield: {
+    id: "dividend_yield",
+    label: "Div yield",
+    type: "number",
+    operators: NUMBER_OPS,
+    sqlExpr: "(f.metrics->'dividends'->>'dividend_yield')::numeric",
+  },
+  pct_chg: {
+    id: "pct_chg",
+    label: "% chg today",
+    type: "number",
+    operators: NUMBER_OPS,
+    sqlExpr:
+      "CASE WHEN q.prev_close IS NULL OR q.prev_close = 0 THEN NULL ELSE (q.last - q.prev_close) / q.prev_close * 100 END",
+  },
+  volume: {
+    id: "volume",
+    label: "Volume",
+    type: "number",
+    operators: NUMBER_OPS,
+    sqlExpr: "q.volume",
+  },
+  rsi_14: {
+    id: "rsi_14",
+    label: "RSI(14)",
+    type: "number",
+    operators: NUMBER_OPS,
+    sqlExpr: "r.rsi_14",
+  },
+  week52_proximity: {
+    id: "week52_proximity",
+    label: "52w proximity",
+    type: "number",
+    operators: NUMBER_OPS,
+    sqlExpr:
+      "CASE WHEN NULLIF((f.metrics->'ranges'->>'week52_high')::numeric - (f.metrics->'ranges'->>'week52_low')::numeric, 0) IS NULL THEN NULL ELSE (q.last - (f.metrics->'ranges'->>'week52_low')::numeric) / ((f.metrics->'ranges'->>'week52_high')::numeric - (f.metrics->'ranges'->>'week52_low')::numeric) END",
+  },
+};
+var screenerValueSchema = external_exports.union([
+  external_exports.string(),
+  external_exports.number(),
+  external_exports.boolean(),
+  external_exports.array(
+    external_exports.union([external_exports.string(), external_exports.number()]),
+  ),
+  external_exports.null(),
+]);
+var screenerConditionSchema = external_exports
+  .object({
+    field: screenerFieldIdSchema,
+    op: conditionOperatorSchema,
+    value: screenerValueSchema.optional(),
+  })
+  .superRefine((condition, ctx) => {
+    const def = SCREENER_FIELD_REGISTRY[condition.field];
+    if (!def.operators.includes(condition.op)) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        message: "OPERATOR_NOT_ALLOWED",
+        path: ["op"],
+      });
+    }
+    if (condition.op === "is_null" || condition.op === "any") {
+      return;
+    }
+    if (condition.value === void 0) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        message: "VALUE_REQUIRED",
+        path: ["value"],
+      });
+      return;
+    }
+    if (condition.op === "in" || condition.op === "not_in") {
+      if (!Array.isArray(condition.value) || condition.value.length === 0) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          message: "VALUE_LIST_REQUIRED",
+          path: ["value"],
+        });
+      }
+      return;
+    }
+    if (condition.op === "between") {
+      if (!Array.isArray(condition.value) || condition.value.length !== 2) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          message: "BETWEEN_PAIR_REQUIRED",
+          path: ["value"],
+        });
+      }
+      return;
+    }
+    if (condition.field === "market_cap_band" && typeof condition.value === "string") {
+      if (!marketCapBandSchema.safeParse(condition.value).success) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          message: "MARKET_CAP_BAND_INVALID",
+          path: ["value"],
+        });
+      }
+    }
+  });
+var screenerGroupSchema = external_exports.object({
+  combinator: screenerCombinatorSchema,
+  conditions: external_exports.array(screenerConditionSchema).min(1).max(16),
+});
+var screenerCriteriaSchema = external_exports.object({
+  combinator: screenerCombinatorSchema,
+  groups: external_exports.array(screenerGroupSchema).min(1).max(16),
+});
+var screenerSortSchema = external_exports.object({
+  column: screenerSortColumnSchema,
+  dir: screenerSortDirSchema,
+});
+var screenerRunRequestSchema = external_exports
+  .object({
+    op: external_exports.enum(["run", "count"]).optional(),
+    criteria: screenerCriteriaSchema,
+    sort: screenerSortSchema.optional(),
+  })
+  .strict();
+var screenerRowSchema = external_exports.object({
+  instrument_id: uuidSchema,
+  symbol: external_exports.string().min(1),
+  name: external_exports.string().min(1),
+  sector: external_exports.string().nullable(),
+  market_cap_band: external_exports.string().nullable(),
+  pe: numericSchema.nullable(),
+  dividend_yield: numericSchema.nullable(),
+  pct_chg: numericSchema.nullable(),
+  volume: numericSchema.nullable(),
+  last: numericSchema.nullable(),
+  rsi_14: numericSchema.nullable(),
+  week52_proximity: numericSchema.nullable(),
+});
+var screenerRunResponseSchema = external_exports.object({
+  rows: external_exports.array(screenerRowSchema),
+  count: external_exports.number().int().nonnegative(),
+  truncated: external_exports.boolean(),
+});
+var screenerCountResponseSchema = external_exports.object({
+  count: external_exports.number().int().nonnegative(),
+  truncated: external_exports.boolean(),
+});
+var screenRecordSchema = external_exports.object({
+  id: uuidSchema,
+  user_id: uuidSchema,
+  name: external_exports.string().min(1),
+  criteria: screenerCriteriaSchema,
+  created_at: timestamptzSchema,
+  updated_at: timestamptzSchema,
+});
+var screenInsertSchema = external_exports.object({
+  user_id: uuidSchema,
+  name: external_exports.string().min(1).max(80),
+  criteria: screenerCriteriaSchema,
+});
+var screenPatchSchema = external_exports
+  .object({
+    name: external_exports.string().min(1).max(80).optional(),
+    criteria: screenerCriteriaSchema.optional(),
+  })
+  .strict();
+var instrumentDailyRsiSchema = external_exports.object({
+  instrument_id: uuidSchema,
+  rsi_14: numericSchema.nullable(),
+  as_of_date: external_exports.string().min(10),
+  updated_at: timestamptzSchema,
+});
+
+// packages/schemas/src/alerts.ts
+var alertKindSchema = external_exports.enum([
+  "price_cross_above",
+  "price_cross_below",
+  "pct_chg",
+  "volume",
+  "rsi",
+  "news_sentiment",
+]);
+var alertThrottleStateSchema = external_exports
+  .object({
+    last_fired_at: timestamptzSchema.nullable().optional(),
+    fires_today: external_exports.coerce.number().int().nonnegative().optional(),
+    fires_on_date: external_exports.string().nullable().optional(),
+    last_eval_last: numericSchema.nullable().optional(),
+    paused: external_exports.boolean().optional(),
+  })
+  .strict();
+var alertRuleConditionSchema = decisionRowSchema;
+var alertRuleSchema = external_exports.object({
+  id: uuidSchema,
+  user_id: uuidSchema,
+  instrument_id: uuidSchema.nullable(),
+  name: external_exports.string().min(1),
+  kind: alertKindSchema,
+  condition: alertRuleConditionSchema,
+  active: external_exports.boolean(),
+  throttle_state: alertThrottleStateSchema,
+  created_at: timestamptzSchema,
+  updated_at: timestamptzSchema,
+});
+var alertRuleInsertSchema = external_exports
+  .object({
+    user_id: uuidSchema,
+    instrument_id: uuidSchema.nullable().optional(),
+    name: external_exports.string().min(1),
+    kind: alertKindSchema,
+    condition: alertRuleConditionSchema,
+    active: external_exports.boolean().optional(),
+    throttle_state: alertThrottleStateSchema.optional(),
+  })
+  .strict();
+var alertRulePatchSchema = external_exports
+  .object({
+    name: external_exports.string().min(1).optional(),
+    active: external_exports.boolean().optional(),
+    throttle_state: alertThrottleStateSchema.optional(),
+    condition: alertRuleConditionSchema.optional(),
+  })
+  .strict();
+var alertCreateRequestSchema = external_exports
+  .object({
+    instrument_id: uuidSchema.nullable().optional(),
+    symbol: external_exports.string().min(1).optional(),
+    kind: alertKindSchema,
+    threshold: numericSchema.optional(),
+    name: external_exports.string().min(1).optional(),
+  })
+  .strict();
+var alertInstanceSchema = external_exports.object({
+  id: uuidSchema,
+  user_id: uuidSchema,
+  alert_rule_id: uuidSchema,
+  instrument_id: uuidSchema.nullable(),
+  fired_at: timestamptzSchema,
+  message: external_exports.string().min(1),
+  payload: external_exports.record(external_exports.unknown()),
+  read: external_exports.boolean(),
+  created_at: timestamptzSchema,
+});
+var alertInstanceInsertSchema = external_exports
+  .object({
+    user_id: uuidSchema,
+    alert_rule_id: uuidSchema,
+    instrument_id: uuidSchema.nullable().optional(),
+    fired_at: timestamptzSchema.optional(),
+    message: external_exports.string().min(1),
+    payload: external_exports.record(external_exports.unknown()).optional(),
+    read: external_exports.boolean().optional(),
+  })
+  .strict();
+var alertRealtimeEventSchema = external_exports.object({
+  kind: external_exports.literal("alert"),
+  alert: alertInstanceSchema,
+});
+var alertRunnerRequestSchema = external_exports
+  .object({
+    ticks: external_exports.array(quoteTickSchema).optional(),
+    news: external_exports.array(newsItemSchema).optional(),
+    clock: timestamptzSchema.optional(),
+  })
+  .strict();
+var alertRunnerResponseSchema = external_exports.object({
+  evaluated: external_exports.number().int().nonnegative(),
+  fired: external_exports.number().int().nonnegative(),
+  suppressed: external_exports.number().int().nonnegative(),
+});
+var evaluateAlertsRequestSchema = external_exports
+  .object({
+    ticks: external_exports.array(quoteTickSchema).optional(),
+    news: external_exports.array(newsItemSchema).optional(),
+  })
+  .strict();
+var alertConditionListSchema = external_exports.array(decisionConditionSchema).min(1);
+
+// packages/schemas/src/admin-users.ts
+var userRoleSchema = rulesAdminRoleSchema;
+var adminUsersOpSchema = external_exports.enum(["list", "assign"]);
+var adminUserRowSchema = external_exports.object({
+  user_id: uuidSchema,
+  email: external_exports.string().email().nullable().optional(),
+  display_name: external_exports.string().nullable().optional(),
+  role: userRoleSchema,
+});
+var adminUsersListRequestSchema = external_exports.object({
+  op: external_exports.literal("list"),
+});
+var adminUsersAssignRequestSchema = external_exports.object({
+  op: external_exports.literal("assign"),
+  user_id: uuidSchema,
+  role: userRoleSchema,
+});
+var adminUsersRequestSchema = external_exports.discriminatedUnion("op", [
+  adminUsersListRequestSchema,
+  adminUsersAssignRequestSchema,
+]);
+var adminUsersListResponseSchema = external_exports.object({
+  users: external_exports.array(adminUserRowSchema),
+});
+var adminUsersAssignResponseSchema = external_exports.object({
+  ok: external_exports.literal(true),
+  user_id: uuidSchema,
+  role: userRoleSchema,
+});
+
 // packages/schemas/src/index.ts
 var publicInsforgeEnvSchema = external_exports.object({
   NEXT_PUBLIC_INSFORGE_URL: external_exports.string().url(),
@@ -4722,14 +5585,61 @@ function interpolateMessage(message, context) {
 }
 
 // packages/rules-engine/src/authorize.ts
-function authorize(input) {
+function decisionFromOutcome(outcome) {
+  if (!outcome || typeof outcome !== "object" || !("decision" in outcome)) {
+    return "deny";
+  }
+  const decision = outcome.decision;
+  if (decision === "allow" || decision === "deny" || decision === "require_approval") {
+    return decision;
+  }
+  return "deny";
+}
+function authorizeResultFromOutcome(outcome) {
+  const decision = decisionFromOutcome(outcome);
+  return {
+    allowed: decision === "allow",
+    decision,
+    reason: decision === "allow" ? void 0 : "FORBIDDEN",
+  };
+}
+function authorizeFromTable(input) {
   if (!input.userId) {
-    return { allowed: false, reason: "UNAUTHENTICATED" };
+    return { allowed: false, decision: "deny", reason: "UNAUTHENTICATED" };
   }
   if (input.action.length === 0) {
-    return { allowed: false, reason: "ACTION_REQUIRED" };
+    return { allowed: false, decision: "deny", reason: "ACTION_REQUIRED" };
   }
-  return { allowed: true };
+  const role = input.role && input.role.length > 0 ? input.role : "unknown";
+  const result = evaluate(
+    input.table,
+    { role, action: input.action },
+    input.clock ?? /* @__PURE__ */ new Date(),
+  );
+  return authorizeResultFromOutcome(result.outcome);
+}
+async function authorize(input) {
+  if (!input.userId) {
+    return { allowed: false, decision: "deny", reason: "UNAUTHENTICATED" };
+  }
+  if (input.action.length === 0) {
+    return { allowed: false, decision: "deny", reason: "ACTION_REQUIRED" };
+  }
+  if (input.ports) {
+    const role = (await input.ports.loadRole(input.userId)) ?? "unknown";
+    const evaluated = await input.ports.evaluateEntitlements({ role, action: input.action });
+    return authorizeResultFromOutcome(evaluated.outcome);
+  }
+  if (input.table) {
+    return authorizeFromTable({
+      userId: input.userId,
+      action: input.action,
+      role: input.role,
+      table: input.table,
+      clock: input.clock,
+    });
+  }
+  return { allowed: false, decision: "deny", reason: "FORBIDDEN" };
 }
 
 // packages/rules-engine/src/doc05-fixtures.ts
@@ -4879,7 +5789,13 @@ var dtFee01 = {
       id: "2",
       priority: 2,
       conditions: [{ input: "side", op: "eq", value: "sell" }],
-      outputs: { sec_fee: "notional_x_sec_rate", taf: "qty_x_taf_capped" },
+      outputs: {
+        sec_fee: "notional_x_sec_rate",
+        taf: "qty_x_taf_capped",
+        sec_rate: 278e-7,
+        taf_per_share: 166e-6,
+        taf_cap: 8.3,
+      },
     },
     {
       id: "3",
@@ -5129,6 +6045,25 @@ var dtEnt01 = {
         { input: "action", op: "regex", value: "^trade:" },
       ],
       outputs: { decision: "deny" },
+    },
+    {
+      id: "5",
+      priority: 5,
+      conditions: [
+        { input: "role", op: "eq", value: "trader" },
+        {
+          input: "action",
+          op: "in",
+          value: [
+            "rules:evaluate",
+            "provision-account",
+            "profile-wizard",
+            "news:search",
+            "chart:bars",
+          ],
+        },
+      ],
+      outputs: { decision: "allow" },
     },
   ],
 };
@@ -5384,12 +6319,6 @@ function filterRuleAudits(rows, query) {
     return hay.toLowerCase().includes(needle);
   });
 }
-function entitlementAllows(outcome) {
-  if (!outcome || typeof outcome !== "object") {
-    return false;
-  }
-  return outcome.decision === "allow";
-}
 function requiredActionForAdminOp(op) {
   if (op === "listCatalog" || op === "getTable" || op === "listHistory" || op === "listAudits") {
     return "rules:read";
@@ -5527,16 +6456,15 @@ async function handleRulesServiceRequest(input) {
   if (adminOps.has(op)) {
     return handleAdminRulesOp(input, raw);
   }
-  const actorId = input.isService ? (input.userId ?? "service") : input.userId;
   const action =
     op === "publish"
       ? "rules:publish"
       : op === "invalidate"
         ? "rules:invalidate"
         : "rules:evaluate";
-  const gate = authorize({ userId: actorId, action });
-  if (!gate.allowed) {
-    return { status: 401, body: { error: gate.reason ?? "DENIED" } };
+  const denied = await denyUnlessEntitled(input, action);
+  if (denied) {
+    return denied;
   }
   if (input.ports.readPublishGeneration) {
     input.cache.syncGeneration(await input.ports.readPublishGeneration());
@@ -5599,6 +6527,37 @@ async function handleRulesServiceRequest(input) {
   });
   return { status: 200, body: result };
 }
+async function denyUnlessEntitled(input, action) {
+  const actorId = input.isService ? (input.userId ?? "service") : input.userId;
+  if (!actorId) {
+    return { status: 401, body: { error: "UNAUTHENTICATED" } };
+  }
+  if (input.isService) {
+    return null;
+  }
+  if (!input.ports.loadCallerRole || !input.userId) {
+    return { status: 403, body: { error: "FORBIDDEN" } };
+  }
+  const gate = await authorize({
+    userId: input.userId,
+    action,
+    ports: {
+      loadRole: input.ports.loadCallerRole,
+      evaluateEntitlements: async (ctx) => {
+        const tables = await input.ports.loadPublishedTables("entitlements");
+        const table = tables[0]?.table ?? baselineTable("DT-ENT-01");
+        return evaluate(table, ctx, input.clock ?? /* @__PURE__ */ new Date());
+      },
+    },
+  });
+  if (!gate.allowed) {
+    return {
+      status: gate.reason === "UNAUTHENTICATED" ? 401 : 403,
+      body: { error: gate.reason ?? "FORBIDDEN" },
+    };
+  }
+  return null;
+}
 function requireAdminPorts(ports) {
   if (
     !ports.listCatalog ||
@@ -5628,26 +6587,9 @@ async function handleAdminRulesOp(input, raw) {
   if (!parsed.success) {
     return { status: 400, body: { error: "INVALID_ADMIN_REQUEST" } };
   }
-  const actorId = input.isService ? (input.userId ?? "service") : input.userId;
-  const session = authorize({ userId: actorId, action: requiredActionForAdminOp(parsed.data.op) });
-  if (!session.allowed) {
-    return { status: 401, body: { error: session.reason ?? "DENIED" } };
-  }
-  if (!input.isService) {
-    if (!input.ports.loadCallerRole || !input.userId) {
-      return { status: 403, body: { error: "FORBIDDEN" } };
-    }
-    const role = (await input.ports.loadCallerRole(input.userId)) ?? "unknown";
-    const entitlementTables = await input.ports.loadPublishedTables("entitlements");
-    const table = entitlementTables[0]?.table ?? baselineTable("DT-ENT-01");
-    const verdict = evaluate(
-      table,
-      { role, action: requiredActionForAdminOp(parsed.data.op) },
-      input.clock ?? /* @__PURE__ */ new Date(),
-    );
-    if (!entitlementAllows(verdict.outcome)) {
-      return { status: 403, body: { error: "FORBIDDEN" } };
-    }
+  const denied = await denyUnlessEntitled(input, requiredActionForAdminOp(parsed.data.op));
+  if (denied) {
+    return denied;
   }
   const admin = requireAdminPorts(input.ports);
   if (!admin) {
@@ -6083,14 +7025,14 @@ async function rules_service_src_default(req) {
       },
       async loadCallerRole(id) {
         const { data, error } = await admin.database
-          .from("profiles")
-          .select("persona")
+          .from("user_roles")
+          .select("role")
           .eq("user_id", id);
         if (error) {
           throw new Error(error.message);
         }
         const row = Array.isArray(data) ? data[0] : void 0;
-        return row?.persona ?? null;
+        return row?.role ?? null;
       },
       async listCatalog() {
         const { data, error } = await admin.database
@@ -6283,4 +7225,5 @@ async function rules_service_src_default(req) {
   });
   return json(result.status, result.body);
 }
-export { rules_service_src_default as default };
+
+module.exports = rules_service_src_default;

@@ -1,0 +1,131 @@
+import { describe, expect, it } from "vitest";
+import {
+  execConfigSchema,
+  matchingRunnerRequestSchema,
+  blotterFiltersSchema,
+  orderCancelRequestSchema,
+  orderDraftSchema,
+  orderPreviewResponseSchema,
+  orderRealtimeEventSchema,
+} from "./orders";
+
+describe("orderDraftSchema", () => {
+  it("accepts a market DAY draft", () => {
+    const parsed = orderDraftSchema.parse({
+      symbol: "AAPL",
+      side: "buy",
+      qty: 5,
+      order_type: "market",
+      tif: "DAY",
+    });
+    expect(parsed.qty).toBe(5);
+  });
+
+  it("accepts bracket and trailing fields", () => {
+    const parsed = orderDraftSchema.parse({
+      symbol: "AAPL",
+      side: "buy",
+      qty: 2,
+      order_type: "market",
+      tif: "DAY",
+      group_type: "bracket",
+      tp_price: 210,
+      sl_price: 190,
+      trail_type: "percent",
+      trail_value: 5,
+    });
+    expect(parsed.group_type).toBe("bracket");
+    expect(parsed.trail_type).toBe("percent");
+  });
+
+  it("rejects unknown fields and invalid enums", () => {
+    expect(
+      orderDraftSchema.safeParse({
+        symbol: "AAPL",
+        side: "buy",
+        qty: 1,
+        order_type: "market",
+        tif: "DAY",
+        extra: true,
+      }).success,
+    ).toBe(false);
+    expect(
+      orderDraftSchema.safeParse({
+        symbol: "AAPL",
+        side: "hold",
+        qty: 1,
+        order_type: "market",
+        tif: "DAY",
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("orderPreviewResponseSchema", () => {
+  it("parses a pass envelope", () => {
+    const parsed = orderPreviewResponseSchema.parse({
+      passed: true,
+      buying_power: "100000",
+      last_price: 200,
+      qty: 5,
+      order_notional: 1000,
+      estimated_fees: 0,
+      est_total: 1000,
+      fees: { commission_usd: 0, sec_fee: 0, taf: 0 },
+      rules: [{ table_key: "DT-RISK-01", passed: true, decision: "allow", reason: "allow" }],
+      validation_outcome: { decision: "valid" },
+      risk_outcome: { decision: "allow" },
+      fee_outcome: { commission_usd: 0 },
+    });
+    expect(parsed.buying_power).toBe(100000);
+  });
+});
+
+describe("execConfigSchema", () => {
+  it("accepts slippage and an optional share cap", () => {
+    expect(execConfigSchema.parse({ slippage_bps: 5, liquidity_cap: 40 }).liquidity_cap).toBe(40);
+  });
+});
+
+describe("matchingRunnerRequestSchema", () => {
+  it("accepts an empty body or ticks", () => {
+    expect(matchingRunnerRequestSchema.parse({}).ticks).toBeUndefined();
+  });
+});
+
+describe("orderRealtimeEventSchema", () => {
+  it("accepts a channel order event", () => {
+    expect(
+      orderRealtimeEventSchema.parse({
+        id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        status: "working",
+        symbol: "AAPL",
+      }).symbol,
+    ).toBe("AAPL");
+  });
+});
+
+describe("blotterFiltersSchema", () => {
+  it("accepts empty filters", () => {
+    expect(
+      blotterFiltersSchema.parse({
+        symbol: "",
+        side: "all",
+        status: "all",
+        dateFrom: "",
+        dateTo: "",
+      }).side,
+    ).toBe("all");
+  });
+});
+
+describe("orderCancelRequestSchema", () => {
+  it("accepts cancel with an order id", () => {
+    expect(
+      orderCancelRequestSchema.parse({
+        op: "cancel",
+        order_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      }).order_id,
+    ).toBe("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
+  });
+});

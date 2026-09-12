@@ -193,6 +193,9 @@ function handlerPorts(initial: PublishedDomainTable[]): RulesServicePorts {
     async writeAuditLog() {
       return;
     },
+    async loadCallerRole() {
+      return "trader";
+    },
   };
 }
 
