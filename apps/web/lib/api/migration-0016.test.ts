@@ -16,8 +16,11 @@ const cliTwinSql = readFileSync(
 
 describe("PBI-024 migration 0016 user_roles", () => {
   it("lists 0016 after 0015", () => {
-    expect(LOCAL_MIGRATION_IDS[LOCAL_MIGRATION_IDS.length - 1]).toBe("0016");
+    expect(LOCAL_MIGRATION_IDS).toContain("0016");
     expect(LOCAL_MIGRATION_IDS).toContain("0015");
+    expect(LOCAL_MIGRATION_IDS.indexOf("0016")).toBeGreaterThan(
+      LOCAL_MIGRATION_IDS.indexOf("0015"),
+    );
   });
 
   it("creates user_roles with own-select RLS and admin directory RPC", () => {

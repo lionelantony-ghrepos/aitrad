@@ -79,3 +79,10 @@ npx -y @insforge/cli functions deploy admin-users --file insforge/functions/admi
 ```
 
 `admin-users` accepts `POST` `{ op: "list" | "assign", user_id?, role? }`. User JWT + `authorize` `users:read` / `users:assign` (DT-ENT-01). Lists via `list_user_directory` (`project_admin`). Writes `audit_log`. Apply migration 0016 (`user_roles`) first. Optional seed: `MERIDIAN_BOOTSTRAP_ADMIN_USER_ID` with `pnpm seed:rules`.
+
+```bash
+pnpm functions:bundle:copilot-orchestrator
+npx -y @insforge/cli functions deploy copilot-orchestrator --file insforge/functions/copilot-orchestrator.ts --name "Copilot orchestrator"
+```
+
+`copilot-orchestrator` accepts `POST` `{ session_id?, message, active_symbol? }` (user JWT). `authorize` `copilot:chat`. Evaluates `ai_action_policy` (DT-AI-01) with `messages_today`. Streams SSE tool/token events. Read tools: `get_quote`, `get_bars`, `search_news`, `get_fundamentals`, `screen_instruments`, `get_portfolio`, `explain_rule_decision`. Each tool writes `audit_log`. Apply migration 0017 first. `MERIDIAN_COPILOT_LLM=fake` uses the scripted transcript.

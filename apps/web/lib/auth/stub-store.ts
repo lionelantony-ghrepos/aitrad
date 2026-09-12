@@ -1,3 +1,4 @@
+import { assertOwnedCopilotSession } from "@meridian/copilot";
 import {
   createRulesAdminMemory,
   paperAccountSeed,
@@ -34,6 +35,9 @@ import type {
   UserRole,
   AlertRule,
   AlertInstance,
+  CopilotSession,
+  CopilotMessage,
+  CopilotToolCallRecord,
 } from "@meridian/schemas";
 
 export type StubUser = {
@@ -52,6 +56,9 @@ type StubState = {
   screens: ScreenRecord[];
   alertRules: AlertRule[];
   alerts: AlertInstance[];
+  copilotSessions: CopilotSession[];
+  copilotMessages: CopilotMessage[];
+  copilotForceRateLimitUserIds: Set<string>;
   orders: OrderRecord[];
   executions: ExecutionRecord[];
   positions: PositionRecord[];
@@ -73,6 +80,9 @@ function createState(): StubState {
     screens: [],
     alertRules: [],
     alerts: [],
+    copilotSessions: [],
+    copilotMessages: [],
+    copilotForceRateLimitUserIds: new Set(),
     orders: [],
     executions: [],
     positions: [],
@@ -953,4 +963,77 @@ export function stubMarkAlertRead(userId: string, id: string, read: boolean): Al
 
 export function stubQuoteForInstrument(instrumentId: string): QuotesLatest | undefined {
   return STUB_QUOTES.find((row) => row.instrument_id === instrumentId);
+}
+
+export function stubForceCopilotRateLimit(userId: string): void {
+  getStubState().copilotForceRateLimitUserIds.add(userId);
+}
+
+export function stubCopilotRateLimited(userId: string): boolean {
+  return getStubState().copilotForceRateLimitUserIds.has(userId);
+}
+
+export function stubCountCopilotUserMessages(userId: string): number {
+  return getStubState().copilotMessages.filter(
+    (row) => row.user_id === userId && row.role === "user",
+  ).length;
+}
+
+export function stubListCopilotSessions(userId: string): CopilotSession[] {
+  return getStubState()
+    .copilotSessions.filter((row) => row.user_id === userId)
+    .sort((a, b) => (a.updated_at < b.updated_at ? 1 : -1));
+}
+
+export function stubCreateCopilotSession(userId: string, title: string): CopilotSession {
+  const ts = nowIso();
+  const row: CopilotSession = {
+    id: crypto.randomUUID(),
+    user_id: userId,
+    title: title.trim() || "New session",
+    created_at: ts,
+    updated_at: ts,
+  };
+  getStubState().copilotSessions.push(row);
+  return row;
+}
+
+export function stubRequireOwnedCopilotSession(userId: string, sessionId: string): CopilotSession {
+  const owned = {
+    session: getStubState().copilotSessions.find((row) => row.id === sessionId),
+    userId,
+  };
+  assertOwnedCopilotSession(owned);
+  return owned.session;
+}
+
+export function stubAppendCopilotMessage(input: {
+  userId: string;
+  sessionId: string;
+  role: CopilotMessage["role"];
+  content: string;
+  tool_calls: CopilotToolCallRecord[];
+}): CopilotMessage {
+  const session = stubRequireOwnedCopilotSession(input.userId, input.sessionId);
+  const ts = nowIso();
+  const row: CopilotMessage = {
+    id: crypto.randomUUID(),
+    session_id: input.sessionId,
+    user_id: input.userId,
+    role: input.role,
+    content: input.content,
+    tool_calls: input.tool_calls,
+    created_at: ts,
+  };
+  const state = getStubState();
+  state.copilotMessages.push(row);
+  session.updated_at = ts;
+  return row;
+}
+
+export function stubListCopilotMessages(userId: string, sessionId: string): CopilotMessage[] {
+  stubRequireOwnedCopilotSession(userId, sessionId);
+  return getStubState()
+    .copilotMessages.filter((row) => row.user_id === userId && row.session_id === sessionId)
+    .sort((a, b) => (a.created_at < b.created_at ? -1 : 1));
 }
