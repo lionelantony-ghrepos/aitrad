@@ -1,10 +1,12 @@
+import { cache } from "react";
 import { cookies } from "next/headers";
-import { DEFAULT_ACCESS_TOKEN_COOKIE } from "@insforge/sdk/ssr";
 import { isProfileWizardComplete } from "@meridian/rules-engine";
 import type { Account, SessionUser } from "@meridian/schemas";
 import { tryReadPublicInsforgeEnv } from "../insforge/env";
 import { createInsForgeServerClient } from "../insforge/server";
+import { readAccessTokenFromJar } from "./insforge-cookies";
 import { isAuthStub, STUB_USER_COOKIE } from "./mode";
+import { sessionUserFromAccessToken } from "./session-user";
 import { stubGetRole, stubGetUser, stubLoadProvision } from "./stub-store";
 
 export type AuthContext = {
@@ -20,10 +22,10 @@ export async function getAccessToken(): Promise<string | null> {
   if (isAuthStub()) {
     return jar.get(STUB_USER_COOKIE)?.value ?? null;
   }
-  return jar.get(DEFAULT_ACCESS_TOKEN_COOKIE)?.value ?? null;
+  return readAccessTokenFromJar(jar);
 }
 
-export async function getSessionUser(): Promise<SessionUser | null> {
+export const getSessionUser = cache(async function getSessionUser(): Promise<SessionUser | null> {
   if (isAuthStub()) {
     const jar = await cookies();
     const userId = jar.get(STUB_USER_COOKIE)?.value;
@@ -40,6 +42,11 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     return null;
   }
 
+  const fromToken = sessionUserFromAccessToken(accessToken);
+  if (fromToken) {
+    return fromToken;
+  }
+
   const client = await createInsForgeServerClient();
   const { data } = await client.auth.getCurrentUser();
   const raw = data?.user as { id?: string; email?: string } | undefined;
@@ -47,7 +54,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     return null;
   }
   return { id: raw.id, email: raw.email };
-}
+});
 
 export async function loadAuthContext(): Promise<AuthContext | null> {
   if (isAuthStub()) {

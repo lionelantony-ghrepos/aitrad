@@ -23,6 +23,12 @@ async function parseJson(response: Response): Promise<unknown> {
   if (text.length === 0) {
     return null;
   }
+  if (text.startsWith("<")) {
+    throw new InsForgeApiError({
+      status: response.status,
+      message: response.ok ? "Unexpected HTML from records API." : response.statusText,
+    });
+  }
   return JSON.parse(text) as unknown;
 }
 
