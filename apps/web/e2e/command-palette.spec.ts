@@ -1,12 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { signUpThroughWizard } from "./helpers/onboard";
-
-async function runPalette(page: import("@playwright/test").Page, command: string) {
-  await page.keyboard.press("Control+K");
-  await expect(page.getByTestId("command-palette")).toBeVisible();
-  await page.getByTestId("palette-input").fill(command);
-  await page.getByTestId("palette-input").press("Enter");
-}
+import { runPalette } from "./helpers/palette";
 
 test.describe("PBI-009 command palette", () => {
   test.beforeEach(async ({ page, request }) => {

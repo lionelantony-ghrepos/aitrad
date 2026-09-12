@@ -8,7 +8,8 @@ import {
   newsSearchRequestSchema,
   newsSearchResponseSchema,
 } from "../../packages/schemas/src/index.ts";
-import { authorize, resolveRulesServiceApiKey } from "../../packages/rules-engine/src/index.ts";
+import { resolveRulesServiceApiKey } from "../../packages/rules-engine/src/index.ts";
+import { authorizeEdgeUser } from "./_shared/entitlements.ts";
 import {
   DEFAULT_EMBEDDING_MODEL,
   DEFAULT_OPENROUTER_EMBEDDINGS_URL,
@@ -67,17 +68,19 @@ export default async function (req: Request): Promise<Response> {
   const userClient = createClient({ baseUrl, accessToken: token });
   const { data: userData } = await userClient.auth.getCurrentUser();
   const userId = userData?.user?.id as string | undefined;
-  const gate = authorize({ userId, action: "news:search" });
-  if (!gate.allowed || !userId) {
-    return json(401, { error: gate.reason ?? "UNAUTHENTICATED" });
-  }
-
   const apiKey = resolveRulesServiceApiKey({
     API_KEY: Deno.env.get("API_KEY"),
     INSFORGE_API_KEY: Deno.env.get("INSFORGE_API_KEY"),
   });
   if (!apiKey) {
     return json(500, { error: "API_KEY_MISSING" });
+  }
+  const admin = createAdminClient({ baseUrl, apiKey });
+  const gate = await authorizeEdgeUser({ db: admin.database, userId, action: "news:search" });
+  if (!gate.allowed || !userId) {
+    return json(gate.reason === "UNAUTHENTICATED" || !userId ? 401 : 403, {
+      error: gate.reason ?? "UNAUTHENTICATED",
+    });
   }
 
   const mode = (Deno.env.get("MERIDIAN_EMBEDDING_MODE") ?? "").trim().toLowerCase();
@@ -108,7 +111,6 @@ export default async function (req: Request): Promise<Response> {
     queryVector = embedded.vector;
   }
 
-  const admin = createAdminClient({ baseUrl, apiKey });
   const limit = parsed.data.limit ?? 10;
   const rpc = await admin.database.rpc("search_news_hybrid", {
     query_embedding: formatVectorLiteral(queryVector),

@@ -28,6 +28,9 @@ export const recordTables = {
   instrument_daily_rsi: "instrument_daily_rsi",
   alert_rules: "alert_rules",
   alerts: "alerts",
+  user_roles: "user_roles",
+  copilot_sessions: "copilot_sessions",
+  copilot_messages: "copilot_messages",
 } as const;
 
 export type RecordTable = (typeof recordTables)[keyof typeof recordTables];

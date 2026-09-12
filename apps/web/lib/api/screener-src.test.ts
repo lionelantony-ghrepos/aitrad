@@ -19,7 +19,8 @@ describe("screener edge function orchestration", () => {
   it("authorizes a user JWT then admin-RPCs compiled SQL only", () => {
     expect(src).toContain("createClient({ baseUrl, accessToken: token })");
     expect(src).toContain("getCurrentUser");
-    expect(src).toContain('authorize({ userId, action: "screener:run" })');
+    expect(src).toContain('action: "screener:run"');
+    expect(src).toContain("authorizeEdgeUser");
     expect(src).toContain("compileScreenerSql");
     expect(src).toContain("CRITERIA_COMPILE_FAILED");
     expect(src).toContain('admin.database.rpc("exec_screener"');

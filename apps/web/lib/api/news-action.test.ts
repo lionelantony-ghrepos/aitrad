@@ -22,7 +22,8 @@ describe("listNewsAction security", () => {
 
   it("does not put a service-role client in the News panel", () => {
     expect(newsAction).toContain("searchNewsAction");
-    expect(newsAction).toContain('authorize({ userId: session.userId, action: "news:search" })');
+    expect(newsAction).toContain('action: "news:search"');
+    expect(newsAction).toContain("authorizeUser");
     expect(newsPanel).toContain("listNewsAction");
     expect(newsPanel).toContain("searchNewsAction");
     expect(newsPanel).toContain("news-semantic-input");

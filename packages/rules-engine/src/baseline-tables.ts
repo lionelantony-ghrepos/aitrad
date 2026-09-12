@@ -271,6 +271,25 @@ const dtEnt01: DecisionTable = {
       ],
       outputs: { decision: "deny" },
     },
+    {
+      id: "5",
+      priority: 5,
+      conditions: [
+        { input: "role", op: "eq", value: "trader" },
+        {
+          input: "action",
+          op: "in",
+          value: [
+            "rules:evaluate",
+            "provision-account",
+            "profile-wizard",
+            "news:search",
+            "chart:bars",
+          ],
+        },
+      ],
+      outputs: { decision: "allow" },
+    },
   ],
 };
 

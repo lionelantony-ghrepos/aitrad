@@ -23,7 +23,17 @@ export {
   type TraceEntry,
 } from "./evaluate";
 
-export { authorize } from "./authorize";
+export {
+  authorize,
+  authorizeFromTable,
+  authorizeResultFromOutcome,
+  decisionFromOutcome,
+  entitlementHttpStatus,
+  type AuthorizePorts,
+  type AuthorizeResult,
+  type EntitlementDecision,
+} from "./authorize";
+export { handleAdminUsersRequest, type AdminUsersPorts } from "./admin-users";
 export { paperAccountSeed } from "./paper-account-seed";
 export {
   executeProvision,

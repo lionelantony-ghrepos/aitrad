@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { baselineTable, entitlementAllows, evaluate } from "@meridian/rules-engine";
+import { authorizeUser } from "@/lib/auth/authorize-user";
 import { RulesAdminConsole } from "@/components/admin/rules-admin-console";
 import { loadAuthContext } from "@/lib/auth/session";
 
@@ -13,12 +13,12 @@ export default async function RulesAdminPage(): Promise<React.JSX.Element> {
   if (!ctx.wizardComplete) {
     redirect("/onboarding");
   }
-  const verdict = evaluate(
-    baselineTable("DT-ENT-01"),
-    { role: ctx.role, action: "rules:read" },
-    new Date(),
-  );
-  if (!entitlementAllows(verdict.outcome)) {
+  const verdict = await authorizeUser({
+    userId: ctx.user.id,
+    action: "rules:read",
+    token: ctx.accessToken,
+  });
+  if (!verdict.allowed) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-background text-foreground">
         <p className="text-sm text-destructive" data-testid="rules-denied">
@@ -33,9 +33,14 @@ export default async function RulesAdminPage(): Promise<React.JSX.Element> {
         <p className="font-mono text-[10px] tracking-[0.2em] text-primary uppercase">
           Meridian · Rules
         </p>
-        <a href="/workspace" className="text-[11px] text-accent">
-          Back to workspace
-        </a>
+        <div className="flex gap-3">
+          <a href="/admin/users" className="text-[11px] text-accent">
+            Users
+          </a>
+          <a href="/workspace" className="text-[11px] text-accent">
+            Back to workspace
+          </a>
+        </div>
       </header>
       <RulesAdminConsole />
     </main>

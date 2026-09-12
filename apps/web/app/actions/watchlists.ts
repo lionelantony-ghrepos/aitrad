@@ -1,6 +1,6 @@
 "use server";
 
-import { authorize } from "@meridian/rules-engine";
+import { authorizeUser } from "@/lib/auth/authorize-user";
 import {
   duplicateWatchlistItemMessage,
   instrumentSchema,
@@ -69,7 +69,11 @@ export async function listWatchlistsAction(): Promise<ActionResult<Watchlist[]>>
   if (!session.ok) {
     return session;
   }
-  const gate = authorize({ userId: session.userId, action: "watchlist:list" });
+  const gate = await authorizeUser({
+    userId: session.userId,
+    token: session.token,
+    action: "watchlist:list",
+  });
   if (!gate.allowed) {
     return { ok: false, message: "Not allowed." };
   }
@@ -89,7 +93,11 @@ export async function createWatchlistAction(name: string): Promise<ActionResult<
   if (!parsed.success) {
     return { ok: false, message: "Enter a list name." };
   }
-  const gate = authorize({ userId: session.userId, action: "watchlist:create" });
+  const gate = await authorizeUser({
+    userId: session.userId,
+    token: session.token,
+    action: "watchlist:create",
+  });
   if (!gate.allowed) {
     return { ok: false, message: "Not allowed." };
   }
@@ -124,7 +132,11 @@ export async function renameWatchlistAction(
   if (trimmed.length === 0) {
     return { ok: false, message: "Enter a list name." };
   }
-  const gate = authorize({ userId: session.userId, action: "watchlist:update" });
+  const gate = await authorizeUser({
+    userId: session.userId,
+    token: session.token,
+    action: "watchlist:update",
+  });
   if (!gate.allowed) {
     return { ok: false, message: "Not allowed." };
   }
@@ -153,7 +165,11 @@ export async function deleteWatchlistAction(id: string): Promise<ActionResult<{ 
   if (!session.ok) {
     return session;
   }
-  const gate = authorize({ userId: session.userId, action: "watchlist:delete" });
+  const gate = await authorizeUser({
+    userId: session.userId,
+    token: session.token,
+    action: "watchlist:delete",
+  });
   if (!gate.allowed) {
     return { ok: false, message: "Not allowed." };
   }
@@ -180,7 +196,11 @@ export async function listWatchlistItemsAction(
   if (!session.ok) {
     return session;
   }
-  const gate = authorize({ userId: session.userId, action: "watchlist:item:list" });
+  const gate = await authorizeUser({
+    userId: session.userId,
+    token: session.token,
+    action: "watchlist:item:list",
+  });
   if (!gate.allowed) {
     return { ok: false, message: "Not allowed." };
   }
@@ -202,7 +222,11 @@ export async function addWatchlistItemAction(
   if (!session.ok) {
     return session;
   }
-  const gate = authorize({ userId: session.userId, action: "watchlist:item:create" });
+  const gate = await authorizeUser({
+    userId: session.userId,
+    token: session.token,
+    action: "watchlist:item:create",
+  });
   if (!gate.allowed) {
     return { ok: false, message: "Not allowed." };
   }
@@ -259,7 +283,11 @@ export async function removeWatchlistItemAction(
   if (!session.ok) {
     return session;
   }
-  const gate = authorize({ userId: session.userId, action: "watchlist:item:delete" });
+  const gate = await authorizeUser({
+    userId: session.userId,
+    token: session.token,
+    action: "watchlist:item:delete",
+  });
   if (!gate.allowed) {
     return { ok: false, message: "Not allowed." };
   }

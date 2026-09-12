@@ -1,6 +1,6 @@
 "use server";
 
-import { authorize } from "@meridian/rules-engine";
+import { authorizeUser } from "@/lib/auth/authorize-user";
 import {
   newsItemSchema,
   newsSearchRequestSchema,
@@ -62,7 +62,11 @@ export async function searchNewsAction(input: unknown): Promise<ActionResult<New
   if (!session.ok) {
     return session;
   }
-  const gate = authorize({ userId: session.userId, action: "news:search" });
+  const gate = await authorizeUser({
+    userId: session.userId,
+    token: session.token,
+    action: "news:search",
+  });
   if (!gate.allowed) {
     return { ok: false, message: "Not allowed." };
   }

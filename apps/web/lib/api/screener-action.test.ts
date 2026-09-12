@@ -16,9 +16,7 @@ describe("screener client and actions security", () => {
     expect(screenerAction).toContain("getSessionUser");
     expect(screenerAction).toContain("getAccessToken");
     expect(screenerAction).toContain("You must be signed in.");
-    expect(screenerAction).toContain(
-      'authorize({ userId: session.userId, action: "screener:run" })',
-    );
+    expect(screenerAction).toContain('action: "screener:run"');
     expect(screenerAction).toContain("accessToken: session.token");
     expect(screenerAction).toContain("invokeScreenerRun");
     expect(screenerAction).not.toContain("createAdminClient");

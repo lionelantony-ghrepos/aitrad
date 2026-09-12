@@ -5383,6 +5383,36 @@ var evaluateAlertsRequestSchema = external_exports
   .strict();
 var alertConditionListSchema = external_exports.array(decisionConditionSchema).min(1);
 
+// packages/schemas/src/admin-users.ts
+var userRoleSchema = rulesAdminRoleSchema;
+var adminUsersOpSchema = external_exports.enum(["list", "assign"]);
+var adminUserRowSchema = external_exports.object({
+  user_id: uuidSchema,
+  email: external_exports.string().email().nullable().optional(),
+  display_name: external_exports.string().nullable().optional(),
+  role: userRoleSchema,
+});
+var adminUsersListRequestSchema = external_exports.object({
+  op: external_exports.literal("list"),
+});
+var adminUsersAssignRequestSchema = external_exports.object({
+  op: external_exports.literal("assign"),
+  user_id: uuidSchema,
+  role: userRoleSchema,
+});
+var adminUsersRequestSchema = external_exports.discriminatedUnion("op", [
+  adminUsersListRequestSchema,
+  adminUsersAssignRequestSchema,
+]);
+var adminUsersListResponseSchema = external_exports.object({
+  users: external_exports.array(adminUserRowSchema),
+});
+var adminUsersAssignResponseSchema = external_exports.object({
+  ok: external_exports.literal(true),
+  user_id: uuidSchema,
+  role: userRoleSchema,
+});
+
 // packages/schemas/src/index.ts
 var publicInsforgeEnvSchema = external_exports.object({
   NEXT_PUBLIC_INSFORGE_URL: external_exports.string().url(),
@@ -5555,14 +5585,61 @@ function interpolateMessage(message, context) {
 }
 
 // packages/rules-engine/src/authorize.ts
-function authorize(input) {
+function decisionFromOutcome(outcome) {
+  if (!outcome || typeof outcome !== "object" || !("decision" in outcome)) {
+    return "deny";
+  }
+  const decision = outcome.decision;
+  if (decision === "allow" || decision === "deny" || decision === "require_approval") {
+    return decision;
+  }
+  return "deny";
+}
+function authorizeResultFromOutcome(outcome) {
+  const decision = decisionFromOutcome(outcome);
+  return {
+    allowed: decision === "allow",
+    decision,
+    reason: decision === "allow" ? void 0 : "FORBIDDEN",
+  };
+}
+function authorizeFromTable(input) {
   if (!input.userId) {
-    return { allowed: false, reason: "UNAUTHENTICATED" };
+    return { allowed: false, decision: "deny", reason: "UNAUTHENTICATED" };
   }
   if (input.action.length === 0) {
-    return { allowed: false, reason: "ACTION_REQUIRED" };
+    return { allowed: false, decision: "deny", reason: "ACTION_REQUIRED" };
   }
-  return { allowed: true };
+  const role = input.role && input.role.length > 0 ? input.role : "unknown";
+  const result = evaluate(
+    input.table,
+    { role, action: input.action },
+    input.clock ?? /* @__PURE__ */ new Date(),
+  );
+  return authorizeResultFromOutcome(result.outcome);
+}
+async function authorize(input) {
+  if (!input.userId) {
+    return { allowed: false, decision: "deny", reason: "UNAUTHENTICATED" };
+  }
+  if (input.action.length === 0) {
+    return { allowed: false, decision: "deny", reason: "ACTION_REQUIRED" };
+  }
+  if (input.ports) {
+    const role = (await input.ports.loadRole(input.userId)) ?? "unknown";
+    const evaluated = await input.ports.evaluateEntitlements({ role, action: input.action });
+    return authorizeResultFromOutcome(evaluated.outcome);
+  }
+  if (input.table) {
+    return authorizeFromTable({
+      userId: input.userId,
+      action: input.action,
+      role: input.role,
+      table: input.table,
+      clock: input.clock,
+    });
+  }
+  return { allowed: false, decision: "deny", reason: "FORBIDDEN" };
 }
 
 // packages/rules-engine/src/doc05-fixtures.ts
@@ -5969,6 +6046,25 @@ var dtEnt01 = {
       ],
       outputs: { decision: "deny" },
     },
+    {
+      id: "5",
+      priority: 5,
+      conditions: [
+        { input: "role", op: "eq", value: "trader" },
+        {
+          input: "action",
+          op: "in",
+          value: [
+            "rules:evaluate",
+            "provision-account",
+            "profile-wizard",
+            "news:search",
+            "chart:bars",
+          ],
+        },
+      ],
+      outputs: { decision: "allow" },
+    },
   ],
 };
 var dtAlrt01 = {
@@ -6223,12 +6319,6 @@ function filterRuleAudits(rows, query) {
     return hay.toLowerCase().includes(needle);
   });
 }
-function entitlementAllows(outcome) {
-  if (!outcome || typeof outcome !== "object") {
-    return false;
-  }
-  return outcome.decision === "allow";
-}
 function requiredActionForAdminOp(op) {
   if (op === "listCatalog" || op === "getTable" || op === "listHistory" || op === "listAudits") {
     return "rules:read";
@@ -6366,16 +6456,15 @@ async function handleRulesServiceRequest(input) {
   if (adminOps.has(op)) {
     return handleAdminRulesOp(input, raw);
   }
-  const actorId = input.isService ? (input.userId ?? "service") : input.userId;
   const action =
     op === "publish"
       ? "rules:publish"
       : op === "invalidate"
         ? "rules:invalidate"
         : "rules:evaluate";
-  const gate = authorize({ userId: actorId, action });
-  if (!gate.allowed) {
-    return { status: 401, body: { error: gate.reason ?? "DENIED" } };
+  const denied = await denyUnlessEntitled(input, action);
+  if (denied) {
+    return denied;
   }
   if (input.ports.readPublishGeneration) {
     input.cache.syncGeneration(await input.ports.readPublishGeneration());
@@ -6438,6 +6527,37 @@ async function handleRulesServiceRequest(input) {
   });
   return { status: 200, body: result };
 }
+async function denyUnlessEntitled(input, action) {
+  const actorId = input.isService ? (input.userId ?? "service") : input.userId;
+  if (!actorId) {
+    return { status: 401, body: { error: "UNAUTHENTICATED" } };
+  }
+  if (input.isService) {
+    return null;
+  }
+  if (!input.ports.loadCallerRole || !input.userId) {
+    return { status: 403, body: { error: "FORBIDDEN" } };
+  }
+  const gate = await authorize({
+    userId: input.userId,
+    action,
+    ports: {
+      loadRole: input.ports.loadCallerRole,
+      evaluateEntitlements: async (ctx) => {
+        const tables = await input.ports.loadPublishedTables("entitlements");
+        const table = tables[0]?.table ?? baselineTable("DT-ENT-01");
+        return evaluate(table, ctx, input.clock ?? /* @__PURE__ */ new Date());
+      },
+    },
+  });
+  if (!gate.allowed) {
+    return {
+      status: gate.reason === "UNAUTHENTICATED" ? 401 : 403,
+      body: { error: gate.reason ?? "FORBIDDEN" },
+    };
+  }
+  return null;
+}
 function requireAdminPorts(ports) {
   if (
     !ports.listCatalog ||
@@ -6467,26 +6587,9 @@ async function handleAdminRulesOp(input, raw) {
   if (!parsed.success) {
     return { status: 400, body: { error: "INVALID_ADMIN_REQUEST" } };
   }
-  const actorId = input.isService ? (input.userId ?? "service") : input.userId;
-  const session = authorize({ userId: actorId, action: requiredActionForAdminOp(parsed.data.op) });
-  if (!session.allowed) {
-    return { status: 401, body: { error: session.reason ?? "DENIED" } };
-  }
-  if (!input.isService) {
-    if (!input.ports.loadCallerRole || !input.userId) {
-      return { status: 403, body: { error: "FORBIDDEN" } };
-    }
-    const role = (await input.ports.loadCallerRole(input.userId)) ?? "unknown";
-    const entitlementTables = await input.ports.loadPublishedTables("entitlements");
-    const table = entitlementTables[0]?.table ?? baselineTable("DT-ENT-01");
-    const verdict = evaluate(
-      table,
-      { role, action: requiredActionForAdminOp(parsed.data.op) },
-      input.clock ?? /* @__PURE__ */ new Date(),
-    );
-    if (!entitlementAllows(verdict.outcome)) {
-      return { status: 403, body: { error: "FORBIDDEN" } };
-    }
+  const denied = await denyUnlessEntitled(input, requiredActionForAdminOp(parsed.data.op));
+  if (denied) {
+    return denied;
   }
   const admin = requireAdminPorts(input.ports);
   if (!admin) {
@@ -6922,14 +7025,14 @@ async function rules_service_src_default(req) {
       },
       async loadCallerRole(id) {
         const { data, error } = await admin.database
-          .from("profiles")
-          .select("persona")
+          .from("user_roles")
+          .select("role")
           .eq("user_id", id);
         if (error) {
           throw new Error(error.message);
         }
         const row = Array.isArray(data) ? data[0] : void 0;
-        return row?.persona ?? null;
+        return row?.role ?? null;
       },
       async listCatalog() {
         const { data, error } = await admin.database

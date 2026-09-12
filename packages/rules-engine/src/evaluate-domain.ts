@@ -18,7 +18,6 @@ import {
   type EvaluationResult,
 } from "./evaluate";
 import {
-  entitlementAllows,
   filterRuleAudits,
   requiredActionForAdminOp,
   simulateDraftAgainstAudits,
@@ -252,16 +251,15 @@ export async function handleRulesServiceRequest(input: {
   if (adminOps.has(op)) {
     return handleAdminRulesOp(input, raw);
   }
-  const actorId = input.isService ? (input.userId ?? "service") : input.userId;
   const action =
     op === "publish"
       ? "rules:publish"
       : op === "invalidate"
         ? "rules:invalidate"
         : "rules:evaluate";
-  const gate = authorize({ userId: actorId, action });
-  if (!gate.allowed) {
-    return { status: 401, body: { error: gate.reason ?? "DENIED" } };
+  const denied = await denyUnlessEntitled(input, action);
+  if (denied) {
+    return denied;
   }
 
   if (input.ports.readPublishGeneration) {
@@ -330,6 +328,46 @@ export async function handleRulesServiceRequest(input: {
   return { status: 200, body: result };
 }
 
+async function denyUnlessEntitled(
+  input: {
+    userId: string | null;
+    isService: boolean;
+    ports: RulesServicePorts;
+    clock?: Date;
+  },
+  action: string,
+): Promise<{ status: number; body: unknown } | null> {
+  const actorId = input.isService ? (input.userId ?? "service") : input.userId;
+  if (!actorId) {
+    return { status: 401, body: { error: "UNAUTHENTICATED" } };
+  }
+  if (input.isService) {
+    return null;
+  }
+  if (!input.ports.loadCallerRole || !input.userId) {
+    return { status: 403, body: { error: "FORBIDDEN" } };
+  }
+  const gate = await authorize({
+    userId: input.userId,
+    action,
+    ports: {
+      loadRole: input.ports.loadCallerRole,
+      evaluateEntitlements: async (ctx) => {
+        const tables = await input.ports.loadPublishedTables("entitlements");
+        const table = tables[0]?.table ?? baselineTable("DT-ENT-01");
+        return evaluate(table, ctx, input.clock ?? new Date());
+      },
+    },
+  });
+  if (!gate.allowed) {
+    return {
+      status: gate.reason === "UNAUTHENTICATED" ? 401 : 403,
+      body: { error: gate.reason ?? "FORBIDDEN" },
+    };
+  }
+  return null;
+}
+
 function requireAdminPorts(ports: RulesServicePorts): RulesAdminPorts | null {
   if (
     !ports.listCatalog ||
@@ -369,27 +407,9 @@ async function handleAdminRulesOp(
   if (!parsed.success) {
     return { status: 400, body: { error: "INVALID_ADMIN_REQUEST" } };
   }
-  const actorId = input.isService ? (input.userId ?? "service") : input.userId;
-  const session = authorize({ userId: actorId, action: requiredActionForAdminOp(parsed.data.op) });
-  if (!session.allowed) {
-    return { status: 401, body: { error: session.reason ?? "DENIED" } };
-  }
-
-  if (!input.isService) {
-    if (!input.ports.loadCallerRole || !input.userId) {
-      return { status: 403, body: { error: "FORBIDDEN" } };
-    }
-    const role = (await input.ports.loadCallerRole(input.userId)) ?? "unknown";
-    const entitlementTables = await input.ports.loadPublishedTables("entitlements");
-    const table = entitlementTables[0]?.table ?? baselineTable("DT-ENT-01");
-    const verdict = evaluate(
-      table,
-      { role, action: requiredActionForAdminOp(parsed.data.op) },
-      input.clock ?? new Date(),
-    );
-    if (!entitlementAllows(verdict.outcome)) {
-      return { status: 403, body: { error: "FORBIDDEN" } };
-    }
+  const denied = await denyUnlessEntitled(input, requiredActionForAdminOp(parsed.data.op));
+  if (denied) {
+    return denied;
   }
 
   const admin = requireAdminPorts(input.ports);

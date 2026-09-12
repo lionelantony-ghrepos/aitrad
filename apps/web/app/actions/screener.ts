@@ -1,6 +1,6 @@
 "use server";
 
-import { authorize } from "@meridian/rules-engine";
+import { authorizeUser } from "@/lib/auth/authorize-user";
 import {
   screenerCriteriaSchema,
   screenInsertSchema,
@@ -68,7 +68,11 @@ export async function runScreenerAction(
   if (!session.ok) {
     return session;
   }
-  const gate = authorize({ userId: session.userId, action: "screener:run" });
+  const gate = await authorizeUser({
+    userId: session.userId,
+    token: session.token,
+    action: "screener:run",
+  });
   if (!gate.allowed) {
     return { ok: false, message: "Not allowed." };
   }
@@ -101,7 +105,11 @@ export async function listScreensAction(): Promise<ActionResult<ScreenRecord[]>>
   if (!session.ok) {
     return session;
   }
-  const gate = authorize({ userId: session.userId, action: "screener:list" });
+  const gate = await authorizeUser({
+    userId: session.userId,
+    token: session.token,
+    action: "screener:list",
+  });
   if (!gate.allowed) {
     return { ok: false, message: "Not allowed." };
   }
@@ -121,7 +129,11 @@ export async function saveScreenAction(input: {
   if (!session.ok) {
     return session;
   }
-  const gate = authorize({ userId: session.userId, action: "screener:save" });
+  const gate = await authorizeUser({
+    userId: session.userId,
+    token: session.token,
+    action: "screener:save",
+  });
   if (!gate.allowed) {
     return { ok: false, message: "Not allowed." };
   }
@@ -190,7 +202,11 @@ export async function deleteScreenAction(id: string): Promise<ActionResult<{ id:
   if (!session.ok) {
     return session;
   }
-  const gate = authorize({ userId: session.userId, action: "screener:delete" });
+  const gate = await authorizeUser({
+    userId: session.userId,
+    token: session.token,
+    action: "screener:delete",
+  });
   if (!gate.allowed) {
     return { ok: false, message: "Not allowed." };
   }
@@ -218,7 +234,11 @@ export async function addScreenerResultsToWatchlistAction(input: {
   if (!session.ok) {
     return session;
   }
-  const gate = authorize({ userId: session.userId, action: "watchlist:item:create" });
+  const gate = await authorizeUser({
+    userId: session.userId,
+    token: session.token,
+    action: "watchlist:item:create",
+  });
   if (!gate.allowed) {
     return { ok: false, message: "Not allowed." };
   }
@@ -295,7 +315,11 @@ export async function listScreenerWatchlistsAction() {
   if (!session.ok) {
     return session;
   }
-  const gate = authorize({ userId: session.userId, action: "watchlist:list" });
+  const gate = await authorizeUser({
+    userId: session.userId,
+    token: session.token,
+    action: "watchlist:list",
+  });
   if (!gate.allowed) {
     return { ok: false, message: "Not allowed." } as const;
   }

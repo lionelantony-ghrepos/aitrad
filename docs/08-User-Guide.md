@@ -10,7 +10,7 @@ You receive a **paper cash account** on first login (amount comes from the openi
 ## 2. The workspace
 Meridian is a multi-panel terminal. Open **`/workspace`**. Drag panel edges to resize, drag tabs to rearrange, and your layout is saved automatically (**Reset layout** in the top command bar). The status bar shows the market clock (America/New_York, OPEN/CLOSED), a **bell** with unread alert count, and a connection indicator.
 
-Placeholder panels in this build: Copilot (input only). **Watchlist** (PBI-007), **Chart** (PBI-008), **Order ticket** (PBI-013), **Blotter** (PBI-017), **Portfolio** (PBI-018), **News** (PBI-019), **Description / DES** (PBI-020), and **Screener / SCR** (PBI-021) are live. `DES <symbol>` opens the instrument profile (key stats, financials, analyst mix, industry peers). `SCR` opens the criteria builder.
+**Watchlist** (PBI-007), **Chart** (PBI-008), **Order ticket** (PBI-013), **Blotter** (PBI-017), **Portfolio** (PBI-018), **News** (PBI-019), **Description / DES** (PBI-020), **Screener / SCR** (PBI-021), and **Copilot / AI** (PBI-025) are live. `DES <symbol>` opens the instrument profile (key stats, financials, analyst mix, industry peers). `SCR` opens the criteria builder. `AI <question>` opens Copilot with the question filled.
 
 **Linked symbol.** The workspace exposes a shared symbol context. Clicking a watchlist row or a DES peer sets it (debug readout for tests: `symbol-context-readout`) and retargets the Chart, News, Description, and Order ticket panels.
 
@@ -48,14 +48,14 @@ The **Blotter** lists orders in Working / Filled / Rejected / All tabs (virtuali
 - **Alerts:** set price/%change/RSI/news alerts from the Watchlist **Alerts** tab or a row context menu; the status-bar bell collects toasts and unread count.
 
 ## 6. Copilot (AI)
-Open the Copilot panel or type `AI <question>`. It can quote prices, chart data, search news with citations, screen the market, and analyze your portfolio — everything it says is pulled live from data tools, with citation chips you can click.
+Open the Copilot panel or type `AI <question>`. Sessions persist in the left sidebar. Slash commands (`/news`, `/quote`, `/portfolio`, …) expand into tool-backed prompts. **Ask about the linked symbol** uses the workspace ticker. Answers stream as markdown; tool activity shows as “Searching news…”. News citation chips open the News drawer; `[des:AAPL]`-style chips open Description. It can quote prices, chart data, search news with citations, screen the market, and analyze your portfolio — everything it says is pulled live from data tools.
 
 It can also **act**: "add NVDA to my watchlist", "alert me if AAPL drops below 200", "buy 10 MSFT at market". Safe actions run instantly; **orders always come back as an approval card** — nothing trades without your explicit click, and approved orders still pass every risk rule. **Monitors** are standing instructions ("watch my portfolio and tell me if any position drops 5% in a day") that run continuously and alert you with an explanation. **Briefs** generate a Morning Brief, Instrument Brief, or Portfolio Health report (exportable to PDF).
 
 Meridian Copilot provides information and analysis, not personalized financial advice.
 
 ## 7. For administrators
-`/admin/rules`: entitlement-gated spreadsheet editor (draft, side-by-side diff, history/rollback, simulate against recent `rule_audit` contexts, searchable evaluation traces). Publish applies immediately with no deploy. Traders are denied. `/admin/users`: role management. `/admin/audit`: tamper-evident audit trail of every action (compliance role has read-only access). `/admin/health`: feed and service status.
+`/admin/rules`: entitlement-gated spreadsheet editor (draft, side-by-side diff, history/rollback, simulate against recent `rule_audit` contexts, searchable evaluation traces). Publish applies immediately with no deploy. Traders are denied. `/admin/users`: admin-only directory — list accounts and assign **trader**, **admin**, or **compliance**. Role changes apply on the next request (the entitlement table is evaluated live; publishing a table change does not require a deploy). `/admin/audit`: tamper-evident audit trail of every action (compliance role has read-only access). `/admin/health`: feed and service status.
 
 ## 8. FAQ
 **Is my money real?** No — v1 is paper trading with simulated fills (realistic slippage and partial fills).

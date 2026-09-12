@@ -29,6 +29,8 @@
     "functions:bundle:embed-worker": "node scripts/bundle-embed-worker.mjs",
     "functions:bundle:search-news": "node scripts/bundle-search-news.mjs",
     "functions:bundle:provision-account": "node scripts/bundle-provision-account.mjs",
+    "functions:bundle:admin-users": "node scripts/bundle-admin-users.mjs",
+    "functions:bundle:copilot-orchestrator": "node scripts/bundle-copilot-orchestrator.mjs",
     "prepare": "husky"
   },
   "dependencies": {
