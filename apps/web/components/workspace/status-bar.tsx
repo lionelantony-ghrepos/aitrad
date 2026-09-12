@@ -12,7 +12,7 @@ type StatusBarProps = {
 };
 
 export function StatusBar({ connection }: StatusBarProps): React.JSX.Element {
-  const [now, setNow] = useState(() => new Date());
+  const [now, setNow] = useState<Date | null>(null);
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<AlertInstance[]>([]);
   const unreadCount = useAlertsUi((s) => s.unreadCount);
@@ -21,9 +21,11 @@ export function StatusBar({ connection }: StatusBarProps): React.JSX.Element {
   const setUnreadCount = useAlertsUi((s) => s.setUnreadCount);
 
   useEffect(() => {
-    const id = window.setInterval(() => {
+    const tick = (): void => {
       setNow(new Date());
-    }, 1000);
+    };
+    tick();
+    const id = window.setInterval(tick, 1000);
     return () => {
       window.clearInterval(id);
     };
@@ -39,8 +41,8 @@ export function StatusBar({ connection }: StatusBarProps): React.JSX.Element {
     return () => window.clearTimeout(id);
   }, [toast, clearToast]);
 
-  const session: NyseSessionState = nyseSessionState(now);
-  const clock = formatNyClock(now);
+  const session: NyseSessionState | null = now ? nyseSessionState(now) : null;
+  const clock = now ? formatNyClock(now) : "--:--:--";
 
   async function onBell(): Promise<void> {
     setOpen((prev) => !prev);
@@ -72,10 +74,10 @@ export function StatusBar({ connection }: StatusBarProps): React.JSX.Element {
         <span data-testid="market-clock">{clock} ET</span>
         <span
           className={session === "OPEN" ? "text-up" : "text-muted-foreground"}
-          data-session={session}
+          data-session={session ?? ""}
           data-testid="market-session"
         >
-          {session}
+          {session ?? "—"}
         </span>
       </div>
       <div className="flex items-center gap-3">
