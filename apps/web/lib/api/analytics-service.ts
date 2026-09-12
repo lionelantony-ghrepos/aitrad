@@ -34,7 +34,11 @@ export async function invokeAnalyticsPortfolio(input: {
     },
     body: JSON.stringify(payload),
   });
-  const body: unknown = await response.json();
+  const text = await response.text();
+  if (!text || text.startsWith("<")) {
+    throw new Error("ANALYTICS_UNAVAILABLE");
+  }
+  const body: unknown = JSON.parse(text) as unknown;
   if (!response.ok) {
     throw new Error(`ANALYTICS_SERVICE_${response.status}`);
   }
