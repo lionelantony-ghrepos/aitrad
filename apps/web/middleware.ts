@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { isTraderAccessToken, readAccessTokenFromJar } from "@/lib/auth/insforge-cookies";
 import { isAuthStub, PROFILE_READY_COOKIE, STUB_USER_COOKIE } from "@/lib/auth/mode";
 
 export async function middleware(request: NextRequest): Promise<NextResponse> {
@@ -15,13 +16,24 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     signedIn = Boolean(request.cookies.get(STUB_USER_COOKIE)?.value);
   } else {
     const { updateSession } = await import("@insforge/sdk/ssr/middleware");
+    const requestCookies = {
+      get(name: string) {
+        const value = request.cookies.get(name);
+        if (name === "insforge_access_token" && value && !isTraderAccessToken(value.value)) {
+          return undefined;
+        }
+        return value;
+      },
+      set: (...args: Parameters<typeof request.cookies.set>) => request.cookies.set(...args),
+      delete: (...args: Parameters<typeof request.cookies.delete>) =>
+        request.cookies.delete(...args),
+    };
     await updateSession({
-      requestCookies: request.cookies,
+      requestCookies,
       responseCookies: response.cookies,
     });
     signedIn = Boolean(
-      request.cookies.get("insforge_access_token")?.value ??
-      response.cookies.get("insforge_access_token")?.value,
+      readAccessTokenFromJar(requestCookies) ?? readAccessTokenFromJar(response.cookies),
     );
   }
 
