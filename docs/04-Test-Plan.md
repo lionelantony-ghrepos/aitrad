@@ -298,10 +298,10 @@ Seeded via `scripts/seed-all.ts` (see doc 06): 150 instruments, 5y daily + 5d 1m
 ### PBI-030 Observability & performance
 | ID | Criterion / Test | Pri | Status |
 |---|---|---|---|
-| AC-030-01 | Panel crash isolated (workspace survives); STALE watermark on feed gap | P1 | ☑ |
-| AC-030-02 | order /preview p95 < 300 ms @ 50 rps; workspace TTI < 3 s (CI profile) | P1 | ☑ |
-| TC-030-01 | Throw in panel dev hook → other panels alive, error reported (AC-030-01) | P1 | ☑ |
-| TC-030-02 | k6 + Lighthouse CI budgets green (AC-030-02) | P1 | ☑ |
+| AC-030-01 | Panel crash isolated (workspace survives); STALE watermark on feed gap | P1 | ☐ |
+| AC-030-02 | order /preview p95 < 300 ms @ 50 rps; workspace TTI < 3 s (CI profile) | P1 | ☐ |
+| TC-030-01 | Throw in panel dev hook → other panels alive, error reported (AC-030-01) | P1 | ☐ |
+| TC-030-02 | k6 + Lighthouse CI budgets green (AC-030-02) | P1 | ☐ |
 
 ### DOC Knowledge-base process (not a product PBI)
 | ID | Criterion / Test | Pri | Status |
