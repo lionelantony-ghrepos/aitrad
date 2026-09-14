@@ -6,15 +6,13 @@ import {
   copilotActionSchema,
   type CopilotAction,
 } from "@meridian/schemas";
-import { decidePersistedAction } from "@meridian/copilot";
 import { createRecordsClient } from "@/lib/api/client";
 import { createCopilotActionsRepository } from "@/lib/api/copilot-actions";
-import { createAuditLogRepository } from "@/lib/api/audit-log";
+import { invokeCopilotActionDecide } from "@/lib/api/copilot";
 import { isAuthStub } from "@/lib/auth/mode";
 import { getAccessToken, getSessionUser } from "@/lib/auth/session";
 import { readPublicInsforgeEnv } from "@/lib/insforge/env";
 import { decideStubCopilotAction } from "@/lib/copilot/execute-write-tools";
-import { runManualWrite } from "@/lib/copilot/run-manual-write";
 import {
   stubAppendCopilotMessage,
   stubAuditCopilot,
@@ -117,42 +115,10 @@ export async function decideCopilotActionAction(
       return { ok: true, data: row };
     }
     const env = readPublicInsforgeEnv();
-    const client = createRecordsClient({
+    const row = await invokeCopilotActionDecide({
       baseUrl: env.baseUrl,
-      getAccessToken: () => session.token,
-    });
-    const repo = createCopilotActionsRepository(client);
-    const existing = await repo.getById(parsed.data.action_id);
-    if (!existing || existing.user_id !== session.userId) {
-      return { ok: false, message: "ACTION_NOT_FOUND" };
-    }
-    const row = await decidePersistedAction({
-      action: existing,
-      decision: parsed.data.decision,
-      feedback: parsed.data.feedback,
-      ports: {
-        evaluatePolicy: async () => ({ decision: "require_approval" }),
-        persistAction: async (next) => {
-          const inserted = await repo.insert(next);
-          return inserted[0] ?? next;
-        },
-        updateAction: async (next) => {
-          const updated = await repo.update(next.id, {
-            status: next.status,
-            executed_ref: next.executed_ref,
-            reject_reason: next.reject_reason,
-          });
-          return updated[0] ?? next;
-        },
-        execute: async (tool, payload) => runManualWrite(tool, payload, session.userId),
-      },
-    });
-    await createAuditLogRepository(client).insert({
-      user_id: session.userId,
-      action: `copilot:action:${parsed.data.decision}`,
-      entity_type: "copilot_actions",
-      entity_id: row.id,
-      payload: { tool: row.tool, status: row.status },
+      accessToken: session.token,
+      request: parsed.data,
     });
     return { ok: true, data: row };
   } catch (error) {

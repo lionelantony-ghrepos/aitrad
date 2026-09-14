@@ -97,12 +97,15 @@ export async function runManualWrite(
       if (!instrument.ok) {
         return { error: instrument.error };
       }
+      const lists = await listWatchlistsAction();
+      if (!lists.ok) {
+        return { error: lists.message };
+      }
       let watchlistId = asString(payload.watchlist_id);
+      if (watchlistId && !lists.data.some((row) => row.id === watchlistId)) {
+        return { error: "WATCHLIST_NOT_FOUND" };
+      }
       if (!watchlistId) {
-        const lists = await listWatchlistsAction();
-        if (!lists.ok) {
-          return { error: lists.message };
-        }
         if (lists.data[0]) {
           watchlistId = lists.data[0].id;
         } else {

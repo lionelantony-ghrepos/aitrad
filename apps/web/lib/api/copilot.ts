@@ -1,6 +1,10 @@
 import {
+  copilotActionDecideRequestSchema,
+  copilotActionSchema,
   copilotChatEventSchema,
   copilotChatRequestSchema,
+  type CopilotAction,
+  type CopilotActionDecideRequest,
   type CopilotChatEvent,
   type CopilotChatRequest,
 } from "@meridian/schemas";
@@ -8,6 +12,33 @@ import { functionsUrl } from "./functions";
 
 export function copilotOrchestratorUrl(baseUrl: string): string {
   return functionsUrl(baseUrl, "copilot-orchestrator");
+}
+
+export async function invokeCopilotActionDecide(input: {
+  baseUrl: string;
+  accessToken: string;
+  request: CopilotActionDecideRequest;
+  fetchImpl?: typeof fetch;
+}): Promise<CopilotAction> {
+  const payload = copilotActionDecideRequestSchema.parse(input.request);
+  const fetchImpl = input.fetchImpl ?? fetch;
+  const response = await fetchImpl(copilotOrchestratorUrl(input.baseUrl), {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${input.accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+  const body: unknown = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(
+      typeof body === "object" && body && "error" in body
+        ? String((body as { error?: unknown }).error)
+        : `COPILOT_ACTION_${response.status}`,
+    );
+  }
+  return copilotActionSchema.parse(body);
 }
 
 export function parseSseBlock(block: string): CopilotChatEvent | null {

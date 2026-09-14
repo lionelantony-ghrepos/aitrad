@@ -165,3 +165,9 @@ PRD named this migration 0012; 0012 is fundamentals.
 | `count_copilot_user_actions_today` | EXECUTE `project_admin` (DT-AI-01 `actions_today`)                                            |
 
 PRD named this migration 0013; 0013 is screener.
+
+## 0020 contents
+
+| Object            | Access                                                                                      |
+| ----------------- | ------------------------------------------------------------------------------------------- |
+| `copilot_actions` | JWT **SELECT-only** (owner RLS). INSERT/UPDATE/DELETE `project_admin` (orchestrator decide) |

@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "url";
 import { describe, expect, it } from "vitest";
-import { parseSseBlock } from "./copilot";
+import { invokeCopilotActionDecide, parseSseBlock } from "./copilot";
 
 const here = fileURLToPath(new URL(".", import.meta.url));
 const src = readFileSync(
@@ -13,7 +13,7 @@ const panel = readFileSync(path.join(here, "../../components/workspace/copilot-p
 
 describe("copilot-orchestrator source contracts", () => {
   it("authorizes, audits tools, and binds the read registry", () => {
-    expect(src).toContain('action: "copilot:chat"');
+    expect(src).toContain('"copilot:chat"');
     expect(src).toContain("authorizeEdgeUser");
     expect(src).toContain("audit_log");
     expect(src).toContain("copilot:tool:");
@@ -37,6 +37,11 @@ describe("copilot-orchestrator source contracts", () => {
     expect(src).toContain("requireOwnedCopilotSession");
     expect(src).toContain('.eq("user_id", userId)');
     expect(src).toContain("COPILOT_SESSION_NOT_FOUND");
+    expect(src).toContain("persistOwnedCopilotAction");
+    expect(src).toMatch(/persistAction[\s\S]*persistOwnedCopilotAction/);
+    expect(src).toContain("requireOwnedWatchlist");
+    expect(src).toContain("decideOwnedCopilotAction");
+    expect(src).toContain('"copilot:act"');
   });
 
   it("panel uses the repository/action path and citation chips", () => {
@@ -46,6 +51,33 @@ describe("copilot-orchestrator source contracts", () => {
     expect(panel).toContain("copilot-approval-card");
     expect(panel).toContain("Ask about");
     expect(panel).not.toContain("createAdminClient");
+  });
+
+  it("decides actions via the orchestrator service, not records PATCH", async () => {
+    const action = {
+      id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      user_id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      session_id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      tool: "propose_order" as const,
+      payload: { symbol: "AAPL" },
+      policy_outcome: { decision: "require_approval" },
+      status: "approved" as const,
+      executed_ref: null,
+      reject_reason: null,
+      created_at: "2026-09-14T00:00:00.000Z",
+      updated_at: "2026-09-14T00:00:00.000Z",
+    };
+    const result = await invokeCopilotActionDecide({
+      baseUrl: "https://app.insforge.app",
+      accessToken: "tok",
+      request: { action_id: action.id, decision: "approve" },
+      fetchImpl: async (url, init) => {
+        expect(String(url)).toContain("/functions/copilot-orchestrator");
+        expect(init?.method).toBe("POST");
+        return new Response(JSON.stringify(action), { status: 200 });
+      },
+    });
+    expect(result.status).toBe("approved");
   });
 
   it("parses SSE data frames", () => {

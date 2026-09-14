@@ -15,13 +15,26 @@ import {
   stubInstrumentBySymbol,
   stubQuoteForInstrument,
   stubReplaceCopilotAction,
+  stubRequireOwnedCopilotSession,
 } from "@/lib/auth/stub-store";
 
 export function stubWritePorts(userId: string): WriteActionPorts {
   return {
     evaluatePolicy: async (context) => evaluateWritePolicyBaseline(context),
-    persistAction: async (row) => stubInsertCopilotAction(row),
-    updateAction: async (row) => stubReplaceCopilotAction(row),
+    persistAction: async (row) => {
+      if (row.user_id !== userId) {
+        throw new Error("ACTION_USER_MISMATCH");
+      }
+      stubRequireOwnedCopilotSession(userId, row.session_id);
+      return stubInsertCopilotAction(row);
+    },
+    updateAction: async (row) => {
+      if (row.user_id !== userId) {
+        throw new Error("ACTION_USER_MISMATCH");
+      }
+      stubRequireOwnedCopilotSession(userId, row.session_id);
+      return stubReplaceCopilotAction(row);
+    },
     execute: async (tool, payload) => runManualWrite(tool, payload, userId),
   };
 }

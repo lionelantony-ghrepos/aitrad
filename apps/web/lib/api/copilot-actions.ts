@@ -1,4 +1,4 @@
-import { copilotActionSchema, type CopilotAction } from "@meridian/schemas";
+import { copilotActionSchema } from "@meridian/schemas";
 import type { RecordsClient } from "./client";
 import { eqFilter, recordTables } from "./rest";
 
@@ -20,17 +20,6 @@ export function createCopilotActionsRepository(client: RecordsClient) {
           query: { id: eqFilter(id) },
         })
         .then((rows) => rows[0] ?? null);
-    },
-    insert(row: CopilotAction) {
-      return client.insert(recordTables.copilot_actions, copilotActionSchema, [row]);
-    },
-    update(id: string, patch: Partial<CopilotAction>) {
-      return client.update(
-        recordTables.copilot_actions,
-        copilotActionSchema,
-        { id: eqFilter(id) },
-        patch,
-      );
     },
   };
 }
