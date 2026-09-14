@@ -3,9 +3,11 @@
 import { useEffect, useState } from "react";
 import { formatNyClock, nyseSessionState, type NyseSessionState } from "@/lib/market-session";
 import { listAlertsAction, markAlertReadAction } from "@/app/actions/alerts";
+import { listCopilotActionsAction } from "@/app/actions/copilot-actions";
+import { CopilotApprovalCard } from "@/components/workspace/copilot-approval-card";
 import { openWatchlistAlertsTab } from "@/lib/alerts/events";
 import { useAlertsUi } from "@/lib/alerts/store";
-import type { AlertInstance } from "@meridian/schemas";
+import type { AlertInstance, CopilotAction } from "@meridian/schemas";
 
 type StatusBarProps = {
   connection: "live" | "offline";
@@ -15,6 +17,7 @@ export function StatusBar({ connection }: StatusBarProps): React.JSX.Element {
   const [now, setNow] = useState<Date | null>(null);
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<AlertInstance[]>([]);
+  const [pendingActions, setPendingActions] = useState<CopilotAction[]>([]);
   const unreadCount = useAlertsUi((s) => s.unreadCount);
   const toast = useAlertsUi((s) => s.toast);
   const clearToast = useAlertsUi((s) => s.clearToast);
@@ -41,6 +44,14 @@ export function StatusBar({ connection }: StatusBarProps): React.JSX.Element {
     return () => window.clearTimeout(id);
   }, [toast, clearToast]);
 
+  useEffect(() => {
+    void listCopilotActionsAction().then((result) => {
+      if (result.ok) {
+        setPendingActions(result.data.filter((row) => row.status === "proposed"));
+      }
+    });
+  }, []);
+
   const session: NyseSessionState | null = now ? nyseSessionState(now) : null;
   const clock = now ? formatNyClock(now) : "--:--:--";
 
@@ -50,6 +61,10 @@ export function StatusBar({ connection }: StatusBarProps): React.JSX.Element {
     const result = await listAlertsAction();
     if (result.ok) {
       setItems(result.data);
+    }
+    const pending = await listCopilotActionsAction();
+    if (pending.ok) {
+      setPendingActions(pending.data.filter((row) => row.status === "proposed"));
     }
   }
 
@@ -94,7 +109,7 @@ export function StatusBar({ connection }: StatusBarProps): React.JSX.Element {
               className="rounded-sm bg-secondary px-1 tabular-nums text-foreground"
               data-testid="alert-unread-badge"
             >
-              {unreadCount}
+              {unreadCount + pendingActions.length}
             </span>
           </button>
           {open ? (
@@ -102,21 +117,36 @@ export function StatusBar({ connection }: StatusBarProps): React.JSX.Element {
               className="absolute bottom-6 right-0 z-50 w-64 border border-border bg-card p-1 text-foreground"
               data-testid="alert-center"
             >
-              {items.length === 0 ? (
+              {pendingActions.length === 0 && items.length === 0 ? (
                 <p className="text-muted-foreground">No alerts.</p>
               ) : (
-                <ul>
-                  {items.slice(0, 8).map((row) => (
-                    <li key={row.id} className="flex justify-between gap-1">
-                      <span>{row.message}</span>
-                      {!row.read ? (
-                        <button type="button" onClick={() => void onMarkRead(row.id)}>
-                          Read
-                        </button>
-                      ) : null}
-                    </li>
+                <div className="flex flex-col gap-1" data-testid="alert-center-pending">
+                  {pendingActions.map((action) => (
+                    <CopilotApprovalCard
+                      key={action.id}
+                      action={action}
+                      onChange={(next) => {
+                        setPendingActions((current) =>
+                          next.status === "proposed"
+                            ? current.map((row) => (row.id === next.id ? next : row))
+                            : current.filter((row) => row.id !== next.id),
+                        );
+                      }}
+                    />
                   ))}
-                </ul>
+                  <ul>
+                    {items.slice(0, 8).map((row) => (
+                      <li key={row.id} className="flex justify-between gap-1">
+                        <span>{row.message}</span>
+                        {!row.read ? (
+                          <button type="button" onClick={() => void onMarkRead(row.id)}>
+                            Read
+                          </button>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
             </div>
           ) : null}

@@ -1,13 +1,18 @@
 import {
   copilotChatEventSchema,
   copilotChatRequestSchema,
+  copilotOrchestratorDecideRequestSchema,
+  copilotOrchestratorDecideResponseSchema,
+  type CopilotAction,
+  type CopilotActionDecideRequest,
   type CopilotChatEvent,
   type CopilotChatRequest,
 } from "@meridian/schemas";
 import { functionsUrl } from "./functions";
 
-export function copilotOrchestratorUrl(baseUrl: string): string {
-  return functionsUrl(baseUrl, "copilot-orchestrator");
+export function copilotOrchestratorUrl(baseUrl: string, path?: "decide"): string {
+  const root = functionsUrl(baseUrl, "copilot-orchestrator");
+  return path ? `${root}/${path}` : root;
 }
 
 export function parseSseBlock(block: string): CopilotChatEvent | null {
@@ -71,4 +76,37 @@ export async function invokeCopilotOrchestrator(input: {
       input.onEvent(event);
     }
   }
+}
+
+/** Approve/reject via orchestrator admin writer — never JWT PATCH on copilot_actions. */
+export async function invokeCopilotDecide(input: {
+  baseUrl: string;
+  accessToken: string;
+  request: CopilotActionDecideRequest;
+  fetchImpl?: typeof fetch;
+}): Promise<CopilotAction> {
+  const payload = copilotOrchestratorDecideRequestSchema.parse({
+    op: "decide",
+    ...input.request,
+  });
+  const fetchImpl = input.fetchImpl ?? fetch;
+  const response = await fetchImpl(copilotOrchestratorUrl(input.baseUrl, "decide"), {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${input.accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+  const body: unknown = await response
+    .json()
+    .catch(() => ({ error: "COPILOT_DECIDE_UNAVAILABLE" }));
+  if (!response.ok) {
+    const message =
+      typeof body === "object" && body && "error" in body
+        ? String((body as { error?: unknown }).error)
+        : `COPILOT_DECIDE_${response.status}`;
+    throw new Error(message);
+  }
+  return copilotOrchestratorDecideResponseSchema.parse(body).action;
 }

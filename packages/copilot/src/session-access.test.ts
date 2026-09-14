@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { scriptedLlm } from "./fake-llm";
 import { runCopilotRequest } from "./run-request";
-import { assertOwnedCopilotSession, COPILOT_SESSION_NOT_FOUND } from "./session-access";
+import {
+  assertOwnedCopilotSession,
+  persistOwnedCopilotAction,
+  COPILOT_SESSION_NOT_FOUND,
+} from "./session-access";
 
 describe("copilot session ownership", () => {
   it("rejects missing and foreign sessions", () => {
@@ -45,5 +49,23 @@ describe("copilot session ownership", () => {
       }),
     ).rejects.toThrow(COPILOT_SESSION_NOT_FOUND);
     expect(appended).toEqual([]);
+  });
+
+  it("does not persist copilot_actions until the session is owned", async () => {
+    const inserted: string[] = [];
+    await expect(
+      persistOwnedCopilotAction({
+        userId: "u1",
+        row: { user_id: "u1", session_id: "foreign-session" },
+        requireOwnedSession: async () => {
+          throw new Error(COPILOT_SESSION_NOT_FOUND);
+        },
+        insert: async (row) => {
+          inserted.push(row.session_id);
+          return row;
+        },
+      }),
+    ).rejects.toThrow(COPILOT_SESSION_NOT_FOUND);
+    expect(inserted).toEqual([]);
   });
 });

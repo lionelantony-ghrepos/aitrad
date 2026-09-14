@@ -31,6 +31,7 @@ export const recordTables = {
   user_roles: "user_roles",
   copilot_sessions: "copilot_sessions",
   copilot_messages: "copilot_messages",
+  copilot_actions: "copilot_actions",
 } as const;
 
 export type RecordTable = (typeof recordTables)[keyof typeof recordTables];

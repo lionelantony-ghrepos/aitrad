@@ -156,3 +156,18 @@ PRD named this migration 0012; 0012 is fundamentals.
 | Object                    | Access                                                                                    |
 | ------------------------- | ----------------------------------------------------------------------------------------- |
 | `copilot_messages` INSERT | Must be caller `user_id` **and** `EXISTS` parent `copilot_sessions` owned by `auth.uid()` |
+
+## 0019 contents
+
+| Table / object                     | Access                                                                                        |
+| ---------------------------------- | --------------------------------------------------------------------------------------------- |
+| `copilot_actions`                  | Owner RLS SELECT/INSERT/UPDATE (`user_id = auth.uid()`); INSERT requires owned parent session |
+| `count_copilot_user_actions_today` | EXECUTE `project_admin` (DT-AI-01 `actions_today`)                                            |
+
+PRD named this migration 0013; 0013 is screener.
+
+## 0020 contents
+
+| Object            | Access                                                                                      |
+| ----------------- | ------------------------------------------------------------------------------------------- |
+| `copilot_actions` | JWT **SELECT-only** (owner RLS). INSERT/UPDATE/DELETE `project_admin` (orchestrator decide) |
