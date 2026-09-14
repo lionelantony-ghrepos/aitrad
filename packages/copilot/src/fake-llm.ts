@@ -155,7 +155,11 @@ export function actionAwareLlm(): LlmPort {
           ],
         };
       }
-      if (/\bmonitor\b/i.test(text)) {
+      if (
+        /\bmonitor\b/i.test(text) ||
+        /tell me if any position drops/i.test(text) ||
+        /watch (semis|my positions)/i.test(text)
+      ) {
         return {
           tool_calls: [
             {

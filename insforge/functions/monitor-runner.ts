@@ -9,101 +9,14 @@ function createAdminClient(config) {
   delete clientConfig.apiKey;
   return createClient({ ...clientConfig, accessToken: apiKey, isServerMode: true });
 }
-// insforge/functions/news-ticker-src.ts
+// bundled from insforge/functions/monitor-runner-src.ts
 
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all) __defProp(target, name, { get: all[name], enumerable: true });
 };
 
-// insforge/functions/news-ticker-src.ts
-// packages/mock-data/src/calendar.ts
-var HISTORY_SEED = 42;
-var REGULAR_OPEN_MINUTE = 9 * 60 + 30;
-var REGULAR_CLOSE_MINUTE = 16 * 60;
-var HALF_CLOSE_MINUTE = 13 * 60;
-
-// packages/mock-data/src/rng.ts
-function hashSymbolSeed(symbol, seed) {
-  let h = seed >>> 0;
-  for (let i = 0; i < symbol.length; i += 1) {
-    h = Math.imul(h ^ symbol.charCodeAt(i), 16777619);
-  }
-  return h >>> 0;
-}
-function mulberry32(seed) {
-  let a = seed >>> 0;
-  return () => {
-    a = (a + 1831565813) >>> 0;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-// packages/mock-data/src/feed.ts
-function asRecord(value) {
-  if (typeof value === "object" && value !== null && !Array.isArray(value)) {
-    return value;
-  }
-  return null;
-}
-function parsePaused(value) {
-  if (value === true || value === "true") {
-    return true;
-  }
-  const rec = asRecord(value);
-  if (rec && "paused" in rec) {
-    return rec.paused === true || rec.paused === "true";
-  }
-  return false;
-}
-function parseSpeed(value) {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return value;
-  }
-  if (typeof value === "string" && value.trim() !== "") {
-    const n = Number(value);
-    return Number.isFinite(n) ? n : void 0;
-  }
-  const rec = asRecord(value);
-  if (rec && typeof rec.speed === "number" && Number.isFinite(rec.speed)) {
-    return rec.speed;
-  }
-  return void 0;
-}
-function parseForce(value) {
-  const rec = asRecord(value);
-  if (!rec) {
-    return null;
-  }
-  const symbol = rec.symbol;
-  const price = rec.price;
-  if (typeof symbol === "string" && price !== void 0 && Number.isFinite(Number(price))) {
-    return { symbol, price: Number(price) };
-  }
-  return null;
-}
-function parseFeedControls(rows) {
-  let paused = false;
-  let speed = 1;
-  let forcePrice = null;
-  for (const row of rows) {
-    if (row.key === "feed.paused") {
-      paused = parsePaused(row.value);
-    } else if (row.key === "feed.speed") {
-      const parsed = parseSpeed(row.value);
-      if (parsed !== void 0) {
-        speed = parsed;
-      }
-    } else if (row.key === "feed.force_price") {
-      forcePrice = parseForce(row.value);
-    }
-  }
-  return { paused, speed, forcePrice };
-}
-
+// insforge/functions/monitor-runner-src.ts
 // node_modules/.pnpm/zod@3.25.76/node_modules/zod/v3/external.js
 var external_exports = {};
 __export(external_exports, {
@@ -5009,6 +4922,7 @@ var newsRealtimeBatchSchema = external_exports.object({
 
 // packages/schemas/src/news-search.ts
 var NEWS_SEARCH_LIMIT = 50;
+var NEWS_EMBEDDING_DIM = 1536;
 var newsSearchRequestSchema = external_exports.object({
   query: external_exports.string().trim().min(1).max(500),
   symbols: external_exports.array(external_exports.string().min(1)).max(32).optional(),
@@ -5836,339 +5750,443 @@ var seedEnvSchema = external_exports.object({
   INSFORGE_API_KEY: external_exports.string().min(1),
 });
 
-// packages/mock-data/src/news.ts
-var NEWS_LIVE_WINDOW_SEC = 300;
-var NEWS_LIVE_MIN_ITEMS = 1;
-var NEWS_LIVE_MAX_ITEMS = 5;
-var EVENT_WEIGHTS = [
-  { type: "analyst", weight: 0.3 },
-  { type: "earnings", weight: 0.2 },
-  { type: "macro", weight: 0.2 },
-  { type: "product", weight: 0.15 },
-  { type: "regulatory", weight: 0.1 },
-  { type: "mna", weight: 0.05 },
-];
-var CAP_WEIGHTS = {
-  mega: 8,
-  large: 4,
-  mid: 2,
-  small: 1,
-  micro: 0.5,
-};
-var SOURCES = ["Reuters", "Bloomberg", "WSJ", "CNBC", "AP"];
-var BODY_LINES = {
-  earnings: [
-    "Management highlighted {segment} as the primary swing factor.",
-    "Street models now imply a {pct}% revision path into the next print.",
-    "The result lands against a busy {sector} reporting calendar.",
-  ],
-  analyst: [
-    "The note cites {concern} as the key debate versus consensus.",
-    "{bank} frames risk/reward as balanced near ${target}.",
-    "Positioning in {sector} names may shift after the call.",
-  ],
-  product: [
-    "Early demand checks in {market} will set the near-term narrative.",
-    "Rivals in {sector} are watching execution on {product}.",
-    "Investors will parse commentary on {segment} attach rates.",
-  ],
-  macro: [
-    "Rates traders marked the {stance} path into the next session.",
-    "{sector} factor baskets {direction} as yields {yielddir}.",
-    "Futures {futdir} after the inflation print came in {inflation}.",
-  ],
-  regulatory: [
-    "Counsel said the {agency} process remains at an early stage.",
-    "The {issue} docket has been a lingering {sector} overhang.",
-    "A timeline for the next filing was not specified.",
-  ],
-  mna: [
-    "Advisors put the cash-and-stock mix as still in flux.",
-    "The {targetco} asset would expand {company} in {segment}.",
-    "Antitrust review is the next gating item for the ${dealsize}B package.",
-  ],
-};
-function parseNewsTemplatesJson(raw) {
-  return newsTemplatesFileSchema.parse(raw);
+// packages/rules-engine/src/evaluate.ts
+function evaluate(table, context, clock) {
+  const parsed = decisionTableSchema.parse(table);
+  return evaluateParsed(parsed, context, clock);
 }
-function requireItem(item, code) {
-  if (item === void 0) {
-    throw new Error(code);
-  }
-  return item;
-}
-function pickWeighted(rng, items) {
-  if (items.length === 0) {
-    throw new Error("NEWS_WEIGHT_EMPTY");
-  }
-  const total = items.reduce((sum, row) => sum + row.weight, 0);
-  let cursor = rng() * total;
-  for (const row of items) {
-    cursor -= row.weight;
-    if (cursor <= 0) {
-      return row.item;
+function evaluateParsed(table, context, clock) {
+  const trace = [];
+  const matched = [];
+  for (const row of table.rows) {
+    const effective = isEffective(row, clock);
+    const cells = row.conditions.map((condition) => ({
+      input: condition.input,
+      op: condition.op,
+      passed: evaluateCondition(condition, context),
+    }));
+    const conditionsPass = cells.every((cell) => cell.passed);
+    const rowMatched = effective && conditionsPass;
+    const outputs = interpolateOutputs(row.outputs, context);
+    trace.push({
+      rowId: row.id,
+      priority: row.priority,
+      effective,
+      cells,
+      matched: rowMatched,
+      outputs,
+    });
+    if (rowMatched) {
+      matched.push({ row, outputs });
     }
   }
-  return requireItem(items[items.length - 1], "NEWS_WEIGHT_EMPTY").item;
+  matched.sort((a, b) => a.row.priority - b.row.priority || a.row.id.localeCompare(b.row.id));
+  const matchedRows = matched.map((item) => item.row);
+  const defaultOutputs = interpolateOutputs(table.default_outputs, context);
+  const outcome = applyHitPolicy(
+    table.hit_policy,
+    matched.map((item) => item.outputs),
+    defaultOutputs,
+  );
+  return { outcome, matchedRows, trace };
 }
-function pickOne(rng, values) {
-  if (values.length === 0) {
-    throw new Error("NEWS_FILL_EMPTY");
+function applyHitPolicy(policy, matchedOutputs, defaultOutputs) {
+  if (matchedOutputs.length === 0) {
+    return policy === "COLLECT" ? [defaultOutputs] : defaultOutputs;
   }
-  return requireItem(values[Math.floor(rng() * values.length)] ?? values[0], "NEWS_FILL_EMPTY");
+  if (policy === "FIRST") {
+    return matchedOutputs[0] ?? defaultOutputs;
+  }
+  if (policy === "ALL") {
+    return Object.assign({}, ...matchedOutputs);
+  }
+  return matchedOutputs;
 }
-function fillSlots(template, vars) {
-  return template.replace(/\{([a-z0-9]+)\}/gi, (_match, key) => {
-    const value = vars[key];
-    if (value === void 0) {
-      throw new Error(`NEWS_FILL_MISSING:${key}`);
+function isEffective(row, clock) {
+  const clockMs = clock.getTime();
+  if (row.effective_from != null && row.effective_from !== "") {
+    if (clockMs < Date.parse(row.effective_from)) {
+      return false;
     }
-    return value;
+  }
+  if (row.effective_to != null && row.effective_to !== "") {
+    if (clockMs >= Date.parse(row.effective_to)) {
+      return false;
+    }
+  }
+  return true;
+}
+function evaluateCondition(condition, context) {
+  const left = context[condition.input];
+  const passed = matchOperator(condition.op, left, condition.value);
+  return condition.negate === true ? !passed : passed;
+}
+function matchOperator(op, left, right) {
+  switch (op) {
+    case "any":
+      return true;
+    case "is_null":
+      return left === null || left === void 0;
+    case "eq":
+      return Object.is(left, right);
+    case "neq":
+      return !Object.is(left, right);
+    case "lt":
+      return relational(left, right, (ord) => ord < 0);
+    case "lte":
+      return relational(left, right, (ord) => ord <= 0);
+    case "gt":
+      return relational(left, right, (ord) => ord > 0);
+    case "gte":
+      return relational(left, right, (ord) => ord >= 0);
+    case "in":
+      return Array.isArray(right) && right.some((item) => Object.is(left, item));
+    case "not_in":
+      return Array.isArray(right) && !right.some((item) => Object.is(left, item));
+    case "between":
+      return inBetween(left, right);
+    case "regex":
+      return matchRegex(left, right);
+  }
+}
+function relational(left, right, pred) {
+  const ord = compareOrd(left, right);
+  if (ord === null) {
+    return false;
+  }
+  return pred(ord);
+}
+function compareOrd(left, right) {
+  if (typeof left === "number" && typeof right === "number") {
+    if (!Number.isFinite(left) || !Number.isFinite(right)) {
+      return null;
+    }
+    if (left === right) {
+      return 0;
+    }
+    return left < right ? -1 : 1;
+  }
+  if (typeof left === "string" && typeof right === "string") {
+    if (left === right) {
+      return 0;
+    }
+    return left < right ? -1 : 1;
+  }
+  return null;
+}
+function inBetween(left, right) {
+  if (!Array.isArray(right) || right.length !== 2) {
+    return false;
+  }
+  const lo = right[0];
+  const hi = right[1];
+  const geLo = relational(left, lo, (ord) => ord >= 0);
+  const leHi = relational(left, hi, (ord) => ord <= 0);
+  return geLo && leHi;
+}
+function matchRegex(left, right) {
+  if (typeof right !== "string") {
+    return false;
+  }
+  try {
+    return new RegExp(right).test(String(left));
+  } catch {
+    return false;
+  }
+}
+function interpolateOutputs(outputs, context) {
+  const next = {};
+  for (const [key, value] of Object.entries(outputs)) {
+    next[key] = typeof value === "string" ? interpolateMessage(value, context) : value;
+  }
+  return next;
+}
+function interpolateMessage(message, context) {
+  return message.replace(/\$\{([A-Za-z_][A-Za-z0-9_]*)\}/g, (_full, field) => {
+    const value = context[field];
+    if (value === void 0 || value === null) {
+      return "";
+    }
+    return String(value);
   });
 }
-function eventTypeFromRng(rng) {
-  return pickWeighted(
-    rng,
-    EVENT_WEIGHTS.map((row) => ({ item: row.type, weight: row.weight })),
-  );
+
+// packages/rules-engine/src/alert-cycle.ts
+function utcDay(clock) {
+  return clock.toISOString().slice(0, 10);
 }
-function pickInstrument(rng, universe) {
-  return pickWeighted(
-    rng,
-    universe.map((item) => ({ item, weight: CAP_WEIGHTS[item.market_cap_band] })),
-  );
+function minutesSince(iso, clock) {
+  if (!iso) {
+    return void 0;
+  }
+  const then = Date.parse(iso);
+  if (!Number.isFinite(then)) {
+    return void 0;
+  }
+  return (clock.getTime() - then) / 6e4;
 }
-function buildVars(rng, templates, instrument) {
-  const fills = templates.fills;
-  const pick = (key, fallback) => {
-    const vocab = fills[key];
-    return pickOne(rng, vocab && vocab.length > 0 ? vocab : fallback);
+function buildAlertThrottleFacts(input) {
+  const elapsed = minutesSince(input.lastFiredAt, input.clock);
+  const facts = {
+    rule_fires_today: input.ruleFiresToday,
+    user_alerts_today: input.userAlertsToday,
   };
-  return {
-    company: instrument.name,
-    symbol: instrument.symbol,
-    sector: instrument.sector,
-    q: String(1 + Math.floor(rng() * 4)),
-    pct: String(3 + Math.floor(rng() * 26)),
-    target: String(20 + Math.floor(rng() * 480)),
-    dealsize: (1 + rng() * 44).toFixed(1),
-    bank: pick("bank", ["Goldman Sachs"]),
-    concern: pick("concern", ["valuation"]),
-    segment: pick("segment", ["cloud"]),
-    product: pick("product", ["next-gen AI platform"]),
-    market: pick("market", ["enterprise AI"]),
-    stance: pick("stance", ["a data-dependent"]),
-    direction: pick("direction", ["climb"]),
-    yielddir: pick("yielddir", ["ease"]),
-    inflation: pick("inflation", ["in line"]),
-    futdir: pick("futdir", ["hold steady"]),
-    agency: pick("agency", ["SEC"]),
-    issue: pick("issue", ["disclosure practices"]),
-    targetco: pick("targetco", ["a private AI startup"]),
-  };
+  if (elapsed !== void 0) {
+    facts.same_rule_fired_within_min = elapsed;
+  }
+  return facts;
 }
-function generateNewsItem(input) {
-  const seed = input.seed ?? HISTORY_SEED;
-  const rng = mulberry32(hashSymbolSeed(`news:${input.index}`, seed));
-  const eventType = eventTypeFromRng(rng);
-  const primary = pickInstrument(rng, input.universe);
-  const headlines = input.templates[eventType];
-  const template = requireItem(
-    headlines[Math.floor(rng() * headlines.length)] ?? headlines[0],
-    "NEWS_TEMPLATE_EMPTY",
+function alertingDecisionFromOutcome(outcome) {
+  const row = Array.isArray(outcome) ? outcome[0] : outcome;
+  const decision = row && typeof row === "object" ? row.decision : void 0;
+  if (decision === "suppress" || decision === "suppress_and_pause_rule" || decision === "deliver") {
+    return decision;
+  }
+  return "suppress";
+}
+function alertConditionMatched(condition, context, clock) {
+  const result = evaluate(
+    {
+      id: "alert-rule",
+      hit_policy: "FIRST",
+      default_outputs: { decision: "idle" },
+      rows: [condition],
+    },
+    context,
+    clock,
   );
-  const vars = buildVars(rng, input.templates, primary);
-  const lo = Math.min(template.sentiment[0], template.sentiment[1]);
-  const hi = Math.max(template.sentiment[0], template.sentiment[1]);
-  const sentiment = lo + rng() * (hi - lo);
-  const sentenceCount = 2 + Math.floor(rng() * 2);
-  const bodyPool = BODY_LINES[eventType];
-  const sentences = [];
-  const used = /* @__PURE__ */ new Set();
-  while (sentences.length < sentenceCount) {
-    const idx = Math.floor(rng() * bodyPool.length);
-    if (used.has(idx) && used.size < bodyPool.length) {
+  const outcome = result.outcome;
+  const decision =
+    outcome && typeof outcome === "object" && !Array.isArray(outcome) ? outcome.decision : void 0;
+  return result.matchedRows.length > 0 && decision === "fire";
+}
+
+// packages/rules-engine/src/monitor-cycle.ts
+var CADENCE_MS = {
+  "5m": 5 * 6e4,
+  "15m": 15 * 6e4,
+  "1h": 60 * 6e4,
+  "1d": 24 * 60 * 6e4,
+};
+function cadenceElapsed(cadence, lastRun, clock) {
+  if (!lastRun) {
+    return true;
+  }
+  const then = Date.parse(lastRun);
+  if (!Number.isFinite(then)) {
+    return true;
+  }
+  const windowMs = CADENCE_MS[cadence] ?? CADENCE_MS["5m"];
+  return clock.getTime() - then >= (windowMs ?? 0);
+}
+function firesTodayFor(state, clock) {
+  const day = utcDay(clock);
+  if (state.fires_on_date !== day) {
+    return 0;
+  }
+  return state.fires_today ?? 0;
+}
+async function runMonitorCycle(input) {
+  const fires = [];
+  const updates = [];
+  let suppressed = 0;
+  const todayCounts = new Map(input.userAlertsToday);
+  for (const monitor of input.monitors) {
+    if (!monitor.active || monitor.throttle_state.paused === true) {
       continue;
     }
-    used.add(idx);
-    sentences.push(fillSlots(requireItem(bodyPool[idx], "NEWS_BODY_EMPTY"), vars));
-  }
-  let symbols = [primary.symbol];
-  if (eventType === "macro") {
-    const peers = input.universe.filter((row) => row.sector === primary.sector);
-    const extra = Math.min(peers.length, 2 + Math.floor(rng() * 3));
-    const picked = /* @__PURE__ */ new Set([primary.symbol]);
-    for (let i = 0; i < extra && picked.size < extra; i += 1) {
-      picked.add(
-        pickOne(
-          rng,
-          peers.map((p) => p.symbol),
-        ),
-      );
+    if (!input.ignoreCadence && !cadenceElapsed(monitor.cadence, monitor.last_run, input.clock)) {
+      continue;
     }
-    symbols = [...picked];
-  }
-  return {
-    ts: input.ts,
-    headline: fillSlots(template.headline, vars),
-    body: sentences.join(" "),
-    source: pickOne(rng, SOURCES),
-    symbols,
-    sector: primary.sector,
-    sentiment: Math.round(sentiment * 1e3) / 1e3,
-    event_type: eventType,
-  };
-}
-function newsSeedId(index, seed = HISTORY_SEED) {
-  const rng = mulberry32(hashSymbolSeed(`news-id:${index}`, seed));
-  const bytes = Array.from({ length: 16 }, () => Math.floor(rng() * 256));
-  bytes[6] = ((bytes[6] ?? 0) & 15) | 64;
-  bytes[8] = ((bytes[8] ?? 0) & 63) | 128;
-  const hex = bytes.map((b) => b.toString(16).padStart(2, "0")).join("");
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
-}
-function liveCount(rng) {
-  return NEWS_LIVE_MIN_ITEMS + Math.floor(rng() * (NEWS_LIVE_MAX_ITEMS - NEWS_LIVE_MIN_ITEMS + 1));
-}
-function planNewsTickerInvocation(input) {
-  const seed = input.seed ?? HISTORY_SEED;
-  if (input.paused || input.speed <= 0) {
-    return { items: [], nextSimElapsedSec: input.simElapsedSec, bursts: 0 };
-  }
-  const delta = Math.max(0, input.speed * input.intervalSeconds);
-  let elapsed = input.simElapsedSec + delta;
-  const items = [];
-  let bursts = 0;
-  let liveIndexBase = Math.floor(input.simElapsedSec / NEWS_LIVE_WINDOW_SEC) * 1e4;
-  while (elapsed >= NEWS_LIVE_WINDOW_SEC) {
-    elapsed -= NEWS_LIVE_WINDOW_SEC;
-    bursts += 1;
-    const bucket = Math.floor(liveIndexBase / 1e4);
-    const rng = mulberry32(hashSymbolSeed(`news-live:${bucket}`, seed));
-    const count = liveCount(rng);
-    const burstTs = new Date(Date.parse(input.nowIso) + bursts * 1e3).toISOString();
-    for (let j = 0; j < count; j += 1) {
-      const index = 1e6 + bucket * 8 + j;
-      const generated = generateNewsItem({
-        universe: input.universe,
-        templates: input.templates,
-        index,
-        seed,
-        ts: burstTs,
+    const facts = input.factsFor(monitor);
+    const lastRun = input.clock.toISOString();
+    if (!facts) {
+      updates.push({
+        id: monitor.id,
+        active: monitor.active,
+        last_run: lastRun,
+        throttle_state: monitor.throttle_state,
       });
-      items.push({ ...generated, id: newsSeedId(index, seed) });
+      continue;
     }
-    liveIndexBase += 1e4;
+    const condition = monitor.compiled_condition;
+    const matched = alertConditionMatched(condition, facts, input.clock);
+    let nextState = { ...monitor.throttle_state };
+    let nextActive = monitor.active;
+    if (!matched) {
+      updates.push({
+        id: monitor.id,
+        active: nextActive,
+        last_run: lastRun,
+        throttle_state: nextState,
+      });
+      continue;
+    }
+    const throttleFacts = buildAlertThrottleFacts({
+      lastFiredAt: nextState.last_fired_at,
+      ruleFiresToday: firesTodayFor(nextState, input.clock),
+      userAlertsToday: todayCounts.get(monitor.user_id) ?? 0,
+      clock: input.clock,
+    });
+    const alerting = await input.evaluateAlerting(throttleFacts, input.clock, {
+      userId: monitor.user_id,
+      ruleId: monitor.id,
+    });
+    const decision = alertingDecisionFromOutcome(alerting.outcome);
+    if (decision === "suppress") {
+      suppressed += 1;
+      updates.push({
+        id: monitor.id,
+        active: nextActive,
+        last_run: lastRun,
+        throttle_state: nextState,
+      });
+      continue;
+    }
+    if (decision === "suppress_and_pause_rule") {
+      suppressed += 1;
+      nextActive = false;
+      nextState = { ...nextState, paused: true };
+      updates.push({
+        id: monitor.id,
+        active: nextActive,
+        last_run: lastRun,
+        throttle_state: nextState,
+      });
+      continue;
+    }
+    const day = utcDay(input.clock);
+    const prior = firesTodayFor(nextState, input.clock);
+    nextState = {
+      ...nextState,
+      last_fired_at: lastRun,
+      fires_today: prior + 1,
+      fires_on_date: day,
+      paused: false,
+    };
+    todayCounts.set(monitor.user_id, (todayCounts.get(monitor.user_id) ?? 0) + 1);
+    const propose =
+      monitor.propose_action && typeof monitor.propose_action === "object"
+        ? monitor.propose_action
+        : null;
+    fires.push({
+      user_id: monitor.user_id,
+      monitor_id: monitor.id,
+      instrument_id: null,
+      message: monitor.name,
+      payload: {
+        ...facts,
+        nl_instruction: monitor.nl_instruction,
+      },
+      facts,
+      propose_action: propose,
+    });
+    updates.push({
+      id: monitor.id,
+      active: nextActive,
+      last_run: lastRun,
+      throttle_state: nextState,
+    });
   }
-  return { items, nextSimElapsedSec: elapsed, bursts };
+  return { fires, updates, suppressed };
 }
 
-// mock_data/news-templates.json
-var news_templates_default = {
-  earnings: [
-    {
-      headline: "{company} beats Q{q} estimates as {segment} revenue jumps {pct}%",
-      sentiment: [0.4, 0.9],
-    },
-    {
-      headline: "{company} misses on Q{q} earnings; guidance cut sends shares lower",
-      sentiment: [-0.9, -0.4],
-    },
-    {
-      headline: "{company} reports in-line Q{q} results, maintains full-year outlook",
-      sentiment: [-0.1, 0.2],
-    },
-  ],
-  analyst: [
-    {
-      headline: "{bank} upgrades {company} to Buy, lifts target to ${target}",
-      sentiment: [0.3, 0.8],
-    },
-    {
-      headline: "{bank} downgrades {company} on {concern} concerns",
-      sentiment: [-0.8, -0.3],
-    },
-    {
-      headline: "{bank} initiates {company} at Neutral, sees balanced risk/reward",
-      sentiment: [-0.1, 0.15],
-    },
-  ],
-  product: [
-    {
-      headline: "{company} unveils {product}, targeting the {market} market",
-      sentiment: [0.2, 0.7],
-    },
-    {
-      headline: "{company} delays {product} launch to address quality issues",
-      sentiment: [-0.7, -0.2],
-    },
-  ],
-  macro: [
-    {
-      headline: "Fed signals {stance} path; {sector} stocks {direction}",
-      sentiment: [-0.5, 0.5],
-    },
-    {
-      headline: "{sector} sector rallies as Treasury yields {yielddir}",
-      sentiment: [0.1, 0.6],
-    },
-    {
-      headline: "Inflation print comes in {inflation}; futures {futdir}",
-      sentiment: [-0.6, 0.6],
-    },
-  ],
-  regulatory: [
-    {
-      headline: "{company} faces {agency} probe over {issue}",
-      sentiment: [-0.9, -0.4],
-    },
-    {
-      headline: "{company} settles {agency} case; overhang removed",
-      sentiment: [0.1, 0.5],
-    },
-  ],
-  mna: [
-    {
-      headline: "{company} to acquire {targetco} in ${dealsize}B deal",
-      sentiment: [-0.2, 0.6],
-    },
-    {
-      headline: "Report: {company} explores strategic alternatives for {segment} unit",
-      sentiment: [0, 0.4],
-    },
-  ],
-  fills: {
-    bank: [
-      "Goldman Sachs",
-      "Morgan Stanley",
-      "JPMorgan",
-      "Barclays",
-      "UBS",
-      "Jefferies",
-      "Piper Sandler",
-    ],
-    concern: [
-      "valuation",
-      "margin compression",
-      "demand softness",
-      "competitive pressure",
-      "execution",
-    ],
-    segment: ["cloud", "AI", "consumer", "enterprise", "international", "services"],
-    product: ["next-gen AI platform", "flagship device", "autonomous suite", "subscription tier"],
-    market: ["enterprise AI", "consumer robotics", "digital health", "edge computing"],
-    stance: ["a slower easing", "a data-dependent", "an extended hold"],
-    direction: ["climb", "slip", "churn sideways"],
-    yielddir: ["ease", "spike"],
-    inflation: ["cooler than expected", "hotter than expected", "in line"],
-    futdir: ["rise", "fall", "hold steady"],
-    agency: ["SEC", "FTC", "DOJ", "EU Commission"],
-    issue: ["disclosure practices", "market dominance", "data handling"],
-    targetco: ["a private AI startup", "a logistics platform", "a fintech challenger"],
-  },
-};
+// packages/copilot/src/monitor-explain.ts
+function groundedMonitorExplanation(input) {
+  const worst = input.facts.position_day_pct;
+  const portfolio = input.facts.portfolio_day_pct;
+  const pct = input.facts.pct_chg;
+  const last = input.facts.last;
+  const sentiment = input.facts.news_sentiment;
+  const symbol = typeof input.facts.symbol === "string" ? input.facts.symbol : null;
+  const bits = [];
+  if (typeof worst === "number") {
+    bits.push(`Worst position day change is ${worst}%.`);
+  } else if (typeof portfolio === "number") {
+    bits.push(`Portfolio day change is ${portfolio}%.`);
+  } else if (symbol && typeof pct === "number") {
+    bits.push(
+      `${symbol} day change is ${pct}%${typeof last === "number" ? ` at last ${last}` : ""}.`,
+    );
+  } else if (typeof sentiment === "number") {
+    bits.push(`News sentiment is ${sentiment}.`);
+  } else {
+    bits.push("Monitor facts matched the compiled condition.");
+  }
+  const cite = input.cited.length > 0 ? ` Cited ${input.cited.join(", ")}.` : "";
+  bits.push(`This matches \u201C${input.nl_instruction}\u201D (${input.name}).${cite}`.trim());
+  return bits.slice(0, 2).join(" ");
+}
 
-// insforge/functions/news-ticker-src.ts
+// packages/rag/src/gateway.ts
+var embeddingsResponseSchema = external_exports.object({
+  data: external_exports
+    .array(
+      external_exports.object({
+        embedding: external_exports.array(external_exports.number()).min(1),
+      }),
+    )
+    .min(1),
+});
+
+// packages/rag/src/vector.ts
+var STOP = /* @__PURE__ */ new Set([
+  "a",
+  "an",
+  "the",
+  "and",
+  "or",
+  "of",
+  "in",
+  "on",
+  "to",
+  "for",
+  "as",
+  "at",
+  "is",
+  "are",
+]);
+function tokenize(text) {
+  return text
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((token) => token.length > 1 && !STOP.has(token));
+}
+function tokenIndex(token, dim) {
+  let h = 2166136261;
+  for (let i = 0; i < token.length; i += 1) {
+    h ^= token.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return Math.abs(h) % dim;
+}
+function hashEmbed(text, dim = NEWS_EMBEDDING_DIM) {
+  const vec = new Array(dim).fill(0);
+  const tokens = tokenize(text);
+  if (tokens.length === 0) {
+    vec[0] = 1;
+    return vec;
+  }
+  for (const token of tokens) {
+    const idx = tokenIndex(token, dim);
+    vec[idx] = (vec[idx] ?? 0) + 1;
+  }
+  let norm = 0;
+  for (const n of vec) {
+    norm += n * n;
+  }
+  const mag = Math.sqrt(norm);
+  if (mag === 0) {
+    vec[0] = 1;
+    return vec;
+  }
+  return vec.map((n) => n / mag);
+}
+function formatVectorLiteral(values) {
+  return `[${values.join(",")}]`;
+}
+
+// insforge/functions/monitor-runner-src.ts
 function json(status, body) {
   return new Response(JSON.stringify(body), {
     status,
@@ -6178,23 +6196,30 @@ function json(status, body) {
 function asRows(data) {
   return Array.isArray(data) ? data : [];
 }
-function flagValue(row) {
-  if (typeof row.key !== "string") {
-    return null;
-  }
-  return { key: row.key, value: row.value };
+function num(value, fallback = 0) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
 }
-function readElapsed(value) {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return value;
+async function evaluateAlertingDomain(input) {
+  const response = await fetch(`${input.baseUrl.replace(/\/+$/, "")}/functions/rules-service`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${input.apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      domain: "alerting",
+      context: input.context,
+      userId: input.userId,
+    }),
+  });
+  const body = await response.json();
+  if (!response.ok) {
+    throw new Error(`RULES_SERVICE_${response.status}`);
   }
-  if (typeof value === "string" && value.trim() !== "") {
-    const n = Number(value);
-    return Number.isFinite(n) ? n : 0;
-  }
-  return 0;
+  return evaluateDomainResponseSchema.parse(body);
 }
-async function news_ticker_src_default(req) {
+async function monitor_runner_src_default(req) {
   if (req.method !== "POST") {
     return json(405, { error: "METHOD_NOT_ALLOWED" });
   }
@@ -6204,175 +6229,345 @@ async function news_ticker_src_default(req) {
   if (!expected || token !== expected) {
     return json(401, { error: "UNAUTHENTICATED" });
   }
-  const intervalRaw =
-    Deno.env.get("NEWS_TICKER_INTERVAL_SECONDS") ?? Deno.env.get("MARKET_TICK_INTERVAL_SECONDS");
-  const intervalSeconds = intervalRaw === void 0 ? 60 : Number(intervalRaw);
-  if (!Number.isFinite(intervalSeconds) || intervalSeconds <= 0) {
-    return json(500, { error: "INTERVAL_INVALID" });
-  }
+  const baseUrl = Deno.env.get("INSFORGE_INTERNAL_URL") ?? Deno.env.get("INSFORGE_BASE_URL") ?? "";
   const admin = createAdminClient({
-    baseUrl: Deno.env.get("INSFORGE_INTERNAL_URL") ?? Deno.env.get("INSFORGE_BASE_URL"),
+    baseUrl,
     apiKey: expected,
   });
-  const templates = parseNewsTemplatesJson(news_templates_default);
-  const { data: flagData, error: flagErr } = await admin.database
-    .from("feature_flags")
-    .select("id,key,value")
-    .is("user_id", null);
-  if (flagErr) {
-    return json(500, { error: flagErr.message });
+  let body = {};
+  try {
+    body = await req.json();
+  } catch {
+    body = {};
   }
-  const flagRows = asRows(flagData)
-    .map(flagValue)
-    .filter((row) => row !== null);
-  const flags = parseFeedControls(flagRows);
-  const elapsedRow = flagRows.find((row) => row.key === "news.sim_elapsed_sec");
-  const simElapsedSec = readElapsed(elapsedRow?.value);
-  const { data: instData, error: instErr } = await admin.database
-    .from("instruments")
-    .select(
-      "symbol,name,exchange,sector,industry,status,currency,tick_size,lot_size,base_price,market_cap_band,beta_class,avg_volume,avg_volume_band",
-    )
-    .eq("status", "active");
-  if (instErr) {
-    return json(500, { error: instErr.message });
+  const parsed = monitorRunnerRequestSchema.safeParse(body);
+  if (!parsed.success) {
+    return json(400, { error: "INVALID_BODY" });
   }
-  const universe = asRows(instData)
-    .filter(
-      (row) =>
-        row.market_cap_band !== null &&
-        row.beta_class !== null &&
-        row.avg_volume_band !== null &&
-        row.sector !== null &&
-        row.industry !== null &&
-        row.base_price !== null,
-    )
-    .map((row) => ({
-      symbol: row.symbol,
-      name: row.name,
-      exchange: row.exchange,
-      sector: row.sector ?? "Unknown",
-      industry: row.industry ?? "Unknown",
-      status: row.status,
-      currency: row.currency,
-      tick_size: Number(row.tick_size),
-      lot_size: Number(row.lot_size),
-      base_price: Number(row.base_price),
-      market_cap_band: row.market_cap_band,
-      beta_class: row.beta_class,
-      avg_volume: Number(row.avg_volume ?? 1),
-      avg_volume_band: row.avg_volume_band,
-    }));
-  const plan = planNewsTickerInvocation({
-    intervalSeconds,
-    speed: flags.speed,
-    paused: flags.paused,
-    simElapsedSec,
-    universe,
-    templates,
-    nowIso: /* @__PURE__ */ new Date().toISOString(),
-  });
-  let alerting = { ok: true };
-  if (plan.items.length > 0) {
-    const { error } = await admin.database.from("news_items").upsert(
-      plan.items.map((item) => ({
-        id: item.id,
-        ts: item.ts,
-        headline: item.headline,
-        body: item.body,
-        source: item.source,
-        symbols: item.symbols,
-        sector: item.sector,
-        sentiment: item.sentiment,
-        event_type: item.event_type,
-      })),
-      { onConflict: "id" },
+  const clock = parsed.data.clock ? new Date(parsed.data.clock) : /* @__PURE__ */ new Date();
+  let query = admin.database.from("monitors").select("*").eq("active", true);
+  if (parsed.data.user_id) {
+    query = query.eq("user_id", parsed.data.user_id);
+  }
+  const monitorsRes = await query;
+  if (monitorsRes.error) {
+    return json(500, { error: monitorsRes.error.message });
+  }
+  const monitors = asRows(monitorsRes.data).map((row) => monitorSchema.parse(row));
+  if (monitors.length === 0) {
+    return json(200, monitorRunnerResponseSchema.parse({ evaluated: 0, fired: 0, suppressed: 0 }));
+  }
+  const instRes = await admin.database.from("instruments").select("id,symbol,sector");
+  if (instRes.error) {
+    return json(500, { error: instRes.error.message });
+  }
+  const instruments = asRows(instRes.data);
+  const byId = new Map(instruments.map((row) => [row.id, row]));
+  const bySymbol = new Map(instruments.map((row) => [row.symbol.toUpperCase(), row]));
+  const quoteRes = await admin.database.from("quotes_latest").select("*");
+  if (quoteRes.error) {
+    return json(500, { error: quoteRes.error.message });
+  }
+  const quotes = /* @__PURE__ */ new Map();
+  for (const row of asRows(quoteRes.data)) {
+    quotes.set(String(row.instrument_id), {
+      last: num(row.last),
+      prev_close: num(row.prev_close),
+      volume: num(row.volume),
+    });
+  }
+  const rsiRes = await admin.database.from("instrument_daily_rsi").select("instrument_id,rsi_14");
+  if (rsiRes.error) {
+    return json(500, { error: rsiRes.error.message });
+  }
+  const rsiById = /* @__PURE__ */ new Map();
+  for (const row of asRows(rsiRes.data)) {
+    rsiById.set(String(row.instrument_id), row.rsi_14 == null ? null : num(row.rsi_14));
+  }
+  const posRes = await admin.database.from("positions").select("*");
+  if (posRes.error) {
+    return json(500, { error: posRes.error.message });
+  }
+  const positions = asRows(posRes.data);
+  const newsRes = await admin.database
+    .from("news_items")
+    .select("id,ts,symbols,sentiment,sector,headline")
+    .order("ts", { ascending: false })
+    .limit(200);
+  if (newsRes.error) {
+    return json(500, { error: newsRes.error.message });
+  }
+  const news = asRows(newsRes.data);
+  const dayStart = `${utcDay(clock)}T00:00:00.000Z`;
+  const todayRes = await admin.database.from("alerts").select("user_id").gte("fired_at", dayStart);
+  if (todayRes.error) {
+    return json(500, { error: todayRes.error.message });
+  }
+  const userAlertsToday = /* @__PURE__ */ new Map();
+  for (const row of asRows(todayRes.data)) {
+    userAlertsToday.set(row.user_id, (userAlertsToday.get(row.user_id) ?? 0) + 1);
+  }
+  const snapshots = monitors.map((row) => ({
+    id: row.id,
+    user_id: row.user_id,
+    name: row.name,
+    nl_instruction: row.nl_instruction,
+    compiled_condition: row.compiled_condition,
+    scope: row.scope,
+    cadence: row.cadence,
+    last_run: row.last_run,
+    active: row.active,
+    throttle_state: row.throttle_state,
+    propose_action: row.propose_action ?? null,
+  }));
+  const hybridHits = /* @__PURE__ */ new Map();
+  for (const monitor of monitors) {
+    const usesNews = monitor.compiled_condition.conditions.some(
+      (cell) => cell.input === "news_sentiment",
     );
+    if (!usesNews) {
+      continue;
+    }
+    const symbols =
+      monitor.scope.kind === "symbols"
+        ? (monitor.scope.symbols ?? []).map((s) => s.toUpperCase())
+        : positions.filter((p) => p.user_id === monitor.user_id).map((p) => p.symbol.toUpperCase());
+    try {
+      const rpc = await admin.database.rpc("search_news_hybrid", {
+        query_embedding: formatVectorLiteral(hashEmbed(monitor.nl_instruction)),
+        p_symbols: symbols.length > 0 ? symbols : null,
+        p_since: null,
+        p_limit: 5,
+      });
+      if (!rpc.error) {
+        hybridHits.set(
+          monitor.id,
+          asRows(rpc.data).map((hit) => ({
+            id: hit.id,
+            sentiment: num(hit.sentiment),
+            headline: hit.headline ?? hit.id,
+          })),
+        );
+      }
+    } catch {}
+  }
+  function factsFor(monitor) {
+    const userPositions = positions.filter((row) => row.user_id === monitor.user_id);
+    const scopeSymbols = /* @__PURE__ */ new Set();
+    if (monitor.scope.kind === "symbols") {
+      for (const symbol of monitor.scope.symbols ?? []) {
+        scopeSymbols.add(symbol.toUpperCase());
+      }
+    } else if (monitor.scope.kind === "sector") {
+      const sector = (monitor.scope.sector ?? "").toLowerCase();
+      for (const inst of instruments) {
+        if ((inst.sector ?? "").toLowerCase() === sector) {
+          scopeSymbols.add(inst.symbol.toUpperCase());
+        }
+      }
+    } else {
+      for (const pos of userPositions) {
+        scopeSymbols.add(pos.symbol.toUpperCase());
+      }
+    }
+    let worst = 0;
+    let portfolioDay = 0;
+    let portfolioPrev = 0;
+    let sample = null;
+    for (const symbol of scopeSymbols) {
+      const inst = bySymbol.get(symbol);
+      if (!inst) {
+        continue;
+      }
+      const quote = quotes.get(inst.id);
+      if (!quote || quote.prev_close === 0) {
+        continue;
+      }
+      const pct = ((quote.last - quote.prev_close) / quote.prev_close) * 100;
+      if (!sample || pct < sample.pct) {
+        sample = {
+          symbol,
+          last: quote.last,
+          pct,
+          volume: quote.volume,
+          rsi: rsiById.get(inst.id) ?? null,
+        };
+      }
+      const pos = userPositions.find((row) => row.instrument_id === inst.id);
+      if (pos) {
+        if (pct < worst) {
+          worst = pct;
+        }
+        portfolioDay += pos.qty * (quote.last - quote.prev_close);
+        portfolioPrev += pos.qty * quote.prev_close;
+      }
+    }
+    const portfolioPct = portfolioPrev === 0 ? 0 : (portfolioDay / portfolioPrev) * 100;
+    const positionDayPct =
+      parsed.data.force_position_day_pct !== void 0 ? parsed.data.force_position_day_pct : worst;
+    let newsSentiment = null;
+    const cited = [];
+    const hits = hybridHits.get(monitor.id) ?? [];
+    if (hits.length > 0) {
+      newsSentiment = hits[0]?.sentiment ?? null;
+      for (const hit of hits.slice(0, 3)) {
+        cited.push(`news:${hit.id}`);
+      }
+    } else {
+      for (const item of news) {
+        const matchSymbol = (item.symbols ?? []).some((s) => scopeSymbols.has(s.toUpperCase()));
+        const matchSector =
+          monitor.scope.kind === "sector" &&
+          (item.sector ?? "").toLowerCase() === (monitor.scope.sector ?? "").toLowerCase();
+        if (matchSymbol || matchSector) {
+          newsSentiment = num(item.sentiment);
+          cited.push(`news:${item.id}`);
+          break;
+        }
+      }
+    }
+    if (
+      parsed.data.force_position_day_pct === void 0 &&
+      scopeSymbols.size === 0 &&
+      hits.length === 0
+    ) {
+      return {
+        position_day_pct: positionDayPct,
+        portfolio_day_pct: portfolioPct,
+        news_sentiment: newsSentiment,
+        cited,
+      };
+    }
+    return {
+      position_day_pct: positionDayPct,
+      portfolio_day_pct: portfolioPct,
+      pct_chg: sample?.pct ?? positionDayPct,
+      last: sample?.last ?? 0,
+      volume: sample?.volume ?? 0,
+      rsi_14: sample?.rsi ?? null,
+      news_sentiment: newsSentiment,
+      symbol: sample?.symbol,
+      cited,
+    };
+  }
+  let cycle;
+  try {
+    cycle = await runMonitorCycle({
+      monitors: snapshots,
+      factsFor,
+      clock,
+      userAlertsToday,
+      ignoreCadence: parsed.data.force === true || parsed.data.force_position_day_pct !== void 0,
+      evaluateAlerting: async (context, _clock, meta) => {
+        const result = await evaluateAlertingDomain({
+          baseUrl,
+          apiKey: expected,
+          userId: meta.userId,
+          context,
+        });
+        return { outcome: result.outcome };
+      },
+    });
+  } catch (error) {
+    return json(500, { error: error instanceof Error ? error.message : "MONITOR_CYCLE_FAILED" });
+  }
+  for (const update of cycle.updates) {
+    const { error } = await admin.database
+      .from("monitors")
+      .update({
+        active: update.active,
+        last_run: update.last_run,
+        throttle_state: update.throttle_state,
+      })
+      .eq("id", update.id);
     if (error) {
       return json(500, { error: error.message });
     }
-    const payload = { ts: plan.items[0]?.ts, items: plan.items };
-    const published = await admin.database.rpc("publish_news_batch", { payload });
+  }
+  let fired = 0;
+  for (const draft of cycle.fires) {
+    const id = crypto.randomUUID();
+    const firedAt = clock.toISOString();
+    const explanation = groundedMonitorExplanation({
+      name: draft.message,
+      nl_instruction: String(draft.payload.nl_instruction ?? draft.message),
+      facts: draft.facts,
+      cited: Array.isArray(draft.facts.cited) ? draft.facts.cited.map((row) => String(row)) : [],
+    });
+    const { error: insertError } = await admin.database.from("alerts").insert([
+      {
+        id,
+        user_id: draft.user_id,
+        alert_rule_id: null,
+        monitor_id: draft.monitor_id,
+        instrument_id: draft.instrument_id,
+        fired_at: firedAt,
+        message: explanation,
+        payload: { ...draft.payload, explanation },
+        read: false,
+      },
+    ]);
+    if (insertError) {
+      return json(500, { error: insertError.message });
+    }
+    const alert = alertInstanceSchema.parse({
+      id,
+      user_id: draft.user_id,
+      alert_rule_id: null,
+      monitor_id: draft.monitor_id,
+      instrument_id: draft.instrument_id,
+      fired_at: firedAt,
+      message: explanation,
+      payload: { ...draft.payload, explanation },
+      read: false,
+      created_at: firedAt,
+    });
+    await admin.database.from("audit_log").insert([
+      {
+        user_id: draft.user_id,
+        action: "monitor:fire",
+        entity_type: "monitors",
+        entity_id: draft.monitor_id,
+        payload: { alert_id: id },
+      },
+    ]);
+    const published = await admin.database.rpc("publish_alert_event", {
+      p_user_id: draft.user_id,
+      payload: { kind: "alert", alert },
+    });
     if (published.error) {
       return json(500, { error: published.error.message });
     }
-    const origin = (
-      Deno.env.get("INSFORGE_INTERNAL_URL") ??
-      Deno.env.get("INSFORGE_BASE_URL") ??
-      ""
-    ).replace(/\/+$/, "");
-    try {
-      const alertRes = await fetch(`${origin}/functions/alert-runner`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${expected}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ news: plan.items }),
-      });
-      if (!alertRes.ok) {
-        alerting = { ok: false, error: `ALERT_RUNNER_${alertRes.status}` };
+    if (draft.propose_action && draft.propose_action.tool === "propose_order") {
+      const sessionRes = await admin.database
+        .from("monitors")
+        .select("session_id")
+        .eq("id", draft.monitor_id)
+        .limit(1);
+      const sessionId = asRows(sessionRes.data)[0]?.session_id;
+      if (sessionId) {
+        await admin.database.from("copilot_actions").insert([
+          {
+            user_id: draft.user_id,
+            session_id: sessionId,
+            tool: "propose_order",
+            payload: draft.propose_action,
+            policy_outcome: { decision: "require_approval", table: "DT-AI-01" },
+            status: "proposed",
+          },
+        ]);
       }
-    } catch (error2) {
-      alerting = {
-        ok: false,
-        error: error2 instanceof Error ? error2.message : "ALERT_RUNNER_UNAVAILABLE",
-      };
     }
-    try {
-      await fetch(`${origin}/functions/monitor-runner`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${expected}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({}),
-      });
-    } catch {}
-    try {
-      await fetch(`${origin}/functions/embed-worker`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${expected}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          op: "cycle",
-          news_ids: plan.items.map((item) => item.id),
-        }),
-      });
-    } catch {}
+    fired += 1;
   }
-  if (elapsedRow) {
-    const { error } = await admin.database
-      .from("feature_flags")
-      .update({ value: plan.nextSimElapsedSec })
-      .eq("key", "news.sim_elapsed_sec")
-      .is("user_id", null);
-    if (error) {
-      return json(500, { error: error.message });
-    }
-  }
-  await admin.database.from("audit_log").insert([
-    {
-      action: "news-ticker",
-      entity_type: "news_items",
-      payload: {
-        published: plan.items.length,
-        bursts: plan.bursts,
-        paused: flags.paused,
-        nextSimElapsedSec: plan.nextSimElapsedSec,
-        alerting,
-      },
-    },
-  ]);
-  return json(200, {
-    published: plan.items.length,
-    bursts: plan.bursts,
-    paused: flags.paused,
-    nextSimElapsedSec: plan.nextSimElapsedSec,
-    alerting,
-  });
+  return json(
+    200,
+    monitorRunnerResponseSchema.parse({
+      evaluated: snapshots.length,
+      fired,
+      suppressed: cycle.suppressed,
+    }),
+  );
 }
 
-module.exports = news_ticker_src_default;
+module.exports = monitor_runner_src_default;

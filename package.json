@@ -31,6 +31,7 @@
     "functions:bundle:provision-account": "node scripts/bundle-provision-account.mjs",
     "functions:bundle:admin-users": "node scripts/bundle-admin-users.mjs",
     "functions:bundle:copilot-orchestrator": "node scripts/bundle-copilot-orchestrator.mjs",
+    "functions:bundle:monitor-runner": "node scripts/bundle-monitor-runner.mjs",
     "prepare": "husky"
   },
   "dependencies": {

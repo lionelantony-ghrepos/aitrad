@@ -222,7 +222,7 @@ export const WRITE_TOOLS: readonly RegisteredWriteTool[] = [
   {
     name: "create_monitor",
     description:
-      "Record a standing monitor instruction. Compilation/runner land in a later PBI; policy still applies.",
+      "Create a standing monitor from a natural-language instruction. Compiles to a rules-engine condition.",
     label: WRITE_TOOL_LABELS.create_monitor,
     inputSchema: createMonitorToolInputSchema,
     jsonSchema: {

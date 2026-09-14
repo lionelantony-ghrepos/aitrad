@@ -633,9 +633,9 @@ var ParseInputLazyPath = class {
     return this._cachedPath;
   }
 };
-var handleResult = (ctx, result) => {
-  if (isValid(result)) {
-    return { success: true, data: result.value };
+var handleResult = (ctx, result2) => {
+  if (isValid(result2)) {
+    return { success: true, data: result2.value };
   } else {
     if (!ctx.common.issues.length) {
       throw new Error("Validation failed but no issues detected.");
@@ -706,20 +706,20 @@ var ZodType = class {
     };
   }
   _parseSync(input) {
-    const result = this._parse(input);
-    if (isAsync(result)) {
+    const result2 = this._parse(input);
+    if (isAsync(result2)) {
       throw new Error("Synchronous parse encountered promise.");
     }
-    return result;
+    return result2;
   }
   _parseAsync(input) {
-    const result = this._parse(input);
-    return Promise.resolve(result);
+    const result2 = this._parse(input);
+    return Promise.resolve(result2);
   }
   parse(data, params) {
-    const result = this.safeParse(data, params);
-    if (result.success) return result.data;
-    throw result.error;
+    const result2 = this.safeParse(data, params);
+    if (result2.success) return result2.data;
+    throw result2.error;
   }
   safeParse(data, params) {
     const ctx = {
@@ -734,8 +734,8 @@ var ZodType = class {
       data,
       parsedType: getParsedType(data),
     };
-    const result = this._parseSync({ data, path: ctx.path, parent: ctx });
-    return handleResult(ctx, result);
+    const result2 = this._parseSync({ data, path: ctx.path, parent: ctx });
+    return handleResult(ctx, result2);
   }
   "~validate"(data) {
     const ctx = {
@@ -751,10 +751,10 @@ var ZodType = class {
     };
     if (!this["~standard"].async) {
       try {
-        const result = this._parseSync({ data, path: [], parent: ctx });
-        return isValid(result)
+        const result2 = this._parseSync({ data, path: [], parent: ctx });
+        return isValid(result2)
           ? {
-              value: result.value,
+              value: result2.value,
             }
           : {
               issues: ctx.common.issues,
@@ -769,10 +769,10 @@ var ZodType = class {
         };
       }
     }
-    return this._parseAsync({ data, path: [], parent: ctx }).then((result) =>
-      isValid(result)
+    return this._parseAsync({ data, path: [], parent: ctx }).then((result2) =>
+      isValid(result2)
         ? {
-            value: result.value,
+            value: result2.value,
           }
         : {
             issues: ctx.common.issues,
@@ -780,9 +780,9 @@ var ZodType = class {
     );
   }
   async parseAsync(data, params) {
-    const result = await this.safeParseAsync(data, params);
-    if (result.success) return result.data;
-    throw result.error;
+    const result2 = await this.safeParseAsync(data, params);
+    if (result2.success) return result2.data;
+    throw result2.error;
   }
   async safeParseAsync(data, params) {
     const ctx = {
@@ -798,10 +798,10 @@ var ZodType = class {
       parsedType: getParsedType(data),
     };
     const maybeAsyncResult = this._parse({ data, path: ctx.path, parent: ctx });
-    const result = await (isAsync(maybeAsyncResult)
+    const result2 = await (isAsync(maybeAsyncResult)
       ? maybeAsyncResult
       : Promise.resolve(maybeAsyncResult));
-    return handleResult(ctx, result);
+    return handleResult(ctx, result2);
   }
   refine(check, message) {
     const getIssueProperties = (val) => {
@@ -814,14 +814,14 @@ var ZodType = class {
       }
     };
     return this._refinement((val, ctx) => {
-      const result = check(val);
+      const result2 = check(val);
       const setError = () =>
         ctx.addIssue({
           code: ZodIssueCode.custom,
           ...getIssueProperties(val),
         });
-      if (typeof Promise !== "undefined" && result instanceof Promise) {
-        return result.then((data) => {
+      if (typeof Promise !== "undefined" && result2 instanceof Promise) {
+        return result2.then((data) => {
           if (!data) {
             setError();
             return false;
@@ -830,7 +830,7 @@ var ZodType = class {
           }
         });
       }
-      if (!result) {
+      if (!result2) {
         setError();
         return false;
       } else {
@@ -2324,14 +2324,14 @@ var ZodArray = class _ZodArray extends ZodType {
         [...ctx.data].map((item, i) => {
           return def.type._parseAsync(new ParseInputLazyPath(ctx, item, ctx.path, i));
         }),
-      ).then((result2) => {
-        return ParseStatus.mergeArray(status, result2);
+      ).then((result3) => {
+        return ParseStatus.mergeArray(status, result3);
       });
     }
-    const result = [...ctx.data].map((item, i) => {
+    const result2 = [...ctx.data].map((item, i) => {
       return def.type._parseSync(new ParseInputLazyPath(ctx, item, ctx.path, i));
     });
-    return ParseStatus.mergeArray(status, result);
+    return ParseStatus.mergeArray(status, result2);
   }
   get element() {
     return this._def.type;
@@ -2740,18 +2740,18 @@ var ZodUnion = class extends ZodType {
     const { ctx } = this._processInputParams(input);
     const options = this._def.options;
     function handleResults(results) {
-      for (const result of results) {
-        if (result.result.status === "valid") {
-          return result.result;
+      for (const result2 of results) {
+        if (result2.result.status === "valid") {
+          return result2.result;
         }
       }
-      for (const result of results) {
-        if (result.result.status === "dirty") {
-          ctx.common.issues.push(...result.ctx.common.issues);
-          return result.result;
+      for (const result2 of results) {
+        if (result2.result.status === "dirty") {
+          ctx.common.issues.push(...result2.ctx.common.issues);
+          return result2.result;
         }
       }
-      const unionErrors = results.map((result) => new ZodError(result.ctx.common.issues));
+      const unionErrors = results.map((result2) => new ZodError(result2.ctx.common.issues));
       addIssueToContext(ctx, {
         code: ZodIssueCode.invalid_union,
         unionErrors,
@@ -2791,15 +2791,15 @@ var ZodUnion = class extends ZodType {
           },
           parent: null,
         };
-        const result = option._parseSync({
+        const result2 = option._parseSync({
           data: ctx.data,
           path: ctx.path,
           parent: childCtx,
         });
-        if (result.status === "valid") {
-          return result;
-        } else if (result.status === "dirty" && !dirty) {
-          dirty = { result, ctx: childCtx };
+        if (result2.status === "valid") {
+          return result2;
+        } else if (result2.status === "dirty" && !dirty) {
+          dirty = { result: result2, ctx: childCtx };
         }
         if (childCtx.common.issues.length) {
           issues.push(childCtx.common.issues);
@@ -3362,11 +3362,11 @@ var ZodFunction = class _ZodFunction extends ZodType {
           error.addIssue(makeArgsIssue(args, e));
           throw error;
         });
-        const result = await Reflect.apply(fn, this, parsedArgs);
+        const result2 = await Reflect.apply(fn, this, parsedArgs);
         const parsedReturns = await me._def.returns._def.type
-          .parseAsync(result, params)
+          .parseAsync(result2, params)
           .catch((e) => {
-            error.addIssue(makeReturnsIssue(result, e));
+            error.addIssue(makeReturnsIssue(result2, e));
             throw error;
           });
         return parsedReturns;
@@ -3378,10 +3378,10 @@ var ZodFunction = class _ZodFunction extends ZodType {
         if (!parsedArgs.success) {
           throw new ZodError([makeArgsIssue(args, parsedArgs.error)]);
         }
-        const result = Reflect.apply(fn, this, parsedArgs.data);
-        const parsedReturns = me._def.returns.safeParse(result, params);
+        const result2 = Reflect.apply(fn, this, parsedArgs.data);
+        const parsedReturns = me._def.returns.safeParse(result2, params);
         if (!parsedReturns.success) {
-          throw new ZodError([makeReturnsIssue(result, parsedReturns.error)]);
+          throw new ZodError([makeReturnsIssue(result2, parsedReturns.error)]);
         }
         return parsedReturns.data;
       });
@@ -3640,36 +3640,36 @@ var ZodEffects = class extends ZodType {
       if (ctx.common.async) {
         return Promise.resolve(processed).then(async (processed2) => {
           if (status.value === "aborted") return INVALID;
-          const result = await this._def.schema._parseAsync({
+          const result2 = await this._def.schema._parseAsync({
             data: processed2,
             path: ctx.path,
             parent: ctx,
           });
-          if (result.status === "aborted") return INVALID;
-          if (result.status === "dirty") return DIRTY(result.value);
-          if (status.value === "dirty") return DIRTY(result.value);
-          return result;
+          if (result2.status === "aborted") return INVALID;
+          if (result2.status === "dirty") return DIRTY(result2.value);
+          if (status.value === "dirty") return DIRTY(result2.value);
+          return result2;
         });
       } else {
         if (status.value === "aborted") return INVALID;
-        const result = this._def.schema._parseSync({
+        const result2 = this._def.schema._parseSync({
           data: processed,
           path: ctx.path,
           parent: ctx,
         });
-        if (result.status === "aborted") return INVALID;
-        if (result.status === "dirty") return DIRTY(result.value);
-        if (status.value === "dirty") return DIRTY(result.value);
-        return result;
+        if (result2.status === "aborted") return INVALID;
+        if (result2.status === "dirty") return DIRTY(result2.value);
+        if (status.value === "dirty") return DIRTY(result2.value);
+        return result2;
       }
     }
     if (effect.type === "refinement") {
       const executeRefinement = (acc) => {
-        const result = effect.refinement(acc, checkCtx);
+        const result2 = effect.refinement(acc, checkCtx);
         if (ctx.common.async) {
-          return Promise.resolve(result);
+          return Promise.resolve(result2);
         }
-        if (result instanceof Promise) {
+        if (result2 instanceof Promise) {
           throw new Error(
             "Async refinement encountered during synchronous parse operation. Use .parseAsync instead.",
           );
@@ -3706,21 +3706,21 @@ var ZodEffects = class extends ZodType {
           parent: ctx,
         });
         if (!isValid(base)) return INVALID;
-        const result = effect.transform(base.value, checkCtx);
-        if (result instanceof Promise) {
+        const result2 = effect.transform(base.value, checkCtx);
+        if (result2 instanceof Promise) {
           throw new Error(
             `Asynchronous transform encountered during synchronous parse operation. Use .parseAsync instead.`,
           );
         }
-        return { status: status.value, value: result };
+        return { status: status.value, value: result2 };
       } else {
         return this._def.schema
           ._parseAsync({ data: ctx.data, path: ctx.path, parent: ctx })
           .then((base) => {
             if (!isValid(base)) return INVALID;
-            return Promise.resolve(effect.transform(base.value, checkCtx)).then((result) => ({
+            return Promise.resolve(effect.transform(base.value, checkCtx)).then((result2) => ({
               status: status.value,
-              value: result,
+              value: result2,
             }));
           });
       }
@@ -3817,20 +3817,20 @@ var ZodCatch = class extends ZodType {
         issues: [],
       },
     };
-    const result = this._def.innerType._parse({
+    const result2 = this._def.innerType._parse({
       data: newCtx.data,
       path: newCtx.path,
       parent: {
         ...newCtx,
       },
     });
-    if (isAsync(result)) {
-      return result.then((result2) => {
+    if (isAsync(result2)) {
+      return result2.then((result3) => {
         return {
           status: "valid",
           value:
-            result2.status === "valid"
-              ? result2.value
+            result3.status === "valid"
+              ? result3.value
               : this._def.catchValue({
                   get error() {
                     return new ZodError(newCtx.common.issues);
@@ -3843,8 +3843,8 @@ var ZodCatch = class extends ZodType {
       return {
         status: "valid",
         value:
-          result.status === "valid"
-            ? result.value
+          result2.status === "valid"
+            ? result2.value
             : this._def.catchValue({
                 get error() {
                   return new ZodError(newCtx.common.issues);
@@ -3957,14 +3957,14 @@ var ZodPipeline = class _ZodPipeline extends ZodType {
 };
 var ZodReadonly = class extends ZodType {
   _parse(input) {
-    const result = this._def.innerType._parse(input);
+    const result2 = this._def.innerType._parse(input);
     const freeze = (data) => {
       if (isValid(data)) {
         data.value = Object.freeze(data.value);
       }
       return data;
     };
-    return isAsync(result) ? result.then((data) => freeze(data)) : freeze(result);
+    return isAsync(result2) ? result2.then((data) => freeze(data)) : freeze(result2);
   }
   unwrap() {
     return this._def.innerType;
@@ -5340,7 +5340,8 @@ var alertCreateRequestSchema = external_exports
 var alertInstanceSchema = external_exports.object({
   id: uuidSchema,
   user_id: uuidSchema,
-  alert_rule_id: uuidSchema,
+  alert_rule_id: uuidSchema.nullable(),
+  monitor_id: uuidSchema.nullable().optional(),
   instrument_id: uuidSchema.nullable(),
   fired_at: timestamptzSchema,
   message: external_exports.string().min(1),
@@ -5351,7 +5352,8 @@ var alertInstanceSchema = external_exports.object({
 var alertInstanceInsertSchema = external_exports
   .object({
     user_id: uuidSchema,
-    alert_rule_id: uuidSchema,
+    alert_rule_id: uuidSchema.nullable().optional(),
+    monitor_id: uuidSchema.nullable().optional(),
     instrument_id: uuidSchema.nullable().optional(),
     fired_at: timestamptzSchema.optional(),
     message: external_exports.string().min(1),
@@ -5382,6 +5384,140 @@ var evaluateAlertsRequestSchema = external_exports
   })
   .strict();
 var alertConditionListSchema = external_exports.array(decisionConditionSchema).min(1);
+
+// packages/schemas/src/monitors.ts
+var MONITOR_FACT_INPUTS = [
+  "position_day_pct",
+  "portfolio_day_pct",
+  "pct_chg",
+  "last",
+  "volume",
+  "rsi_14",
+  "news_sentiment",
+];
+var monitorFactInputSchema = external_exports.enum(MONITOR_FACT_INPUTS);
+var monitorCadenceSchema = external_exports.enum(["5m", "15m", "1h", "1d"]);
+var monitorScopeKindSchema = external_exports.enum(["symbols", "sector", "portfolio"]);
+var monitorScopeSchema = external_exports
+  .object({
+    kind: monitorScopeKindSchema,
+    symbols: external_exports
+      .array(external_exports.string().trim().min(1).max(16))
+      .max(50)
+      .optional(),
+    sector: external_exports.string().trim().min(1).max(64).optional(),
+  })
+  .strict()
+  .superRefine((scope, ctx) => {
+    if (scope.kind === "symbols" && (!scope.symbols || scope.symbols.length === 0)) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        message: "SCOPE_SYMBOLS_REQUIRED",
+      });
+    }
+    if (scope.kind === "sector" && !scope.sector) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        message: "SCOPE_SECTOR_REQUIRED",
+      });
+    }
+  });
+var compiledMonitorConditionSchema = decisionRowSchema.superRefine((row, ctx) => {
+  if (row.outputs.decision !== "fire") {
+    ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message: "MONITOR_OUTPUT_FIRE" });
+  }
+  if (row.conditions.length < 1) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      message: "MONITOR_CONDITION_REQUIRED",
+    });
+  }
+  for (const cell of row.conditions) {
+    const input = monitorFactInputSchema.safeParse(cell.input);
+    if (!input.success) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        message: `MONITOR_FACT_UNKNOWN:${cell.input}`,
+      });
+    }
+  }
+});
+var monitorCompileResultSchema = external_exports
+  .object({
+    name: external_exports.string().trim().min(1).max(80).optional(),
+    cadence: monitorCadenceSchema.optional(),
+    scope: monitorScopeSchema,
+    compiled_condition: compiledMonitorConditionSchema,
+    propose_action: external_exports.record(external_exports.unknown()).nullable().optional(),
+  })
+  .strict();
+var monitorSchema = external_exports.object({
+  id: uuidSchema,
+  user_id: uuidSchema,
+  session_id: uuidSchema.nullable().optional(),
+  name: external_exports.string().min(1),
+  nl_instruction: external_exports.string().min(1),
+  compiled_condition: compiledMonitorConditionSchema,
+  scope: monitorScopeSchema,
+  cadence: monitorCadenceSchema,
+  last_run: timestamptzSchema.nullable(),
+  active: external_exports.boolean(),
+  throttle_state: alertThrottleStateSchema,
+  propose_action: external_exports.record(external_exports.unknown()).nullable().optional(),
+  created_at: timestamptzSchema,
+  updated_at: timestamptzSchema,
+});
+var monitorInsertSchema = external_exports
+  .object({
+    user_id: uuidSchema,
+    session_id: uuidSchema.nullable().optional(),
+    name: external_exports.string().min(1),
+    nl_instruction: external_exports.string().min(1),
+    compiled_condition: compiledMonitorConditionSchema,
+    scope: monitorScopeSchema,
+    cadence: monitorCadenceSchema.optional(),
+    last_run: timestamptzSchema.nullable().optional(),
+    active: external_exports.boolean().optional(),
+    throttle_state: alertThrottleStateSchema.optional(),
+    propose_action: external_exports.record(external_exports.unknown()).nullable().optional(),
+  })
+  .strict();
+var monitorOwnerPatchSchema = external_exports
+  .object({
+    name: external_exports.string().min(1).optional(),
+    active: external_exports.boolean().optional(),
+    throttle_state: alertThrottleStateSchema.optional(),
+  })
+  .strict();
+var monitorPatchSchema = monitorOwnerPatchSchema
+  .extend({
+    last_run: timestamptzSchema.nullable().optional(),
+  })
+  .strict();
+var monitorCreateRequestSchema = external_exports
+  .object({
+    name: external_exports.string().trim().min(1).max(80).optional(),
+    nl_instruction: external_exports.string().trim().min(1).max(2e3),
+    symbols: external_exports.array(external_exports.string().trim().min(1).max(16)).optional(),
+    session_id: uuidSchema.optional(),
+  })
+  .strict();
+var monitorRunnerRequestSchema = external_exports
+  .object({
+    clock: timestamptzSchema.optional(),
+    force: external_exports.boolean().optional(),
+    force_position_day_pct: external_exports.number().optional(),
+    user_id: uuidSchema.optional(),
+  })
+  .strict();
+var monitorRunnerResponseSchema = external_exports.object({
+  evaluated: external_exports.number().int().nonnegative(),
+  fired: external_exports.number().int().nonnegative(),
+  suppressed: external_exports.number().int().nonnegative(),
+});
+var monitorLlmConditionCellSchema = decisionConditionSchema.extend({
+  input: monitorFactInputSchema,
+});
 
 // packages/schemas/src/admin-users.ts
 var userRoleSchema = rulesAdminRoleSchema;
@@ -5816,12 +5952,12 @@ function authorizeFromTable(input) {
     return { allowed: false, decision: "deny", reason: "ACTION_REQUIRED" };
   }
   const role = input.role && input.role.length > 0 ? input.role : "unknown";
-  const result = evaluate(
+  const result2 = evaluate(
     input.table,
     { role, action: input.action },
     input.clock ?? /* @__PURE__ */ new Date(),
   );
-  return authorizeResultFromOutcome(result.outcome);
+  return authorizeResultFromOutcome(result2.outcome);
 }
 async function authorize(input) {
   if (!input.userId) {
@@ -6469,6 +6605,14 @@ function requireThreshold(threshold) {
   return threshold;
 }
 
+// packages/rules-engine/src/monitor-cycle.ts
+var CADENCE_MS = {
+  "5m": 5 * 6e4,
+  "15m": 15 * 6e4,
+  "1h": 60 * 6e4,
+  "1d": 24 * 60 * 6e4,
+};
+
 // packages/copilot/src/prompt.ts
 function buildContextPreamble(input) {
   const lines = ["Session context (retrieved by the host \u2014 treat as tool data, not memory):"];
@@ -6664,7 +6808,7 @@ var WRITE_TOOLS = [
   {
     name: "create_monitor",
     description:
-      "Record a standing monitor instruction. Compilation/runner land in a later PBI; policy still applies.",
+      "Create a standing monitor from a natural-language instruction. Compiles to a rules-engine condition.",
     label: WRITE_TOOL_LABELS.create_monitor,
     inputSchema: createMonitorToolInputSchema,
     jsonSchema: {
@@ -6740,8 +6884,8 @@ function extractCitations(text, newsMeta) {
 }
 function newsMetaFromToolResults(results) {
   const map = /* @__PURE__ */ new Map();
-  for (const result of results) {
-    const items = collectNewsItems(result);
+  for (const result2 of results) {
+    const items = collectNewsItems(result2);
     for (const item of items) {
       map.set(item.id, { headline: item.headline, symbol: item.symbols?.[0] });
     }
@@ -6838,32 +6982,32 @@ async function runOrchestratorLoop(input) {
         call_id: call.id,
       });
       let parsedArgs = call.arguments;
-      let result;
+      let result2;
       let error;
       try {
         if (spec) {
           parsedArgs = spec.inputSchema.parse(call.arguments);
         }
-        result = await input.executeTool(call.name, parsedArgs);
+        result2 = await input.executeTool(call.name, parsedArgs);
       } catch (caught) {
         error = caught instanceof Error ? caught.message : "TOOL_ERROR";
-        result = { error };
+        result2 = { error };
       }
       recorded.push({
         id: call.id,
         name: call.name,
         arguments: parsedArgs,
-        result,
+        result: result2,
         error,
       });
-      results.push(result);
+      results.push(result2);
       emit(input.onEvent, {
         type: "tool_end",
         name: call.name,
         call_id: call.id,
         ok: error === void 0,
       });
-      const pending = extractActionFromToolResult(result);
+      const pending = extractActionFromToolResult(result2);
       if (pending) {
         emit(input.onEvent, { type: "action", action: pending });
       }
@@ -6871,16 +7015,16 @@ async function runOrchestratorLoop(input) {
         role: "tool",
         name: call.name,
         tool_call_id: call.id,
-        content: JSON.stringify(result),
+        content: JSON.stringify(result2),
       });
     }
   }
 }
-function extractActionFromToolResult(result) {
-  if (!result || typeof result !== "object" || !("action" in result)) {
+function extractActionFromToolResult(result2) {
+  if (!result2 || typeof result2 !== "object" || !("action" in result2)) {
     return void 0;
   }
-  const parsed = copilotActionSchema.safeParse(result.action);
+  const parsed = copilotActionSchema.safeParse(result2.action);
   return parsed.success ? parsed.data : void 0;
 }
 function chunkTokens(text, size = 24) {
@@ -7150,6 +7294,302 @@ async function decidePersistedAction(input) {
   return applyExecution(approved, input.ports);
 }
 
+// packages/copilot/src/monitor-compiler.ts
+var SECTOR_ALIASES = {
+  semis: "semiconductors",
+  semiconductor: "semiconductors",
+  semiconductors: "semiconductors",
+  energy: "energy",
+  tech: "technology",
+  technology: "technology",
+  healthcare: "healthcare",
+  financials: "financials",
+};
+function fireRow(input, op, value) {
+  return compiledMonitorConditionSchema.parse({
+    id: "monitor",
+    priority: 1,
+    conditions: [{ input, op, value }],
+    outputs: { decision: "fire" },
+  });
+}
+function result(input) {
+  return monitorCompileResultSchema.parse({
+    name: input.name,
+    cadence: input.cadence ?? "5m",
+    scope: monitorScopeSchema.parse(input.scope),
+    compiled_condition: input.compiled_condition,
+    propose_action: null,
+  });
+}
+function normalizeMonitorInstruction(nl) {
+  return nl
+    .trim()
+    .replace(/^(please\s+)?(create\s+a\s+)?monitor[:\s-]+/i, "")
+    .trim();
+}
+function compileMonitorInstruction(nlInstruction) {
+  const nl = normalizeMonitorInstruction(nlInstruction);
+  if (nl.length === 0) {
+    return null;
+  }
+  const positionDrop = nl.match(/any position drops?\s+(\d+(?:\.\d+)?)%/i);
+  if (positionDrop?.[1]) {
+    const pct = Number(positionDrop[1]);
+    return result({
+      name: `Position day drop ${pct}%`,
+      scope: { kind: "portfolio" },
+      compiled_condition: fireRow("position_day_pct", "lte", -pct),
+    });
+  }
+  const myPositionsNews = /watch my positions for negative news/i.test(nl);
+  if (myPositionsNews) {
+    return result({
+      name: "Positions negative news",
+      scope: { kind: "portfolio" },
+      compiled_condition: fireRow("news_sentiment", "lt", 0),
+    });
+  }
+  const sectorNews = nl.match(/watch\s+(\w+)(?:\s+sector)?\s+for negative news/i);
+  if (sectorNews?.[1]) {
+    const alias = sectorNews[1].toLowerCase();
+    const sector = SECTOR_ALIASES[alias];
+    if (sector) {
+      return result({
+        name: `${sector} negative news`,
+        scope: { kind: "sector", sector },
+        compiled_condition: fireRow("news_sentiment", "lt", 0),
+      });
+    }
+  }
+  const portfolioDown = nl.match(/portfolio is down\s+(\d+(?:\.\d+)?)%/i);
+  if (portfolioDown?.[1]) {
+    const pct = Number(portfolioDown[1]);
+    return result({
+      name: `Portfolio day drop ${pct}%`,
+      scope: { kind: "portfolio" },
+      compiled_condition: fireRow("portfolio_day_pct", "lte", -pct),
+    });
+  }
+  const sectorDrop = nl.match(/watch\s+(\w+)\s+sector for drops? of\s+(\d+(?:\.\d+)?)%/i);
+  if (sectorDrop?.[1] && sectorDrop[2]) {
+    const alias = sectorDrop[1].toLowerCase();
+    const sector = SECTOR_ALIASES[alias] ?? alias;
+    const pct = Number(sectorDrop[2]);
+    return result({
+      name: `${sector} drop ${pct}%`,
+      scope: { kind: "sector", sector },
+      compiled_condition: fireRow("pct_chg", "lte", -pct),
+    });
+  }
+  const lastAbove = nl.match(/watch\s+([A-Za-z]{1,5})\s+if last rises above\s+(\d+(?:\.\d+)?)/i);
+  if (lastAbove?.[1] && lastAbove[2]) {
+    const symbol = lastAbove[1].toUpperCase();
+    const px = Number(lastAbove[2]);
+    return result({
+      name: `${symbol} last above ${px}`,
+      scope: { kind: "symbols", symbols: [symbol] },
+      compiled_condition: fireRow("last", "gte", px),
+    });
+  }
+  const volumeAbove = nl.match(/watch\s+([A-Za-z]{1,5})\s+volume above\s+(\d+)/i);
+  if (volumeAbove?.[1] && volumeAbove[2]) {
+    const symbol = volumeAbove[1].toUpperCase();
+    const volume = Number(volumeAbove[2]);
+    return result({
+      name: `${symbol} volume`,
+      scope: { kind: "symbols", symbols: [symbol] },
+      compiled_condition: fireRow("volume", "gt", volume),
+    });
+  }
+  const rsiBelow = nl.match(/\b([A-Za-z]{1,5})\b RSI goes below\s+(\d+(?:\.\d+)?)/i);
+  if (rsiBelow?.[1] && rsiBelow[2]) {
+    const symbol = rsiBelow[1].toUpperCase();
+    const rsi = Number(rsiBelow[2]);
+    return result({
+      name: `${symbol} RSI`,
+      scope: { kind: "symbols", symbols: [symbol] },
+      compiled_condition: fireRow("rsi_14", "lt", rsi),
+    });
+  }
+  const isUp = nl.match(/when\s+([A-Za-z]{1,5})\s+is up\s+(\d+(?:\.\d+)?)%/i);
+  if (isUp?.[1] && isUp[2]) {
+    const symbol = isUp[1].toUpperCase();
+    const pct = Number(isUp[2]);
+    return result({
+      name: `${symbol} up ${pct}%`,
+      scope: { kind: "symbols", symbols: [symbol] },
+      compiled_condition: fireRow("pct_chg", "gte", pct),
+    });
+  }
+  const symbolDrop = nl.match(/\b([A-Za-z]{1,5})\b drops?\s+(\d+(?:\.\d+)?)%/i);
+  if (symbolDrop?.[1] && symbolDrop[2]) {
+    const symbol = symbolDrop[1].toUpperCase();
+    const pct = Number(symbolDrop[2]);
+    return result({
+      name: `${symbol} drop ${pct}%`,
+      scope: { kind: "symbols", symbols: [symbol] },
+      compiled_condition: fireRow("pct_chg", "lte", -pct),
+    });
+  }
+  return null;
+}
+function extractJsonObject(text) {
+  const trimmed = text.trim();
+  const start = trimmed.indexOf("{");
+  const end = trimmed.lastIndexOf("}");
+  if (start < 0 || end <= start) {
+    throw new Error("MONITOR_COMPILE_NOT_JSON");
+  }
+  return JSON.parse(trimmed.slice(start, end + 1));
+}
+async function compileMonitorInstructionWithLlm(input) {
+  const canned = compileMonitorInstruction(input.nl_instruction);
+  if (canned) {
+    return canned;
+  }
+  const basePrompt = [
+    "Compile this Meridian monitor instruction into JSON only.",
+    "Schema: { name?, cadence?: 5m|15m|1h|1d, scope: { kind: symbols|sector|portfolio, symbols?: string[], sector?: string }, compiled_condition: { id, priority, conditions: [{ input, op, value }], outputs: { decision: 'fire' } }, propose_action?: object|null }.",
+    `Allowed condition inputs: position_day_pct, portfolio_day_pct, pct_chg, last, volume, rsi_14, news_sentiment.`,
+    `Instruction: ${input.nl_instruction}`,
+  ].join("\n");
+  let raw = await input.completeJson(basePrompt);
+  let parsed = tryParseCompile(raw);
+  if (!parsed.ok) {
+    raw = await input.completeJson(
+      `${basePrompt}
+Previous JSON failed validation: ${parsed.error}
+Return corrected JSON only.`,
+    );
+    parsed = tryParseCompile(raw);
+  }
+  if (!parsed.ok) {
+    throw new Error(`MONITOR_COMPILE_INVALID:${parsed.error}`);
+  }
+  return parsed.value;
+}
+function tryParseCompile(raw) {
+  try {
+    const json2 = extractJsonObject(raw);
+    return { ok: true, value: monitorCompileResultSchema.parse(json2) };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "PARSE" };
+  }
+}
+
+// packages/copilot/src/monitor-golden.ts
+function fire(input, op, value) {
+  return {
+    id: "monitor",
+    priority: 1,
+    conditions: [{ input, op, value }],
+    outputs: { decision: "fire" },
+  };
+}
+var MONITOR_GOLDEN_EXPECTED = [
+  {
+    nl: "tell me if any position drops 5% in a day",
+    expected: {
+      name: "Position day drop 5%",
+      cadence: "5m",
+      scope: { kind: "portfolio" },
+      compiled_condition: fire("position_day_pct", "lte", -5),
+      propose_action: null,
+    },
+  },
+  {
+    nl: "watch semis for negative news",
+    expected: {
+      name: "semiconductors negative news",
+      cadence: "5m",
+      scope: { kind: "sector", sector: "semiconductors" },
+      compiled_condition: fire("news_sentiment", "lt", 0),
+      propose_action: null,
+    },
+  },
+  {
+    nl: "alert if AAPL drops 3% today",
+    expected: {
+      name: "AAPL drop 3%",
+      cadence: "5m",
+      scope: { kind: "symbols", symbols: ["AAPL"] },
+      compiled_condition: fire("pct_chg", "lte", -3),
+      propose_action: null,
+    },
+  },
+  {
+    nl: "watch NVDA if last rises above 150",
+    expected: {
+      name: "NVDA last above 150",
+      cadence: "5m",
+      scope: { kind: "symbols", symbols: ["NVDA"] },
+      compiled_condition: fire("last", "gte", 150),
+      propose_action: null,
+    },
+  },
+  {
+    nl: "tell me if my portfolio is down 2% on the day",
+    expected: {
+      name: "Portfolio day drop 2%",
+      cadence: "5m",
+      scope: { kind: "portfolio" },
+      compiled_condition: fire("portfolio_day_pct", "lte", -2),
+      propose_action: null,
+    },
+  },
+  {
+    nl: "watch MSFT volume above 1000000",
+    expected: {
+      name: "MSFT volume",
+      cadence: "5m",
+      scope: { kind: "symbols", symbols: ["MSFT"] },
+      compiled_condition: fire("volume", "gt", 1e6),
+      propose_action: null,
+    },
+  },
+  {
+    nl: "if TSLA RSI goes below 30",
+    expected: {
+      name: "TSLA RSI",
+      cadence: "5m",
+      scope: { kind: "symbols", symbols: ["TSLA"] },
+      compiled_condition: fire("rsi_14", "lt", 30),
+      propose_action: null,
+    },
+  },
+  {
+    nl: "watch energy sector for drops of 4%",
+    expected: {
+      name: "energy drop 4%",
+      cadence: "5m",
+      scope: { kind: "sector", sector: "energy" },
+      compiled_condition: fire("pct_chg", "lte", -4),
+      propose_action: null,
+    },
+  },
+  {
+    nl: "notify me when SPY is up 1% today",
+    expected: {
+      name: "SPY up 1%",
+      cadence: "5m",
+      scope: { kind: "symbols", symbols: ["SPY"] },
+      compiled_condition: fire("pct_chg", "gte", 1),
+      propose_action: null,
+    },
+  },
+  {
+    nl: "watch my positions for negative news",
+    expected: {
+      name: "Positions negative news",
+      cadence: "5m",
+      scope: { kind: "portfolio" },
+      compiled_condition: fire("news_sentiment", "lt", 0),
+      propose_action: null,
+    },
+  },
+];
+
 // packages/copilot/src/rate-limit.ts
 function rateLimitFromAiPolicy(outcome) {
   if (!outcome || typeof outcome !== "object" || !("decision" in outcome)) {
@@ -7330,7 +7770,7 @@ async function runCopilotRequest(input) {
     await input.persist.auditTool(name, args);
     return input.executeTool(name, args);
   };
-  const result = await runOrchestratorLoop({
+  const result2 = await runOrchestratorLoop({
     messages: history,
     llm: input.llm,
     executeTool: execute,
@@ -7339,10 +7779,10 @@ async function runCopilotRequest(input) {
   await input.persist.appendMessage({
     sessionId,
     role: "assistant",
-    content: result.assistantContent,
-    tool_calls: result.toolCalls,
+    content: result2.assistantContent,
+    tool_calls: result2.toolCalls,
   });
-  return { sessionId, assistantContent: result.assistantContent };
+  return { sessionId, assistantContent: result2.assistantContent };
 }
 
 // packages/copilot/src/session-access.ts
@@ -7846,6 +8286,8 @@ async function executeWriteTool(input) {
     p_user_id: input.userId,
   });
   const actionsToday = Number(countRpc.data ?? 0);
+  const monitorsRpc = await db.rpc("count_user_monitors", { p_user_id: input.userId });
+  const monitorsCount = Number(monitorsRpc.data ?? 0);
   let args = input.args;
   if (input.name === "propose_order" && args && typeof args === "object") {
     const row = args;
@@ -7912,6 +8354,7 @@ async function executeWriteTool(input) {
         baseUrl: input.baseUrl,
         token: input.token,
         userId: input.userId,
+        sessionId: input.sessionId,
       }),
   };
   return handleWriteToolCall({
@@ -7920,7 +8363,7 @@ async function executeWriteTool(input) {
     tool: input.name,
     args,
     actionsToday,
-    monitorsCount: 0,
+    monitorsCount,
     ports,
   });
 }
@@ -7984,6 +8427,7 @@ async function decideCopilotActionOnEdge(input) {
             baseUrl: input.baseUrl,
             token: input.token,
             userId: input.userId,
+            sessionId: existing.session_id,
           }),
       },
     });
@@ -8143,7 +8587,90 @@ async function executeManualWriteOnEdge(input) {
     const row = asRows2(created.data)[0];
     return row ? { ref: row.id } : { error: "ALERT_CREATE_FAILED" };
   }
-  return { ref: crypto.randomUUID() };
+  if (input.tool === "create_monitor") {
+    const instruction =
+      typeof input.payload.nl_instruction === "string" ? input.payload.nl_instruction : "";
+    let compiled = compileMonitorInstruction(instruction);
+    if (!compiled) {
+      const llmMode = (Deno.env.get("MERIDIAN_COPILOT_LLM") ?? "").trim().toLowerCase();
+      if (llmMode === "fake") {
+        return { error: "MONITOR_COMPILE_FAILED" };
+      }
+      const apiKey = Deno.env.get("OPENROUTER_API_KEY");
+      if (!apiKey) {
+        return { error: "MONITOR_COMPILE_FAILED" };
+      }
+      try {
+        compiled = await compileMonitorInstructionWithLlm({
+          nl_instruction: instruction,
+          completeJson: async (prompt) => {
+            const response = await fetch(
+              Deno.env.get("OPENROUTER_CHAT_URL") ?? DEFAULT_OPENROUTER_CHAT_URL,
+              {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${apiKey}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  model: Deno.env.get("OPENROUTER_CHAT_MODEL") ?? DEFAULT_OPENROUTER_CHAT_MODEL,
+                  messages: [{ role: "user", content: prompt }],
+                }),
+              },
+            );
+            const body = await response.json();
+            const content =
+              body && typeof body === "object" && "choices" in body && Array.isArray(body.choices)
+                ? (body.choices[0]?.message?.content ?? "")
+                : "";
+            return content;
+          },
+        });
+      } catch (error) {
+        return {
+          error: error instanceof Error ? error.message : "MONITOR_COMPILE_FAILED",
+        };
+      }
+    }
+    const name =
+      (typeof input.payload.name === "string" && input.payload.name) ||
+      compiled.name ||
+      instruction.slice(0, 72);
+    await db.from("monitors").insert([
+      {
+        user_id: input.userId,
+        session_id: input.sessionId ?? null,
+        name,
+        nl_instruction: instruction,
+        compiled_condition: compiled.compiled_condition,
+        scope: compiled.scope,
+        cadence: compiled.cadence ?? "5m",
+        active: true,
+        propose_action: compiled.propose_action ?? null,
+      },
+    ]);
+    const createdMon = await db
+      .from("monitors")
+      .select("id")
+      .eq("user_id", input.userId)
+      .order("created_at", { ascending: false })
+      .limit(1);
+    const monitor = asRows2(createdMon.data)[0];
+    if (!monitor) {
+      return { error: "MONITOR_CREATE_FAILED" };
+    }
+    await db.from("audit_log").insert([
+      {
+        user_id: input.userId,
+        action: "monitors:create",
+        entity_type: "monitors",
+        entity_id: monitor.id,
+        payload: { name, tool: "create_monitor" },
+      },
+    ]);
+    return { ref: monitor.id };
+  }
+  return { error: `UNKNOWN_WRITE_TOOL:${input.tool}` };
 }
 
 module.exports = copilot_orchestrator_src_default;

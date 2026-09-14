@@ -43,7 +43,10 @@ describe("copilot-orchestrator source contracts", () => {
     expect(src).toMatch(/persistOwnedCopilotAction[\s\S]*requireOwnedCopilotSession/);
     expect(src).toContain("insertOwnedWatchlistItemAsAdmin");
     expect(src).toMatch(/from\("watchlists"\)[\s\S]*eq\("user_id", userId\)[\s\S]*eq\("id", id\)/);
-    expect(src).toContain("decideCopilotActionOnEdge");
+    expect(src).toContain("count_user_monitors");
+    expect(src).toContain("compileMonitorInstruction");
+    expect(src).toContain('.from("monitors")');
+    expect(src).toContain('action: "monitors:create"');
     expect(src).toContain('action: "copilot:act"');
     expect(src).toContain('op: "decide"');
   });
@@ -53,6 +56,7 @@ describe("copilot-orchestrator source contracts", () => {
     expect(panel).toContain("listCopilotSessionsAction");
     expect(panel).toContain("copilot-citation");
     expect(panel).toContain("copilot-approval-card");
+    expect(panel).toContain("copilot-tab-monitors");
     expect(panel).toContain("Ask about");
     expect(panel).not.toContain("createAdminClient");
   });

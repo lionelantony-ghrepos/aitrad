@@ -88,3 +88,10 @@ npx -y @insforge/cli functions deploy copilot-orchestrator --file insforge/funct
 `copilot-orchestrator` accepts `POST` `{ session_id?, message, active_symbol? }` (user JWT). `authorize` `copilot:chat`. Evaluates `ai_action_policy` (DT-AI-01) with `messages_today`. Streams SSE tool/token events. Read tools: `get_quote`, `get_bars`, `search_news`, `get_fundamentals`, `screen_instruments`, `get_portfolio`, `explain_rule_decision`. Write tools persist `copilot_actions` via admin client after `requireOwnedCopilotSession`. Each tool writes `audit_log`. Apply migration 0017 first (0019 for write tools). `MERIDIAN_COPILOT_LLM=fake` uses the scripted transcript.
 
 Approve/reject: `POST /functions/copilot-orchestrator/decide` with `{ op: "decide", action_id, decision, feedback? }` (user JWT + `authorize` `copilot:act`). Admin client updates the row — `copilot_actions` is SELECT-only for the authenticated role. Next `decideCopilotActionAction` must call this route, not PostgREST PATCH.
+
+```bash
+pnpm functions:bundle:monitor-runner
+npx -y @insforge/cli functions deploy monitor-runner --file insforge/functions/monitor-runner.ts --name "Monitor runner"
+```
+
+`monitor-runner` is service-key only. It loads active `monitors`, builds portfolio/quote/news facts (news sentiment via `search_news_hybrid` plus `news_items` fallback), evaluates compiled rules-engine conditions, then `evaluateDomain('alerting')` (DT-ALRT-01). On deliver it inserts `alerts` with a grounded two-sentence explanation, writes `audit_log`, and publishes `alerts:{userId}`. Optional `propose_action` rows stay `proposed` (DT-AI-01). `market-tick` and `news-ticker` invoke it after their batches. Request `{ force_position_day_pct }` is the feed test-mode hook.

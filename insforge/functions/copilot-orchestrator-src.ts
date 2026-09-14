@@ -33,6 +33,8 @@ import {
   COPILOT_SESSION_NOT_FOUND,
   DEFAULT_OPENROUTER_CHAT_MODEL,
   DEFAULT_OPENROUTER_CHAT_URL,
+  compileMonitorInstruction,
+  compileMonitorInstructionWithLlm,
   decidePersistedAction,
   evaluateWritePolicyBaseline,
   handleWriteToolCall,
@@ -472,6 +474,8 @@ async function executeWriteTool(input: {
     p_user_id: input.userId,
   });
   const actionsToday = Number(countRpc.data ?? 0);
+  const monitorsRpc = await db.rpc("count_user_monitors", { p_user_id: input.userId });
+  const monitorsCount = Number(monitorsRpc.data ?? 0);
   let args = input.args;
   if (input.name === "propose_order" && args && typeof args === "object") {
     const row = args as Record<string, unknown>;
@@ -540,6 +544,7 @@ async function executeWriteTool(input: {
         baseUrl: input.baseUrl,
         token: input.token,
         userId: input.userId,
+        sessionId: input.sessionId,
       }),
   };
   return handleWriteToolCall({
@@ -548,7 +553,7 @@ async function executeWriteTool(input: {
     tool: input.name,
     args,
     actionsToday,
-    monitorsCount: 0,
+    monitorsCount,
     ports,
   });
 }
@@ -621,6 +626,7 @@ async function decideCopilotActionOnEdge(input: {
             baseUrl: input.baseUrl,
             token: input.token,
             userId: input.userId,
+            sessionId: existing.session_id,
           }),
       },
     });
@@ -662,6 +668,7 @@ async function executeManualWriteOnEdge(input: {
   baseUrl: string;
   token: string;
   userId: string;
+  sessionId?: string;
 }): Promise<{ ref?: string; error?: string; reject_reason?: string }> {
   const db = input.admin.database;
   const actionName =
@@ -791,5 +798,92 @@ async function executeManualWriteOnEdge(input: {
     const row = asRows<{ id: string }>(created.data)[0];
     return row ? { ref: row.id } : { error: "ALERT_CREATE_FAILED" };
   }
-  return { ref: crypto.randomUUID() };
+  if (input.tool === "create_monitor") {
+    const instruction =
+      typeof input.payload.nl_instruction === "string" ? input.payload.nl_instruction : "";
+    let compiled = compileMonitorInstruction(instruction);
+    if (!compiled) {
+      const llmMode = (Deno.env.get("MERIDIAN_COPILOT_LLM") ?? "").trim().toLowerCase();
+      if (llmMode === "fake") {
+        return { error: "MONITOR_COMPILE_FAILED" };
+      }
+      const apiKey = Deno.env.get("OPENROUTER_API_KEY");
+      if (!apiKey) {
+        return { error: "MONITOR_COMPILE_FAILED" };
+      }
+      try {
+        compiled = await compileMonitorInstructionWithLlm({
+          nl_instruction: instruction,
+          completeJson: async (prompt) => {
+            const response = await fetch(
+              Deno.env.get("OPENROUTER_CHAT_URL") ?? DEFAULT_OPENROUTER_CHAT_URL,
+              {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${apiKey}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  model: Deno.env.get("OPENROUTER_CHAT_MODEL") ?? DEFAULT_OPENROUTER_CHAT_MODEL,
+                  messages: [{ role: "user", content: prompt }],
+                }),
+              },
+            );
+            const body: unknown = await response.json();
+            const content =
+              body &&
+              typeof body === "object" &&
+              "choices" in body &&
+              Array.isArray((body as { choices?: unknown }).choices)
+                ? ((body as { choices: Array<{ message?: { content?: string } }> }).choices[0]
+                    ?.message?.content ?? "")
+                : "";
+            return content;
+          },
+        });
+      } catch (error) {
+        return {
+          error: error instanceof Error ? error.message : "MONITOR_COMPILE_FAILED",
+        };
+      }
+    }
+    const name =
+      (typeof input.payload.name === "string" && input.payload.name) ||
+      compiled.name ||
+      instruction.slice(0, 72);
+    await db.from("monitors").insert([
+      {
+        user_id: input.userId,
+        session_id: input.sessionId ?? null,
+        name,
+        nl_instruction: instruction,
+        compiled_condition: compiled.compiled_condition,
+        scope: compiled.scope,
+        cadence: compiled.cadence ?? "5m",
+        active: true,
+        propose_action: compiled.propose_action ?? null,
+      },
+    ]);
+    const createdMon = await db
+      .from("monitors")
+      .select("id")
+      .eq("user_id", input.userId)
+      .order("created_at", { ascending: false })
+      .limit(1);
+    const monitor = asRows<{ id: string }>(createdMon.data)[0];
+    if (!monitor) {
+      return { error: "MONITOR_CREATE_FAILED" };
+    }
+    await db.from("audit_log").insert([
+      {
+        user_id: input.userId,
+        action: "monitors:create",
+        entity_type: "monitors",
+        entity_id: monitor.id,
+        payload: { name, tool: "create_monitor" },
+      },
+    ]);
+    return { ref: monitor.id };
+  }
+  return { error: `UNKNOWN_WRITE_TOOL:${input.tool}` };
 }

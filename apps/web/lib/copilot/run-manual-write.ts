@@ -5,12 +5,9 @@ import {
   searchInstrumentsAction,
 } from "@/app/actions/watchlists";
 import { createAlertRuleAction } from "@/app/actions/alerts";
+import { createMonitorAction } from "@/app/actions/monitors";
 import { submitOrderAction } from "@/app/actions/orders";
-import {
-  stubInstrumentBySymbol,
-  stubInsertCopilotMonitor,
-  stubQuoteForInstrument,
-} from "@/lib/auth/stub-store";
+import { stubInstrumentBySymbol, stubQuoteForInstrument } from "@/lib/auth/stub-store";
 import { isAuthStub } from "@/lib/auth/mode";
 import type { WriteExecuteResult } from "@meridian/copilot";
 import { orderDraftSchema, type CopilotWriteToolName } from "@meridian/schemas";
@@ -51,7 +48,6 @@ async function resolveInstrument(
 export async function runManualWrite(
   tool: CopilotWriteToolName,
   payload: Record<string, unknown>,
-  userId: string,
 ): Promise<WriteExecuteResult> {
   switch (tool) {
     case "propose_order": {
@@ -135,13 +131,17 @@ export async function runManualWrite(
       return { ref: created.data.id };
     }
     case "create_monitor": {
-      const instruction = asString(payload.nl_instruction) ?? "Monitor";
-      const name = asString(payload.name) ?? instruction.slice(0, 72);
-      if (isAuthStub()) {
-        const row = stubInsertCopilotMonitor({ userId, name, nl_instruction: instruction });
-        return { ref: row.id };
+      const created = await createMonitorAction({
+        name: asString(payload.name),
+        nl_instruction: asString(payload.nl_instruction) ?? "Monitor",
+        symbols: Array.isArray(payload.symbols)
+          ? payload.symbols.filter((row): row is string => typeof row === "string")
+          : undefined,
+      });
+      if (!created.ok) {
+        return { error: created.message };
       }
-      return { ref: crypto.randomUUID() };
+      return { ref: created.data.id };
     }
     default:
       return { error: `UNKNOWN_WRITE_TOOL:${tool}` };

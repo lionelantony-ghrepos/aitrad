@@ -35,7 +35,7 @@ export function stubWritePorts(userId: string): WriteActionPorts {
       stubRequireOwnedCopilotSession(userId, row.session_id);
       return stubReplaceCopilotAction(row);
     },
-    execute: async (tool, payload) => runManualWrite(tool, payload, userId),
+    execute: async (tool, payload) => runManualWrite(tool, payload),
   };
 }
 

@@ -19,5 +19,6 @@ describe("market-tick news shocks", () => {
     expect(src).not.toContain('.from("news_items").insert');
     expect(src).not.toContain("publish_news_batch");
     expect(src).toContain("/functions/alert-runner");
+    expect(src).toContain("/functions/monitor-runner");
   });
 });

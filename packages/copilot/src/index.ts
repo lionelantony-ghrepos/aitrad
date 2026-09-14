@@ -36,6 +36,17 @@ export {
   type WriteExecuteResult,
 } from "./write-actions";
 export { summarizeCopilotAction, summarizeWritePayload } from "./write-summary";
+export {
+  compileMonitorInstruction,
+  compileMonitorInstructionWithLlm,
+  normalizeMonitorInstruction,
+} from "./monitor-compiler";
+export { MONITOR_GOLDEN_EXPECTED } from "./monitor-golden";
+export {
+  explainCompiledMonitor,
+  explainMonitorScope,
+  groundedMonitorExplanation,
+} from "./monitor-explain";
 export { extractCitations, newsMetaFromToolResults, splitMarkdownCitations } from "./citations";
 export { extractFigures, ungroundedFigures, assertGroundedOrThrow } from "./grounding";
 export { evaluateCopilotRateLimit, rateLimitFromAiPolicy } from "./rate-limit";
