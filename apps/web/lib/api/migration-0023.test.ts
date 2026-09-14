@@ -30,4 +30,14 @@ describe("PBI-028 migration 0023 briefs", () => {
     expect(migrationSql).toContain("content_md");
     expect(migrationSql).toContain("briefs_select_own");
   });
+
+  it("leaves JWT write grants for 0024 to revoke", () => {
+    expect(LOCAL_MIGRATION_IDS).toContain("0024");
+    expect(LOCAL_MIGRATION_IDS.indexOf("0024")).toBeGreaterThan(
+      LOCAL_MIGRATION_IDS.indexOf("0023"),
+    );
+    expect(migrationSql).toContain(
+      "GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.briefs TO authenticated",
+    );
+  });
 });
