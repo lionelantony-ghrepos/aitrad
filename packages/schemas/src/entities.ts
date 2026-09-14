@@ -212,10 +212,12 @@ export const auditLogSchema = z.object({
   entity_id: uuidSchema.nullable(),
   payload: z.record(z.unknown()),
   created_at: timestamptzSchema,
+  prev_hash: z.string().nullable().optional(),
+  row_hash: z.string().nullable().optional(),
 });
 
 export const auditLogInsertSchema = z.object({
-  user_id: uuidSchema,
+  user_id: uuidSchema.nullable(),
   action: z.string().min(1),
   entity_type: z.string().min(1),
   entity_id: uuidSchema.nullable().optional(),

@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { isProfileWizardComplete, profileWizardPatch } from "@meridian/rules-engine";
 import { authorizeUser } from "@/lib/auth/authorize-user";
 import { credentialsSchema, profileWizardSchema } from "@meridian/schemas";
-import { createAuditLogRepository } from "@/lib/api/audit-log";
+import { appendAuditLog } from "@/lib/api/audit-service";
 import { createRecordsClient } from "@/lib/api/client";
 import { createProfilesRepository } from "@/lib/api/profiles";
 import { provisionAccountForUser } from "@/lib/api/provision";
@@ -164,7 +164,15 @@ export async function completeWizardAction(formData: FormData): Promise<AuthActi
   const patch = profileWizardPatch(parsed.data);
 
   if (isAuthStub()) {
-    stubPatchProfile(user.id, patch);
+    const profile = stubPatchProfile(user.id, patch);
+    await appendAuditLog({
+      userId: user.id,
+      accessToken: token,
+      action: "profile-wizard",
+      entity_type: "profile",
+      entity_id: profile.id,
+      payload: { experience_level: patch.experience_level },
+    });
     writeProfileReady(await cookies(), true);
     redirect("/workspace");
   }
@@ -186,8 +194,9 @@ export async function completeWizardAction(formData: FormData): Promise<AuthActi
   });
   const profiles = createProfilesRepository(records);
   await profiles.updateById(mine.id, patch);
-  await createAuditLogRepository(records).insert({
-    user_id: user.id,
+  await appendAuditLog({
+    userId: user.id,
+    accessToken: token,
     action: "profile-wizard",
     entity_type: "profile",
     entity_id: mine.id,

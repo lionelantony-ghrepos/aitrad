@@ -203,3 +203,18 @@ PRD named this migration 0015; 0015 is news embeddings.
 | Object   | Access                                                                                        |
 | -------- | --------------------------------------------------------------------------------------------- |
 | `briefs` | JWT **SELECT-only** (owner RLS). INSERT/UPDATE/DELETE `project_admin` (`brief-service` admin) |
+
+## 0025 contents
+
+| Object / function                         | Access                                                                          |
+| ----------------------------------------- | ------------------------------------------------------------------------------- |
+| `audit_log.prev_hash` / `row_hash`        | Set by `audit_log_set_chain` BEFORE INSERT; UPDATE still append-only            |
+| `verify_audit_chain(from,to)`             | EXECUTE `project_admin`                                                         |
+| `apply_audit_retention(days)`             | EXECUTE `project_admin`; DELETE allowed only when `meridian.audit_retention=on` |
+| feature_flags `audit.retention_days` etc. | Written by `audit-service` (`project_admin`)                                    |
+
+## 0026 contents
+
+| Object      | Access                                                                                                                                                                                                                                     |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `audit_log` | JWT **no DML** (REVOKE SELECT/INSERT/UPDATE/DELETE from `anon`/`authenticated`; drop own RLS). INSERT/SELECT via `project_admin` (`writeAuditLog` / `audit-service` `append` / edge admin). Append-only UPDATE/DELETE triggers from 0001/0025 still apply. |

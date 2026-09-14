@@ -4465,9 +4465,11 @@ var auditLogSchema = external_exports.object({
   entity_id: uuidSchema.nullable(),
   payload: external_exports.record(external_exports.unknown()),
   created_at: timestamptzSchema,
+  prev_hash: external_exports.string().nullable().optional(),
+  row_hash: external_exports.string().nullable().optional(),
 });
 var auditLogInsertSchema = external_exports.object({
-  user_id: uuidSchema,
+  user_id: uuidSchema.nullable(),
   action: external_exports.string().min(1),
   entity_type: external_exports.string().min(1),
   entity_id: uuidSchema.nullable().optional(),
@@ -5846,6 +5848,95 @@ var adminUsersAssignResponseSchema = external_exports.object({
   ok: external_exports.literal(true),
   user_id: uuidSchema,
   role: userRoleSchema,
+});
+
+// packages/schemas/src/audit-admin.ts
+var auditAdminOpSchema = external_exports.enum([
+  "list",
+  "timeline",
+  "verify",
+  "export",
+  "getConfig",
+  "setRetention",
+  "cron",
+]);
+var auditAdminFilterSchema = external_exports.object({
+  user_id: uuidSchema.optional(),
+  entity_type: external_exports.string().min(1).optional(),
+  entity_id: uuidSchema.optional(),
+  action: external_exports.string().min(1).optional(),
+  from: timestamptzSchema.optional(),
+  to: timestamptzSchema.optional(),
+  limit: external_exports.coerce.number().int().positive().max(500).optional(),
+  offset: external_exports.coerce.number().int().nonnegative().optional(),
+});
+var auditAdminListRequestSchema = auditAdminFilterSchema.extend({
+  op: external_exports.literal("list"),
+});
+var auditAdminTimelineRequestSchema = external_exports.object({
+  op: external_exports.literal("timeline"),
+  entity_type: external_exports.string().min(1),
+  entity_id: uuidSchema,
+});
+var auditAdminVerifyRequestSchema = external_exports.object({
+  op: external_exports.literal("verify"),
+  from: timestamptzSchema.optional(),
+  to: timestamptzSchema.optional(),
+});
+var auditAdminExportRequestSchema = auditAdminFilterSchema.extend({
+  op: external_exports.literal("export"),
+});
+var auditAdminGetConfigRequestSchema = external_exports.object({
+  op: external_exports.literal("getConfig"),
+});
+var auditAdminSetRetentionRequestSchema = external_exports.object({
+  op: external_exports.literal("setRetention"),
+  days: external_exports.coerce.number().int().positive().nullable(),
+});
+var auditAdminCronRequestSchema = external_exports.object({
+  op: external_exports.literal("cron"),
+  force: external_exports.boolean().optional(),
+});
+var auditAdminRequestSchema = external_exports.discriminatedUnion("op", [
+  auditAdminListRequestSchema,
+  auditAdminTimelineRequestSchema,
+  auditAdminVerifyRequestSchema,
+  auditAdminExportRequestSchema,
+  auditAdminGetConfigRequestSchema,
+  auditAdminSetRetentionRequestSchema,
+  auditAdminCronRequestSchema,
+]);
+var auditChainVerifyResultSchema = external_exports.object({
+  ok: external_exports.boolean(),
+  checked: external_exports.number().int().nonnegative(),
+  broken_id: uuidSchema.nullable(),
+  expected_hash: external_exports.string().nullable(),
+  actual_hash: external_exports.string().nullable(),
+  reason: external_exports.string().nullable(),
+});
+var auditAdminListResponseSchema = external_exports.object({
+  rows: external_exports.array(auditLogSchema),
+  total: external_exports.number().int().nonnegative(),
+  can_write: external_exports.boolean(),
+});
+var auditAdminTimelineResponseSchema = external_exports.object({
+  rows: external_exports.array(auditLogSchema),
+});
+var auditAdminExportResponseSchema = external_exports.object({
+  csv: external_exports.string(),
+  rows: external_exports.number().int().nonnegative(),
+});
+var auditAdminConfigResponseSchema = external_exports.object({
+  retention_days: external_exports.number().int().positive().nullable(),
+  chain: auditChainVerifyResultSchema,
+  can_write: external_exports.boolean(),
+});
+var auditAdminCronResponseSchema = external_exports.object({
+  verified: external_exports.boolean(),
+  chain: auditChainVerifyResultSchema,
+  purged: external_exports.number().int().nonnegative(),
+  alerted: external_exports.number().int().nonnegative(),
+  skipped: external_exports.boolean(),
 });
 
 // packages/schemas/src/copilot.ts
@@ -7769,6 +7860,29 @@ async function authorizeEdgeUser(input) {
   });
 }
 
+// insforge/functions/_shared/audit.ts
+async function writeAuditLog(db, row) {
+  const payload = { ...(row.payload ?? {}) };
+  if (row.before !== void 0) {
+    payload.before = row.before;
+  }
+  if (row.after !== void 0) {
+    payload.after = row.after;
+  }
+  const insert = await db.from("audit_log").insert([
+    {
+      user_id: row.user_id ?? null,
+      action: row.action,
+      entity_type: row.entity_type,
+      entity_id: row.entity_id ?? null,
+      payload,
+    },
+  ]);
+  if (insert.error) {
+    throw new Error(insert.error.message);
+  }
+}
+
 // insforge/functions/brief-service-src.ts
 var corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -8130,15 +8244,14 @@ async function generateForUser(input) {
       citations,
     },
   });
-  await input.admin.database.from("audit_log").insert([
-    {
-      user_id: input.userId,
-      action: "briefs:generate",
-      entity_type: "briefs",
-      entity_id: brief.id,
-      payload: { kind: input.kind, subject },
-    },
-  ]);
+  await writeAuditLog(input.admin.database, {
+    user_id: input.userId,
+    action: "briefs:generate",
+    entity_type: "briefs",
+    entity_id: brief.id,
+    payload: { kind: input.kind, subject },
+    after: { kind: input.kind, subject },
+  });
   return { brief, citations };
 }
 async function brief_service_src_default(req) {
@@ -8220,14 +8333,12 @@ async function brief_service_src_default(req) {
         skipped += 1;
       }
     }
-    await admin.database.from("audit_log").insert([
-      {
-        user_id: null,
-        action: "briefs:cron",
-        entity_type: "briefs",
-        payload: { generated, skipped },
-      },
-    ]);
+    await writeAuditLog(admin.database, {
+      user_id: null,
+      action: "briefs:cron",
+      entity_type: "briefs",
+      payload: { generated, skipped },
+    });
     return json(200, briefCronResponseSchema.parse({ generated, skipped }));
   }
   const userClient = createClient({ baseUrl, accessToken: token });
@@ -8302,15 +8413,13 @@ async function brief_service_src_default(req) {
     if (patch.error) {
       return json(500, { error: patch.error.message });
     }
-    await admin.database.from("audit_log").insert([
-      {
-        user_id: userId,
-        action: "briefs:export",
-        entity_type: "briefs",
-        entity_id: brief.id,
-        payload: { key: uploaded.data.key },
-      },
-    ]);
+    await writeAuditLog(admin.database, {
+      user_id: userId,
+      action: "briefs:export",
+      entity_type: "briefs",
+      entity_id: brief.id,
+      payload: { key: uploaded.data.key },
+    });
     return json(
       200,
       briefExportResponseSchema.parse({

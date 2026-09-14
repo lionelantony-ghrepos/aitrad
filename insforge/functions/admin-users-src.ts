@@ -13,7 +13,12 @@ import {
   handleAdminUsersRequest,
   resolveRulesServiceApiKey,
 } from "../../packages/rules-engine/src/index.ts";
-import { loadPublishedEntitlementsTable, loadUserRole } from "./_shared/entitlements.ts";
+import { writeAuditLog } from "./_shared/audit.ts";
+import {
+  authorizeEdgeUser,
+  loadPublishedEntitlementsTable,
+  loadUserRole,
+} from "./_shared/entitlements.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -124,18 +129,7 @@ export default async function (req: Request): Promise<Response> {
         }
       },
       async writeAuditLog(row) {
-        const insert = await admin.database.from("audit_log").insert([
-          {
-            user_id: row.user_id,
-            action: row.action,
-            entity_type: row.entity_type,
-            entity_id: row.entity_id ?? null,
-            payload: row.payload,
-          },
-        ]);
-        if (insert.error) {
-          throw new Error(insert.error.message);
-        }
+        await writeAuditLog(admin.database, row);
       },
     },
   });

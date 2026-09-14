@@ -46,6 +46,7 @@ import {
   runCopilotRequest,
   type WriteActionPorts,
 } from "../../packages/copilot/src/index.ts";
+import { writeAuditLog } from "./_shared/audit.ts";
 import { authorizeEdgeUser } from "./_shared/entitlements.ts";
 
 const corsHeaders = {
@@ -316,14 +317,12 @@ export default async function (req: Request): Promise<Response> {
               return asRows<CopilotMessage>(data).map((row) => copilotMessageSchema.parse(row));
             },
             async auditTool(name, args) {
-              await admin.database.from("audit_log").insert([
-                {
-                  user_id: userId,
-                  action: `copilot:tool:${name}`,
-                  entity_type: "copilot_messages",
-                  payload: { tool: name, arguments: args },
-                },
-              ]);
+              await writeAuditLog(admin.database, {
+                user_id: userId,
+                action: `copilot:tool:${name}`,
+                entity_type: "copilot_messages",
+                payload: { tool: name, arguments: args },
+              });
             },
           },
           onEvent: emit,
@@ -630,15 +629,14 @@ async function decideCopilotActionOnEdge(input: {
           }),
       },
     });
-    await db.from("audit_log").insert([
-      {
-        user_id: input.userId,
-        action: `copilot:action:${parsed.data.decision}`,
-        entity_type: "copilot_actions",
-        entity_id: row.id,
-        payload: { tool: row.tool, status: row.status },
-      },
-    ]);
+    await writeAuditLog(db, {
+      user_id: input.userId,
+      action: `copilot:action:${parsed.data.decision}`,
+      entity_type: "copilot_actions",
+      entity_id: row.id,
+      payload: { tool: row.tool, status: row.status },
+      after: { status: row.status },
+    });
     return json(200, { action: row });
   } catch (error) {
     const message = error instanceof Error ? error.message : "ACTION_DECIDE_FAILED";
@@ -874,15 +872,14 @@ async function executeManualWriteOnEdge(input: {
     if (!monitor) {
       return { error: "MONITOR_CREATE_FAILED" };
     }
-    await db.from("audit_log").insert([
-      {
-        user_id: input.userId,
-        action: "monitors:create",
-        entity_type: "monitors",
-        entity_id: monitor.id,
-        payload: { name, tool: "create_monitor" },
-      },
-    ]);
+    await writeAuditLog(db, {
+      user_id: input.userId,
+      action: "monitors:create",
+      entity_type: "monitors",
+      entity_id: monitor.id,
+      payload: { name, tool: "create_monitor" },
+      after: { name },
+    });
     return { ref: monitor.id };
   }
   return { error: `UNKNOWN_WRITE_TOOL:${input.tool}` };

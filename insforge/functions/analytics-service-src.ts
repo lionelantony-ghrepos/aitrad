@@ -23,6 +23,7 @@ import {
   type MarkedPositionInput,
 } from "../../packages/schemas/src/index.ts";
 import { resolveRulesServiceApiKey } from "../../packages/rules-engine/src/index.ts";
+import { writeAuditLog } from "./_shared/audit.ts";
 import { authorizeEdgeUser } from "./_shared/entitlements.ts";
 
 const corsHeaders = {
@@ -180,14 +181,12 @@ export default async function (req: Request): Promise<Response> {
     const admin = createAdminClient({ baseUrl, apiKey: expected });
     try {
       const written = await precomputeDailyRsi(admin);
-      await admin.database.from("audit_log").insert([
-        {
-          user_id: null,
-          action: "analytics:rsi",
-          entity_type: "instrument_daily_rsi",
-          payload: { written },
-        },
-      ]);
+      await writeAuditLog(admin.database, {
+        user_id: null,
+        action: "analytics:rsi",
+        entity_type: "instrument_daily_rsi",
+        payload: { written },
+      });
       return json(200, analyticsRsiResponseSchema.parse({ written }));
     } catch (error) {
       return json(500, { error: error instanceof Error ? error.message : "RSI_FAILED" });
@@ -310,16 +309,14 @@ export default async function (req: Request): Promise<Response> {
       written += 1;
     }
 
-    await admin.database.from("audit_log").insert([
-      {
-        user_id: asRows<Record<string, unknown>>(accountsRes.data)[0]
-          ? String(asRows<Record<string, unknown>>(accountsRes.data)[0]?.user_id)
-          : null,
-        action: "portfolio:snapshot",
-        entity_type: "portfolio_snapshots",
-        payload: { written, as_of_date: asOf, ts: now.toISOString() },
-      },
-    ]);
+    await writeAuditLog(admin.database, {
+      user_id: asRows<Record<string, unknown>>(accountsRes.data)[0]
+        ? String(asRows<Record<string, unknown>>(accountsRes.data)[0]?.user_id)
+        : null,
+      action: "portfolio:snapshot",
+      entity_type: "portfolio_snapshots",
+      payload: { written, as_of_date: asOf, ts: now.toISOString() },
+    });
     try {
       await precomputeDailyRsi(admin);
     } catch {

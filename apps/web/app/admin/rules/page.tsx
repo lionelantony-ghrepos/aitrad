@@ -34,6 +34,9 @@ export default async function RulesAdminPage(): Promise<React.JSX.Element> {
           Meridian · Rules
         </p>
         <div className="flex gap-3">
+          <a href="/admin/audit" className="text-[11px] text-accent">
+            Audit
+          </a>
           <a href="/admin/users" className="text-[11px] text-accent">
             Users
           </a>

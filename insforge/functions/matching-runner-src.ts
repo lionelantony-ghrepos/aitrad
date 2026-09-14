@@ -29,6 +29,7 @@ import {
   shouldPromoteAccepted,
 } from "../../packages/paper-engine/src/index.ts";
 import type { OrderLegRole, OrderGroupType, TrailType } from "../../packages/schemas/src/index.ts";
+import { writeAuditLog } from "./_shared/audit.ts";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
 
@@ -316,15 +317,15 @@ export default async function (req: Request): Promise<Response> {
     }
     order.status = "working";
     promoted += 1;
-    await admin.database.from("audit_log").insert([
-      {
-        user_id: order.user_id,
-        action: "trade:promote",
-        entity_type: "orders",
-        entity_id: order.id,
-        payload: { from: "accepted", to: "working", ts: now },
-      },
-    ]);
+    await writeAuditLog(admin.database, {
+      user_id: order.user_id,
+      action: "trade:promote",
+      entity_type: "orders",
+      entity_id: order.id,
+      payload: { from: "accepted", to: "working", ts: now },
+      before: { status: "accepted" },
+      after: { status: "working" },
+    });
     await publishOrder(admin, order);
   }
 
@@ -524,20 +525,19 @@ export default async function (req: Request): Promise<Response> {
       positions.set(posKey, storedPos);
       fillsApplied += 1;
 
-      await admin.database.from("audit_log").insert([
-        {
-          user_id: order.user_id,
-          action: "trade:fill",
-          entity_type: "executions",
-          entity_id: executionId,
-          payload: {
-            order_id: order.id,
-            qty: fill.qty,
-            price: fill.price,
-            status: nextStatus,
-          },
+      await writeAuditLog(admin.database, {
+        user_id: order.user_id,
+        action: "trade:fill",
+        entity_type: "executions",
+        entity_id: executionId,
+        payload: {
+          order_id: order.id,
+          qty: fill.qty,
+          price: fill.price,
+          status: nextStatus,
         },
-      ]);
+        after: { status: nextStatus, filled_qty: fill.qty },
+      });
       await publishOrder(admin, order);
       await publishPosition(admin, order.user_id, storedPos);
     }
@@ -564,15 +564,15 @@ export default async function (req: Request): Promise<Response> {
         }
         order.status = "working";
         promoted += 1;
-        await admin.database.from("audit_log").insert([
-          {
-            user_id: order.user_id,
-            action: "trade:promote",
-            entity_type: "orders",
-            entity_id: order.id,
-            payload: { from: "accepted", to: "working", reason: "group_activate" },
-          },
-        ]);
+        await writeAuditLog(admin.database, {
+          user_id: order.user_id,
+          action: "trade:promote",
+          entity_type: "orders",
+          entity_id: order.id,
+          payload: { from: "accepted", to: "working", reason: "group_activate" },
+          before: { status: "accepted" },
+          after: { status: "working" },
+        });
         await publishOrder(admin, order);
       } else {
         await admin.database.from("orders").update({ group_activated: true }).eq("id", order.id);
@@ -601,15 +601,15 @@ export default async function (req: Request): Promise<Response> {
         return json(500, { error: update.error.message });
       }
       order.status = "cancelled";
-      await admin.database.from("audit_log").insert([
-        {
-          user_id: order.user_id,
-          action: "trade:cancel",
-          entity_type: "orders",
-          entity_id: order.id,
-          payload: { from, to: "cancelled", reason: "group_oco" },
-        },
-      ]);
+      await writeAuditLog(admin.database, {
+        user_id: order.user_id,
+        action: "trade:cancel",
+        entity_type: "orders",
+        entity_id: order.id,
+        payload: { from, to: "cancelled", reason: "group_oco" },
+        before: { status: from },
+        after: { status: "cancelled" },
+      });
       await publishOrder(admin, order);
     }
   }

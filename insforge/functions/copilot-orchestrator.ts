@@ -4123,6 +4123,7 @@ var profileSchema = external_exports.object({
   experience_level: experienceLevelSchema.nullable(),
   suitability_tier: suitabilityTierSchema.nullable(),
   objectives: external_exports.string().nullable(),
+  morning_brief_opt_in: external_exports.boolean().optional(),
   created_at: timestamptzSchema,
   updated_at: timestamptzSchema,
 });
@@ -4133,6 +4134,7 @@ var profileInsertSchema = external_exports
     experience_level: experienceLevelSchema.nullable().optional(),
     suitability_tier: suitabilityTierSchema.nullable().optional(),
     objectives: external_exports.string().nullable().optional(),
+    morning_brief_opt_in: external_exports.boolean().optional(),
   })
   .strict();
 var profileAdminInsertSchema = profileInsertSchema.extend({
@@ -4261,9 +4263,11 @@ var auditLogSchema = external_exports.object({
   entity_id: uuidSchema.nullable(),
   payload: external_exports.record(external_exports.unknown()),
   created_at: timestamptzSchema,
+  prev_hash: external_exports.string().nullable().optional(),
+  row_hash: external_exports.string().nullable().optional(),
 });
 var auditLogInsertSchema = external_exports.object({
-  user_id: uuidSchema,
+  user_id: uuidSchema.nullable(),
   action: external_exports.string().min(1),
   entity_type: external_exports.string().min(1),
   entity_id: uuidSchema.nullable().optional(),
@@ -5549,6 +5553,95 @@ var adminUsersAssignResponseSchema = external_exports.object({
   role: userRoleSchema,
 });
 
+// packages/schemas/src/audit-admin.ts
+var auditAdminOpSchema = external_exports.enum([
+  "list",
+  "timeline",
+  "verify",
+  "export",
+  "getConfig",
+  "setRetention",
+  "cron",
+]);
+var auditAdminFilterSchema = external_exports.object({
+  user_id: uuidSchema.optional(),
+  entity_type: external_exports.string().min(1).optional(),
+  entity_id: uuidSchema.optional(),
+  action: external_exports.string().min(1).optional(),
+  from: timestamptzSchema.optional(),
+  to: timestamptzSchema.optional(),
+  limit: external_exports.coerce.number().int().positive().max(500).optional(),
+  offset: external_exports.coerce.number().int().nonnegative().optional(),
+});
+var auditAdminListRequestSchema = auditAdminFilterSchema.extend({
+  op: external_exports.literal("list"),
+});
+var auditAdminTimelineRequestSchema = external_exports.object({
+  op: external_exports.literal("timeline"),
+  entity_type: external_exports.string().min(1),
+  entity_id: uuidSchema,
+});
+var auditAdminVerifyRequestSchema = external_exports.object({
+  op: external_exports.literal("verify"),
+  from: timestamptzSchema.optional(),
+  to: timestamptzSchema.optional(),
+});
+var auditAdminExportRequestSchema = auditAdminFilterSchema.extend({
+  op: external_exports.literal("export"),
+});
+var auditAdminGetConfigRequestSchema = external_exports.object({
+  op: external_exports.literal("getConfig"),
+});
+var auditAdminSetRetentionRequestSchema = external_exports.object({
+  op: external_exports.literal("setRetention"),
+  days: external_exports.coerce.number().int().positive().nullable(),
+});
+var auditAdminCronRequestSchema = external_exports.object({
+  op: external_exports.literal("cron"),
+  force: external_exports.boolean().optional(),
+});
+var auditAdminRequestSchema = external_exports.discriminatedUnion("op", [
+  auditAdminListRequestSchema,
+  auditAdminTimelineRequestSchema,
+  auditAdminVerifyRequestSchema,
+  auditAdminExportRequestSchema,
+  auditAdminGetConfigRequestSchema,
+  auditAdminSetRetentionRequestSchema,
+  auditAdminCronRequestSchema,
+]);
+var auditChainVerifyResultSchema = external_exports.object({
+  ok: external_exports.boolean(),
+  checked: external_exports.number().int().nonnegative(),
+  broken_id: uuidSchema.nullable(),
+  expected_hash: external_exports.string().nullable(),
+  actual_hash: external_exports.string().nullable(),
+  reason: external_exports.string().nullable(),
+});
+var auditAdminListResponseSchema = external_exports.object({
+  rows: external_exports.array(auditLogSchema),
+  total: external_exports.number().int().nonnegative(),
+  can_write: external_exports.boolean(),
+});
+var auditAdminTimelineResponseSchema = external_exports.object({
+  rows: external_exports.array(auditLogSchema),
+});
+var auditAdminExportResponseSchema = external_exports.object({
+  csv: external_exports.string(),
+  rows: external_exports.number().int().nonnegative(),
+});
+var auditAdminConfigResponseSchema = external_exports.object({
+  retention_days: external_exports.number().int().positive().nullable(),
+  chain: auditChainVerifyResultSchema,
+  can_write: external_exports.boolean(),
+});
+var auditAdminCronResponseSchema = external_exports.object({
+  verified: external_exports.boolean(),
+  chain: auditChainVerifyResultSchema,
+  purged: external_exports.number().int().nonnegative(),
+  alerted: external_exports.number().int().nonnegative(),
+  skipped: external_exports.boolean(),
+});
+
 // packages/schemas/src/copilot.ts
 var COPILOT_MAX_TOOL_CALLS = 8;
 var COPILOT_SYSTEM_PROMPT = `You are Meridian Copilot, a market analyst inside a trading terminal. Rules:
@@ -5752,6 +5845,74 @@ var copilotSessionsResponseSchema = external_exports.object({
 var copilotSessionDetailSchema = external_exports.object({
   session: copilotSessionSchema,
   messages: external_exports.array(copilotMessageSchema),
+});
+
+// packages/schemas/src/briefs.ts
+var briefKindSchema = external_exports.enum(["morning", "instrument", "portfolio"]);
+var briefSchema = external_exports.object({
+  id: uuidSchema,
+  user_id: uuidSchema,
+  kind: briefKindSchema,
+  subject: external_exports.string().min(1),
+  content_md: external_exports.string(),
+  data: external_exports.record(external_exports.unknown()),
+  pdf_key: external_exports.string().nullable(),
+  pdf_url: external_exports.string().nullable(),
+  created_at: timestamptzSchema,
+});
+var briefGenerateRequestSchema = external_exports
+  .object({
+    op: external_exports.literal("generate").optional(),
+    kind: briefKindSchema,
+    subject: external_exports.string().trim().min(1).max(32).optional(),
+  })
+  .strict();
+var briefListRequestSchema = external_exports
+  .object({
+    op: external_exports.literal("list").optional(),
+    kind: briefKindSchema.optional(),
+  })
+  .strict();
+var briefExportRequestSchema = external_exports
+  .object({
+    op: external_exports.literal("export"),
+    brief_id: uuidSchema,
+  })
+  .strict();
+var briefCronRequestSchema = external_exports
+  .object({
+    op: external_exports.literal("cron"),
+    force: external_exports.boolean().optional(),
+  })
+  .strict();
+var briefServiceRequestSchema = external_exports.discriminatedUnion("op", [
+  briefGenerateRequestSchema.extend({ op: external_exports.literal("generate") }),
+  briefListRequestSchema.extend({ op: external_exports.literal("list") }),
+  briefExportRequestSchema,
+  briefCronRequestSchema,
+]);
+var briefGenerateResponseSchema = external_exports.object({
+  brief: briefSchema,
+  citations: external_exports.array(copilotCitationSchema),
+});
+var briefListResponseSchema = external_exports.object({
+  briefs: external_exports.array(briefSchema),
+});
+var briefExportResponseSchema = external_exports.object({
+  brief: briefSchema,
+  download_url: external_exports.string().min(1),
+});
+var briefCronResponseSchema = external_exports.object({
+  generated: external_exports.number().int().nonnegative(),
+  skipped: external_exports.number().int().nonnegative(),
+});
+var portfolioAnalysisFactsSchema = external_exports.object({
+  max_position_pct: external_exports.number().finite(),
+  max_sector_pct: external_exports.number().finite(),
+  portfolio_beta: external_exports.number().finite(),
+  cash_pct: external_exports.number().finite(),
+  positions_count: external_exports.number().int().nonnegative(),
+  equity: external_exports.number().finite(),
 });
 
 // packages/schemas/src/index.ts
@@ -7630,6 +7791,10 @@ function expandSlashPrompt(input, activeSymbol) {
       return arg
         ? `Explain rule decision ${arg} using explain_rule_decision.`
         : "Ask for a rule_audit id to explain.";
+    case "/brief":
+      return arg
+        ? `Generate a ${arg} brief from live tools. Do not invent figures.`
+        : "Generate a Morning Brief, Instrument Brief, or Portfolio Health report from live tools.";
     default:
       return trimmed;
   }
@@ -7830,6 +7995,29 @@ async function insertOwnedWatchlistItemAsAdmin(input) {
     sort_order: sortOrder,
   });
   return created?.id ? { ref: created.id } : { error: "WATCHLIST_ITEM_FAILED" };
+}
+
+// insforge/functions/_shared/audit.ts
+async function writeAuditLog(db, row) {
+  const payload = { ...(row.payload ?? {}) };
+  if (row.before !== void 0) {
+    payload.before = row.before;
+  }
+  if (row.after !== void 0) {
+    payload.after = row.after;
+  }
+  const insert = await db.from("audit_log").insert([
+    {
+      user_id: row.user_id ?? null,
+      action: row.action,
+      entity_type: row.entity_type,
+      entity_id: row.entity_id ?? null,
+      payload,
+    },
+  ]);
+  if (insert.error) {
+    throw new Error(insert.error.message);
+  }
 }
 
 // insforge/functions/_shared/entitlements.ts
@@ -8146,14 +8334,12 @@ async function copilot_orchestrator_src_default(req) {
               return asRows2(data).map((row) => copilotMessageSchema.parse(row));
             },
             async auditTool(name, args) {
-              await admin.database.from("audit_log").insert([
-                {
-                  user_id: userId,
-                  action: `copilot:tool:${name}`,
-                  entity_type: "copilot_messages",
-                  payload: { tool: name, arguments: args },
-                },
-              ]);
+              await writeAuditLog(admin.database, {
+                user_id: userId,
+                action: `copilot:tool:${name}`,
+                entity_type: "copilot_messages",
+                payload: { tool: name, arguments: args },
+              });
             },
           },
           onEvent: emit2,
@@ -8431,15 +8617,14 @@ async function decideCopilotActionOnEdge(input) {
           }),
       },
     });
-    await db.from("audit_log").insert([
-      {
-        user_id: input.userId,
-        action: `copilot:action:${parsed.data.decision}`,
-        entity_type: "copilot_actions",
-        entity_id: row.id,
-        payload: { tool: row.tool, status: row.status },
-      },
-    ]);
+    await writeAuditLog(db, {
+      user_id: input.userId,
+      action: `copilot:action:${parsed.data.decision}`,
+      entity_type: "copilot_actions",
+      entity_id: row.id,
+      payload: { tool: row.tool, status: row.status },
+      after: { status: row.status },
+    });
     return json(200, { action: row });
   } catch (error) {
     const message = error instanceof Error ? error.message : "ACTION_DECIDE_FAILED";
@@ -8659,15 +8844,14 @@ async function executeManualWriteOnEdge(input) {
     if (!monitor) {
       return { error: "MONITOR_CREATE_FAILED" };
     }
-    await db.from("audit_log").insert([
-      {
-        user_id: input.userId,
-        action: "monitors:create",
-        entity_type: "monitors",
-        entity_id: monitor.id,
-        payload: { name, tool: "create_monitor" },
-      },
-    ]);
+    await writeAuditLog(db, {
+      user_id: input.userId,
+      action: "monitors:create",
+      entity_type: "monitors",
+      entity_id: monitor.id,
+      payload: { name, tool: "create_monitor" },
+      after: { name },
+    });
     return { ref: monitor.id };
   }
   return { error: `UNKNOWN_WRITE_TOOL:${input.tool}` };

@@ -10,6 +10,7 @@ import {
 } from "../../packages/schemas/src/index.ts";
 import { resolveRulesServiceApiKey } from "../../packages/rules-engine/src/index.ts";
 import { authorizeEdgeUser } from "./_shared/entitlements.ts";
+import { writeAuditLog } from "./_shared/audit.ts";
 import {
   DEFAULT_EMBEDDING_MODEL,
   DEFAULT_OPENROUTER_EMBEDDINGS_URL,
@@ -122,14 +123,12 @@ export default async function (req: Request): Promise<Response> {
     return json(500, { error: rpc.error.message });
   }
 
-  await admin.database.from("audit_log").insert([
-    {
-      user_id: userId,
-      action: "news:search",
-      entity_type: "news_items",
-      payload: { query: parsed.data.query, symbols: parsed.data.symbols ?? null },
-    },
-  ]);
+  await writeAuditLog(admin.database, {
+    user_id: userId,
+    action: "news:search",
+    entity_type: "news_items",
+    payload: { query: parsed.data.query, symbols: parsed.data.symbols ?? null },
+  });
 
   return json(
     200,

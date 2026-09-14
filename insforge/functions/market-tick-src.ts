@@ -14,6 +14,7 @@ import {
   type FeedQuote,
 } from "../../packages/mock-data/src/feed.ts";
 import { newsShocksForSymbols } from "../../packages/mock-data/src/news.ts";
+import { writeAuditLog } from "./_shared/audit.ts";
 
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -356,23 +357,36 @@ export default async function (req: Request): Promise<Response> {
     } catch {
       // best-effort morning briefs at simulated open
     }
+    try {
+      await fetch(
+        `${(Deno.env.get("INSFORGE_INTERNAL_URL") ?? Deno.env.get("INSFORGE_BASE_URL") ?? "").replace(/\/+$/, "")}/functions/audit-service`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${expected}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ op: "cron" }),
+        },
+      );
+    } catch {
+      // best-effort nightly chain verify
+    }
   }
 
-  await admin.database.from("audit_log").insert([
-    {
-      action: "market-tick",
-      entity_type: "quotes_latest",
-      payload: {
-        session: result.session,
-        ticksApplied: result.ticksApplied,
-        published: result.publishes.length,
-        paused: flags.paused,
-        consumeForcePrice: result.consumeForcePrice,
-        matching,
-        alerting,
-      },
+  await writeAuditLog(admin.database, {
+    action: "market-tick",
+    entity_type: "quotes_latest",
+    payload: {
+      session: result.session,
+      ticksApplied: result.ticksApplied,
+      published: result.publishes.length,
+      paused: flags.paused,
+      consumeForcePrice: result.consumeForcePrice,
+      matching,
+      alerting,
     },
-  ]);
+  });
 
   return json(200, {
     session: result.session,

@@ -17,7 +17,7 @@ describe("copilot-orchestrator source contracts", () => {
   it("authorizes, audits tools, and binds the read registry", () => {
     expect(src).toContain('action: "copilot:chat"');
     expect(src).toContain("authorizeEdgeUser");
-    expect(src).toContain("audit_log");
+    expect(src).toContain("writeAuditLog");
     expect(src).toContain("copilot:tool:");
     expect(src).toContain("get_quote");
     expect(src).toContain("get_bars");

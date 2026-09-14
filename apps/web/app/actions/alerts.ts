@@ -11,7 +11,7 @@ import {
   type QuoteTick,
 } from "@meridian/schemas";
 import { createAlertRulesRepository, createAlertsRepository } from "@/lib/api/alerts";
-import { createAuditLogRepository } from "@/lib/api/audit-log";
+import { appendAuditLog } from "@/lib/api/audit-service";
 import { createRecordsClient } from "@/lib/api/client";
 import { createInstrumentsRepository } from "@/lib/api/instruments";
 import { createQuotesLatestRepository } from "@/lib/api/quotes-latest";
@@ -183,8 +183,9 @@ export async function createAlertRuleAction(raw: unknown): Promise<ActionResult<
     throttle_state: { last_eval_last: lastEval },
   });
   const ts = nowIso();
+  let row: AlertRule;
   if (isAuthStub()) {
-    const row: AlertRule = {
+    row = stubCreateAlertRule({
       id: crypto.randomUUID(),
       user_id: insert.user_id,
       instrument_id: insert.instrument_id ?? instrument.id,
@@ -195,17 +196,18 @@ export async function createAlertRuleAction(raw: unknown): Promise<ActionResult<
       throttle_state: insert.throttle_state ?? { last_eval_last: lastEval },
       created_at: ts,
       updated_at: ts,
-    };
-    return { ok: true, data: stubCreateAlertRule(row) };
+    });
+  } else {
+    const created = await createAlertRulesRepository(records(session.token)).insert(insert);
+    const createdRow = created[0];
+    if (!createdRow) {
+      return { ok: false, message: "Could not create alert." };
+    }
+    row = createdRow;
   }
-  const client = records(session.token);
-  const created = await createAlertRulesRepository(client).insert(insert);
-  const row = created[0];
-  if (!row) {
-    return { ok: false, message: "Could not create alert." };
-  }
-  await createAuditLogRepository(client).insert({
-    user_id: session.userId,
+  await appendAuditLog({
+    userId: session.userId,
+    accessToken: session.token,
     action: "alerts:create",
     entity_type: "alert_rules",
     entity_id: row.id,
@@ -230,18 +232,19 @@ export async function setAlertRuleActiveAction(
   if (!gate.allowed) {
     return { ok: false, message: "Not allowed." };
   }
+  let row: AlertRule | null;
   if (isAuthStub()) {
-    const row = stubPatchAlertRule(session.userId, id, { active });
-    return row ? { ok: true, data: row } : { ok: false, message: "Alert not found." };
+    row = stubPatchAlertRule(session.userId, id, { active });
+  } else {
+    const updated = await createAlertRulesRepository(records(session.token)).update(id, { active });
+    row = updated[0] ?? null;
   }
-  const client = records(session.token);
-  const updated = await createAlertRulesRepository(client).update(id, { active });
-  const row = updated[0];
   if (!row) {
     return { ok: false, message: "Alert not found." };
   }
-  await createAuditLogRepository(client).insert({
-    user_id: session.userId,
+  await appendAuditLog({
+    userId: session.userId,
+    accessToken: session.token,
     action: "alerts:update",
     entity_type: "alert_rules",
     entity_id: row.id,
@@ -265,12 +268,15 @@ export async function deleteAlertRuleAction(id: string): Promise<ActionResult<{ 
   }
   if (isAuthStub()) {
     const ok = stubDeleteAlertRule(session.userId, id);
-    return ok ? { ok: true, data: { id } } : { ok: false, message: "Alert not found." };
+    if (!ok) {
+      return { ok: false, message: "Alert not found." };
+    }
+  } else {
+    await createAlertRulesRepository(records(session.token)).remove(id);
   }
-  const client = records(session.token);
-  await createAlertRulesRepository(client).remove(id);
-  await createAuditLogRepository(client).insert({
-    user_id: session.userId,
+  await appendAuditLog({
+    userId: session.userId,
+    accessToken: session.token,
     action: "alerts:delete",
     entity_type: "alert_rules",
     entity_id: id,
@@ -295,18 +301,19 @@ export async function markAlertReadAction(
   if (!gate.allowed) {
     return { ok: false, message: "Not allowed." };
   }
+  let row: AlertInstance | null;
   if (isAuthStub()) {
-    const row = stubMarkAlertRead(session.userId, id, read);
-    return row ? { ok: true, data: row } : { ok: false, message: "Alert not found." };
+    row = stubMarkAlertRead(session.userId, id, read);
+  } else {
+    const updated = await createAlertsRepository(records(session.token)).markRead(id, read);
+    row = updated[0] ?? null;
   }
-  const client = records(session.token);
-  const updated = await createAlertsRepository(client).markRead(id, read);
-  const row = updated[0];
   if (!row) {
     return { ok: false, message: "Alert not found." };
   }
-  await createAuditLogRepository(client).insert({
-    user_id: session.userId,
+  await appendAuditLog({
+    userId: session.userId,
+    accessToken: session.token,
     action: "alerts:mark_read",
     entity_type: "alerts",
     entity_id: row.id,

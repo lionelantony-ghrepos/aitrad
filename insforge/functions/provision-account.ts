@@ -1,4 +1,6 @@
-import { createClient } from "npm:@insforge/sdk";
+import { createAdminClient, createClient } from "npm:@insforge/sdk";
+
+import { writeAuditLog } from "./_shared/audit.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -117,15 +119,20 @@ export default async function (req: Request): Promise<Response> {
   }
 
   if (created.profile || created.account) {
-    await client.database.from("audit_log").insert([
-      {
-        user_id: userId,
-        action: "provision-account",
-        entity_type: "account",
-        entity_id: account.id,
-        payload: { created },
-      },
-    ]);
+    const apiKey = Deno.env.get("API_KEY") ?? Deno.env.get("INSFORGE_API_KEY");
+    const baseUrl = Deno.env.get("INSFORGE_INTERNAL_URL") ?? Deno.env.get("INSFORGE_BASE_URL");
+    if (!apiKey || !baseUrl) {
+      return json(500, { error: "SERVICE_KEY_UNAVAILABLE" });
+    }
+    const admin = createAdminClient({ baseUrl, apiKey });
+    await writeAuditLog(admin.database, {
+      user_id: userId,
+      action: "provision-account",
+      entity_type: "account",
+      entity_id: account.id,
+      payload: { created },
+      after: created,
+    });
   }
 
   return json(200, { profile, account, created });

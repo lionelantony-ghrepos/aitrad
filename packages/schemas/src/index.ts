@@ -36,5 +36,6 @@ export * from "./screener";
 export * from "./alerts";
 export * from "./monitors";
 export * from "./admin-users";
+export * from "./audit-admin";
 export * from "./copilot";
 export * from "./briefs";

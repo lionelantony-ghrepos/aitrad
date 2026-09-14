@@ -13,6 +13,7 @@ import {
 } from "../../packages/schemas/src/index.ts";
 import { resolveRulesServiceApiKey } from "../../packages/rules-engine/src/index.ts";
 import { authorizeEdgeUser } from "./_shared/entitlements.ts";
+import { writeAuditLog } from "./_shared/audit.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -133,14 +134,12 @@ export default async function (req: Request): Promise<Response> {
     matchCount = Number(raw[0]?.match_count ?? 0);
   }
 
-  await admin.database.from("audit_log").insert([
-    {
-      user_id: userId,
-      action: "screener:run",
-      entity_type: "screens",
-      payload: { mode, count: matchCount },
-    },
-  ]);
+  await writeAuditLog(admin.database, {
+    user_id: userId,
+    action: "screener:run",
+    entity_type: "screens",
+    payload: { mode, count: matchCount },
+  });
 
   if (mode === "count") {
     return json(

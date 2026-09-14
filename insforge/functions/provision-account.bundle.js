@@ -12,6 +12,30 @@ function createAdminClient(config) {
 // bundled from insforge/functions/provision-account.ts
 
 // insforge/functions/provision-account.ts
+// insforge/functions/_shared/audit.ts
+async function writeAuditLog(db, row) {
+  const payload = { ...(row.payload ?? {}) };
+  if (row.before !== void 0) {
+    payload.before = row.before;
+  }
+  if (row.after !== void 0) {
+    payload.after = row.after;
+  }
+  const insert = await db.from("audit_log").insert([
+    {
+      user_id: row.user_id ?? null,
+      action: row.action,
+      entity_type: row.entity_type,
+      entity_id: row.entity_id ?? null,
+      payload,
+    },
+  ]);
+  if (insert.error) {
+    throw new Error(insert.error.message);
+  }
+}
+
+// insforge/functions/provision-account.ts
 var corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -110,15 +134,20 @@ async function provision_account_default(req) {
     created.account = true;
   }
   if (created.profile || created.account) {
-    await client.database.from("audit_log").insert([
-      {
-        user_id: userId,
-        action: "provision-account",
-        entity_type: "account",
-        entity_id: account.id,
-        payload: { created },
-      },
-    ]);
+    const apiKey = Deno.env.get("API_KEY") ?? Deno.env.get("INSFORGE_API_KEY");
+    const baseUrl = Deno.env.get("INSFORGE_INTERNAL_URL") ?? Deno.env.get("INSFORGE_BASE_URL");
+    if (!apiKey || !baseUrl) {
+      return json(500, { error: "SERVICE_KEY_UNAVAILABLE" });
+    }
+    const admin = createAdminClient({ baseUrl, apiKey });
+    await writeAuditLog(admin.database, {
+      user_id: userId,
+      action: "provision-account",
+      entity_type: "account",
+      entity_id: account.id,
+      payload: { created },
+      after: created,
+    });
   }
   return json(200, { profile, account, created });
 }
