@@ -5,6 +5,7 @@ import {
   copilotActionSchema,
   copilotChatEventSchema,
   copilotChatRequestSchema,
+  copilotOrchestratorDecideRequestSchema,
   getQuoteToolInputSchema,
   proposeOrderToolInputSchema,
   searchNewsToolInputSchema,
@@ -52,5 +53,12 @@ describe("copilot schemas", () => {
     expect(proposeOrderToolInputSchema.parse({ symbol: "aapl", side: "buy", qty: 10 }).symbol).toBe(
       "aapl",
     );
+    expect(
+      copilotOrchestratorDecideRequestSchema.parse({
+        op: "decide",
+        action_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        decision: "approve",
+      }).op,
+    ).toBe("decide");
   });
 });

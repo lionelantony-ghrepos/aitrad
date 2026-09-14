@@ -1005,6 +1005,7 @@ export function stubCountCopilotMonitors(userId: string): number {
 }
 
 export function stubInsertCopilotAction(row: CopilotAction): CopilotAction {
+  stubRequireOwnedCopilotSession(row.user_id, row.session_id);
   getStubState().copilotActions.push(row);
   return row;
 }

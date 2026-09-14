@@ -46,4 +46,14 @@ export {
   openRouterLlm,
 } from "./gateway";
 export { runCopilotRequest, type CopilotPersistPorts } from "./run-request";
-export { assertOwnedCopilotSession, COPILOT_SESSION_NOT_FOUND } from "./session-access";
+export {
+  assertOwnedCopilotSession,
+  persistOwnedCopilotAction,
+  COPILOT_SESSION_NOT_FOUND,
+} from "./session-access";
+export {
+  assertOwnedWatchlist,
+  insertOwnedWatchlistItemAsAdmin,
+  COPILOT_WATCHLIST_NOT_FOUND,
+  type AdminWatchlistWritePorts,
+} from "./watchlist-access";

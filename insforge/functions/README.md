@@ -85,4 +85,6 @@ pnpm functions:bundle:copilot-orchestrator
 npx -y @insforge/cli functions deploy copilot-orchestrator --file insforge/functions/copilot-orchestrator.ts --name "Copilot orchestrator"
 ```
 
-`copilot-orchestrator` accepts `POST` `{ session_id?, message, active_symbol? }` (user JWT). `authorize` `copilot:chat`. Evaluates `ai_action_policy` (DT-AI-01) with `messages_today`. Streams SSE tool/token events. Read tools: `get_quote`, `get_bars`, `search_news`, `get_fundamentals`, `screen_instruments`, `get_portfolio`, `explain_rule_decision`. Each tool writes `audit_log`. Apply migration 0017 first. `MERIDIAN_COPILOT_LLM=fake` uses the scripted transcript.
+`copilot-orchestrator` accepts `POST` `{ session_id?, message, active_symbol? }` (user JWT). `authorize` `copilot:chat`. Evaluates `ai_action_policy` (DT-AI-01) with `messages_today`. Streams SSE tool/token events. Read tools: `get_quote`, `get_bars`, `search_news`, `get_fundamentals`, `screen_instruments`, `get_portfolio`, `explain_rule_decision`. Write tools persist `copilot_actions` via admin client after `requireOwnedCopilotSession`. Each tool writes `audit_log`. Apply migration 0017 first (0019 for write tools). `MERIDIAN_COPILOT_LLM=fake` uses the scripted transcript.
+
+Approve/reject: `POST /functions/copilot-orchestrator/decide` with `{ op: "decide", action_id, decision, feedback? }` (user JWT + `authorize` `copilot:act`). Admin client updates the row — `copilot_actions` is SELECT-only for the authenticated role. Next `decideCopilotActionAction` must call this route, not PostgREST PATCH.

@@ -5495,6 +5495,12 @@ var copilotActionDecideRequestSchema = external_exports.object({
   decision: copilotActionDecisionSchema,
   feedback: external_exports.string().trim().max(2e3).optional(),
 });
+var copilotOrchestratorDecideRequestSchema = copilotActionDecideRequestSchema.extend({
+  op: external_exports.literal("decide"),
+});
+var copilotOrchestratorDecideResponseSchema = external_exports.object({
+  action: copilotActionSchema,
+});
 var writeToolResultSchema = external_exports.object({
   status: external_exports.enum([
     "awaiting_approval",
@@ -7123,6 +7129,26 @@ async function handleWriteToolCall(input) {
     reject_reason: finished.reject_reason ?? void 0,
   });
 }
+async function decidePersistedAction(input) {
+  if (input.action.status !== "proposed") {
+    throw new Error("ACTION_NOT_PROPOSED");
+  }
+  const now = input.ports.now?.() ?? /* @__PURE__ */ new Date();
+  if (input.decision === "reject") {
+    return input.ports.updateAction({
+      ...input.action,
+      status: "rejected",
+      reject_reason: input.feedback?.trim() || "Rejected by user",
+      updated_at: iso(now),
+    });
+  }
+  const approved = await input.ports.updateAction({
+    ...input.action,
+    status: "approved",
+    updated_at: iso(now),
+  });
+  return applyExecution(approved, input.ports);
+}
 
 // packages/copilot/src/rate-limit.ts
 function rateLimitFromAiPolicy(outcome) {
@@ -7321,6 +7347,47 @@ async function runCopilotRequest(input) {
 
 // packages/copilot/src/session-access.ts
 var COPILOT_SESSION_NOT_FOUND = "SESSION_NOT_FOUND";
+async function persistOwnedCopilotAction(input) {
+  if (input.row.user_id !== input.userId) {
+    throw new Error(COPILOT_SESSION_NOT_FOUND);
+  }
+  await input.requireOwnedSession(input.row.session_id);
+  return input.insert(input.row);
+}
+
+// packages/copilot/src/watchlist-access.ts
+var COPILOT_WATCHLIST_NOT_FOUND = "WATCHLIST_NOT_FOUND";
+function assertOwnedWatchlist(input) {
+  if (!input.watchlist || input.watchlist.user_id !== input.userId) {
+    throw new Error(COPILOT_WATCHLIST_NOT_FOUND);
+  }
+}
+async function insertOwnedWatchlistItemAsAdmin(input) {
+  let watchlist = null;
+  if (input.watchlistId) {
+    watchlist = await input.ports.findWatchlist({
+      id: input.watchlistId,
+      userId: input.userId,
+    });
+  } else {
+    watchlist = await input.ports.findWatchlist({ userId: input.userId });
+    if (!watchlist) {
+      watchlist = await input.ports.createDefaultWatchlist(input.userId);
+    }
+  }
+  try {
+    assertOwnedWatchlist({ watchlist, userId: input.userId });
+  } catch {
+    return { error: COPILOT_WATCHLIST_NOT_FOUND };
+  }
+  const sortOrder = await input.ports.countItems(watchlist.id);
+  const created = await input.ports.insertItem({
+    watchlist_id: watchlist.id,
+    instrument_id: input.instrumentId,
+    sort_order: sortOrder,
+  });
+  return created?.id ? { ref: created.id } : { error: "WATCHLIST_ITEM_FAILED" };
+}
 
 // insforge/functions/_shared/entitlements.ts
 function asRows(data) {
@@ -7470,10 +7537,6 @@ async function copilot_orchestrator_src_default(req) {
   } catch {
     body = {};
   }
-  const parsed = copilotChatRequestSchema.safeParse(body);
-  if (!parsed.success) {
-    return json(400, { error: "INVALID_BODY" });
-  }
   const userClient = createClient({ baseUrl, accessToken: token });
   const { data: userData } = await userClient.auth.getCurrentUser();
   const userId = userData?.user?.id;
@@ -7485,6 +7548,27 @@ async function copilot_orchestrator_src_default(req) {
     return json(500, { error: "API_KEY_MISSING" });
   }
   const admin = createAdminClient({ baseUrl, apiKey });
+  const decideFromPath = new URL(req.url).pathname.replace(/\/+$/, "").endsWith("/decide");
+  const opRaw = body && typeof body === "object" && "op" in body ? body.op : void 0;
+  if (opRaw === "decide" || decideFromPath) {
+    const gate2 = await authorizeEdgeUser({ db: admin.database, userId, action: "copilot:act" });
+    if (!gate2.allowed || !userId) {
+      return json(gate2.reason === "UNAUTHENTICATED" || !userId ? 401 : 403, {
+        error: gate2.reason ?? "UNAUTHENTICATED",
+      });
+    }
+    return decideCopilotActionOnEdge({
+      admin,
+      baseUrl,
+      token,
+      userId,
+      body,
+    });
+  }
+  const parsed = copilotChatRequestSchema.safeParse(body);
+  if (!parsed.success) {
+    return json(400, { error: "INVALID_BODY" });
+  }
   const gate = await authorizeEdgeUser({ db: admin.database, userId, action: "copilot:chat" });
   if (!gate.allowed || !userId) {
     return json(gate.reason === "UNAUTHENTICATED" || !userId ? 401 : 403, {
@@ -7792,10 +7876,17 @@ async function executeWriteTool(input) {
       } catch {}
       return evaluateWritePolicyBaseline(context);
     },
-    persistAction: async (row) => {
-      await db.from("copilot_actions").insert([toActionInsert(row)]);
-      return row;
-    },
+    persistAction: async (row) =>
+      persistOwnedCopilotAction({
+        userId: input.userId,
+        row,
+        requireOwnedSession: (sessionId) =>
+          requireOwnedCopilotSession(input.admin, input.userId, sessionId),
+        insert: async (owned) => {
+          await db.from("copilot_actions").insert([toActionInsert(owned)]);
+          return owned;
+        },
+      }),
     updateAction: async (row) => {
       await db
         .from("copilot_actions")
@@ -7829,6 +7920,85 @@ async function executeWriteTool(input) {
     monitorsCount: 0,
     ports,
   });
+}
+async function decideCopilotActionOnEdge(input) {
+  const parsed = copilotOrchestratorDecideRequestSchema.safeParse(
+    input.body && typeof input.body === "object" ? { op: "decide", ...input.body } : input.body,
+  );
+  if (!parsed.success) {
+    return json(400, { error: "INVALID_BODY" });
+  }
+  const db = input.admin.database;
+  const loaded = await db
+    .from("copilot_actions")
+    .select("*")
+    .eq("id", parsed.data.action_id)
+    .eq("user_id", input.userId)
+    .limit(1);
+  const existingRow = asRows2(loaded.data)[0];
+  if (!existingRow) {
+    return json(404, { error: "ACTION_NOT_FOUND" });
+  }
+  const existing = copilotActionSchema.parse(existingRow);
+  try {
+    await requireOwnedCopilotSession(input.admin, input.userId, existing.session_id);
+    const row = await decidePersistedAction({
+      action: existing,
+      decision: parsed.data.decision,
+      feedback: parsed.data.feedback,
+      ports: {
+        evaluatePolicy: async () => ({ decision: "require_approval" }),
+        persistAction: async (next) =>
+          persistOwnedCopilotAction({
+            userId: input.userId,
+            row: next,
+            requireOwnedSession: (sessionId) =>
+              requireOwnedCopilotSession(input.admin, input.userId, sessionId),
+            insert: async (owned) => {
+              await db.from("copilot_actions").insert([toActionInsert(owned)]);
+              return owned;
+            },
+          }),
+        updateAction: async (next) => {
+          await db
+            .from("copilot_actions")
+            .update({
+              status: next.status,
+              executed_ref: next.executed_ref,
+              reject_reason: next.reject_reason,
+              policy_outcome: next.policy_outcome,
+              updated_at: next.updated_at,
+            })
+            .eq("id", next.id)
+            .eq("user_id", input.userId);
+          return next;
+        },
+        execute: async (tool, payload) =>
+          executeManualWriteOnEdge({
+            tool,
+            payload,
+            admin: input.admin,
+            baseUrl: input.baseUrl,
+            token: input.token,
+            userId: input.userId,
+          }),
+      },
+    });
+    await db.from("audit_log").insert([
+      {
+        user_id: input.userId,
+        action: `copilot:action:${parsed.data.decision}`,
+        entity_type: "copilot_actions",
+        entity_id: row.id,
+        payload: { tool: row.tool, status: row.status },
+      },
+    ]);
+    return json(200, { action: row });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "ACTION_DECIDE_FAILED";
+    const status = message === COPILOT_SESSION_NOT_FOUND ? 404 : 400;
+    return json(status, { error: message });
+  }
 }
 function toActionInsert(row) {
   return {
@@ -7890,37 +8060,52 @@ async function executeManualWriteOnEdge(input) {
     if (!instrument) {
       return { error: "SYMBOL_NOT_FOUND" };
     }
-    let watchlistId =
-      typeof input.payload.watchlist_id === "string" ? input.payload.watchlist_id : "";
-    if (!watchlistId) {
-      const lists = await db.from("watchlists").select("id").eq("user_id", input.userId).limit(1);
-      const existing = asRows2(lists.data)[0];
-      if (existing) {
-        watchlistId = existing.id;
-      } else {
-        await db.from("watchlists").insert([{ user_id: input.userId, name: "Default" }]);
-        const again = await db.from("watchlists").select("id").eq("user_id", input.userId).limit(1);
-        watchlistId = asRows2(again.data)[0]?.id ?? "";
-      }
-    }
-    if (!watchlistId) {
-      return { error: "WATCHLIST_MISSING" };
-    }
-    const items = await db.from("watchlist_items").select("id").eq("watchlist_id", watchlistId);
-    await db.from("watchlist_items").insert([
-      {
-        watchlist_id: watchlistId,
-        instrument_id: instrument.id,
-        sort_order: asRows2(items.data).length,
+    const requestedWatchlistId =
+      typeof input.payload.watchlist_id === "string" ? input.payload.watchlist_id : void 0;
+    return insertOwnedWatchlistItemAsAdmin({
+      userId: input.userId,
+      watchlistId: requestedWatchlistId,
+      instrumentId: instrument.id,
+      ports: {
+        findWatchlist: async ({ id, userId }) => {
+          let query = db.from("watchlists").select("id,user_id").eq("user_id", userId);
+          if (id) {
+            query = query.eq("id", id);
+          }
+          const lists = await query.limit(1);
+          return asRows2(lists.data)[0] ?? null;
+        },
+        createDefaultWatchlist: async (userId) => {
+          await db.from("watchlists").insert([{ user_id: userId, name: "Default" }]);
+          const again = await db
+            .from("watchlists")
+            .select("id,user_id")
+            .eq("user_id", userId)
+            .limit(1);
+          const created = asRows2(again.data)[0];
+          if (!created) {
+            throw new Error("WATCHLIST_MISSING");
+          }
+          return created;
+        },
+        countItems: async (watchlistId) => {
+          const items = await db
+            .from("watchlist_items")
+            .select("id")
+            .eq("watchlist_id", watchlistId);
+          return asRows2(items.data).length;
+        },
+        insertItem: async (row) => {
+          await db.from("watchlist_items").insert([row]);
+          const created = await db
+            .from("watchlist_items")
+            .select("id")
+            .eq("watchlist_id", row.watchlist_id)
+            .eq("instrument_id", row.instrument_id);
+          return asRows2(created.data)[0] ?? null;
+        },
       },
-    ]);
-    const created = await db
-      .from("watchlist_items")
-      .select("id")
-      .eq("watchlist_id", watchlistId)
-      .eq("instrument_id", instrument.id);
-    const row = asRows2(created.data)[0];
-    return row ? { ref: row.id } : { error: "WATCHLIST_ITEM_FAILED" };
+    });
   }
   if (input.tool === "create_alert") {
     const parsed = createAlertToolInputSchema.parse(input.payload);
