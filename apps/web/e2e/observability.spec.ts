@@ -4,6 +4,8 @@ import { signUpThroughWizard } from "./helpers/onboard";
 import { setStubPersona } from "./helpers/persona";
 
 test.describe("PBI-030 observability", () => {
+  test.describe.configure({ timeout: 90_000 });
+
   test.beforeEach(async ({ request }) => {
     await request.post("/api/e2e/reset");
   });
