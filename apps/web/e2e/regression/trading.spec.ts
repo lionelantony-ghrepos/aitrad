@@ -67,7 +67,9 @@ test.describe("P0 orders, blotter, bracket, portfolio @P0", () => {
     await page.getByTestId("order-limit").fill("100");
     await expect(page.getByTestId("order-submit")).toBeEnabled();
     await page.getByTestId("order-submit").click();
+    await expect(page.getByTestId("order-confirm-modal")).toBeVisible();
     await page.getByTestId("order-confirm-submit").click();
+    await expect(page.getByTestId("order-confirm-modal")).toHaveCount(0, { timeout: 8_000 });
     const row = page.locator("[data-testid^='blotter-row-'][data-symbol='AAPL']").first();
     await expect(row).toHaveAttribute("data-status", /accepted|working/, { timeout: 8_000 });
     await row.getByTestId("blotter-cancel").click({ force: true });

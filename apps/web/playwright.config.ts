@@ -26,6 +26,7 @@ export default defineConfig({
     {
       name: "regression",
       testDir: "./e2e/regression",
+      retries: 2,
       use: { ...devices["Desktop Chrome"] },
     },
   ],

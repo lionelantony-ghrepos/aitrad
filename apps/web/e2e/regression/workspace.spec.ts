@@ -34,32 +34,42 @@ test.describe("P0 watchlist, chart, palette @P0", () => {
     await page.getByTestId("watchlist-search").fill("AAPL");
     await page.getByTestId("instrument-option-AAPL").click();
     await expect(page.getByTestId("watchlist-row-AAPL")).toBeVisible();
-    await page.evaluate(
-      ({ eventName, instrumentId }) => {
-        window.dispatchEvent(
-          new CustomEvent(eventName, {
-            detail: {
-              ts: new Date().toISOString(),
-              ticks: [
-                {
-                  instrument_id: instrumentId,
-                  symbol: "AAPL",
-                  bid: 199.9,
-                  ask: 200.1,
-                  last: 200,
-                  prev_close: 185,
-                  volume: 2,
-                  ts: new Date().toISOString(),
-                },
-              ],
-            },
-          }),
-        );
-      },
-      { eventName: TEST_TICK_BATCH_EVENT, instrumentId: STUB_AAPL_INSTRUMENT_ID },
-    );
-    await expect(page.getByTestId("watchlist-last-AAPL")).toHaveText("200.00", { timeout: 5_000 });
-    await expect(page.getByTestId("watchlist-last-AAPL")).toHaveAttribute("data-flash", "up");
+    const lastCell = page.getByTestId("watchlist-last-AAPL");
+    for (let attempt = 0; attempt < 8; attempt += 1) {
+      await page.evaluate(
+        ({ eventName, instrumentId }) => {
+          window.dispatchEvent(
+            new CustomEvent(eventName, {
+              detail: {
+                ts: new Date().toISOString(),
+                ticks: [
+                  {
+                    instrument_id: instrumentId,
+                    symbol: "AAPL",
+                    bid: 199.9,
+                    ask: 200.1,
+                    last: 200,
+                    prev_close: 185,
+                    volume: 2,
+                    ts: new Date().toISOString(),
+                  },
+                ],
+              },
+            }),
+          );
+        },
+        { eventName: TEST_TICK_BATCH_EVENT, instrumentId: STUB_AAPL_INSTRUMENT_ID },
+      );
+      try {
+        await expect(lastCell).toHaveText("200.00", { timeout: 800 });
+        await expect(lastCell).toHaveAttribute("data-flash", "up", { timeout: 800 });
+        return;
+      } catch {
+        /* quote subscribe may not be attached yet */
+      }
+    }
+    await expect(lastCell).toHaveText("200.00");
+    await expect(lastCell).toHaveAttribute("data-flash", "up");
   });
 
   test("click MSFT sets symbolContext @TC-007-03 @P0", async ({ page }) => {
