@@ -6,6 +6,7 @@ export const COPILOT_SLASH_SUGGESTIONS = [
   { command: "/screen", hint: "Screen a sector" },
   { command: "/portfolio", hint: "Paper book summary" },
   { command: "/explain", hint: "Explain a rule_audit id" },
+  { command: "/brief", hint: "Ask for a Morning, Instrument, or Portfolio Health brief" },
 ] as const;
 
 export function expandSlashPrompt(input: string, activeSymbol?: string): string {
@@ -30,6 +31,10 @@ export function expandSlashPrompt(input: string, activeSymbol?: string): string 
       return arg
         ? `Explain rule decision ${arg} using explain_rule_decision.`
         : "Ask for a rule_audit id to explain.";
+    case "/brief":
+      return arg
+        ? `Generate a ${arg} brief from live tools. Do not invent figures.`
+        : "Generate a Morning Brief, Instrument Brief, or Portfolio Health report from live tools.";
     default:
       return trimmed;
   }

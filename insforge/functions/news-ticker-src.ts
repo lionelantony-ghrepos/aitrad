@@ -193,6 +193,18 @@ export default async function (req: Request): Promise<Response> {
       };
     }
     try {
+      await fetch(`${origin}/functions/monitor-runner`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${expected}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({}),
+      });
+    } catch {
+      // best-effort
+    }
+    try {
       await fetch(`${origin}/functions/embed-worker`, {
         method: "POST",
         headers: {

@@ -4,9 +4,12 @@
  */
 import { createAdminClient, createClient } from "npm:@insforge/sdk";
 import {
+  copilotActionSchema,
   copilotChatRequestSchema,
   copilotMessageSchema,
+  copilotOrchestratorDecideRequestSchema,
   copilotSessionSchema,
+  createAlertToolInputSchema,
   getBarsToolInputSchema,
   getFundamentalsToolInputSchema,
   getPortfolioToolInputSchema,
@@ -14,12 +17,15 @@ import {
   explainRuleDecisionToolInputSchema,
   screenInstrumentsToolInputSchema,
   searchNewsToolInputSchema,
+  type CopilotAction,
   type CopilotChatEvent,
   type CopilotMessage,
   type CopilotSession,
+  type CopilotWriteToolName,
 } from "../../packages/schemas/src/index.ts";
 import {
   baselineTable,
+  compileAlertTemplate,
   evaluate,
   resolveRulesServiceApiKey,
 } from "../../packages/rules-engine/src/index.ts";
@@ -27,9 +33,18 @@ import {
   COPILOT_SESSION_NOT_FOUND,
   DEFAULT_OPENROUTER_CHAT_MODEL,
   DEFAULT_OPENROUTER_CHAT_URL,
+  compileMonitorInstruction,
+  compileMonitorInstructionWithLlm,
+  decidePersistedAction,
+  evaluateWritePolicyBaseline,
+  handleWriteToolCall,
+  insertOwnedWatchlistItemAsAdmin,
+  isWriteTool,
   newsSummaryLlm,
   openRouterLlm,
+  persistOwnedCopilotAction,
   runCopilotRequest,
+  type WriteActionPorts,
 } from "../../packages/copilot/src/index.ts";
 import { authorizeEdgeUser } from "./_shared/entitlements.ts";
 
@@ -125,10 +140,6 @@ export default async function (req: Request): Promise<Response> {
   } catch {
     body = {};
   }
-  const parsed = copilotChatRequestSchema.safeParse(body);
-  if (!parsed.success) {
-    return json(400, { error: "INVALID_BODY" });
-  }
 
   const userClient = createClient({ baseUrl, accessToken: token });
   const { data: userData } = await userClient.auth.getCurrentUser();
@@ -141,6 +152,30 @@ export default async function (req: Request): Promise<Response> {
     return json(500, { error: "API_KEY_MISSING" });
   }
   const admin = createAdminClient({ baseUrl, apiKey });
+  const decideFromPath = new URL(req.url).pathname.replace(/\/+$/, "").endsWith("/decide");
+  const opRaw =
+    body && typeof body === "object" && "op" in body ? (body as { op?: unknown }).op : undefined;
+  if (opRaw === "decide" || decideFromPath) {
+    const gate = await authorizeEdgeUser({ db: admin.database, userId, action: "copilot:act" });
+    if (!gate.allowed || !userId) {
+      return json(gate.reason === "UNAUTHENTICATED" || !userId ? 401 : 403, {
+        error: gate.reason ?? "UNAUTHENTICATED",
+      });
+    }
+    return decideCopilotActionOnEdge({
+      admin,
+      baseUrl,
+      token,
+      userId,
+      body,
+    });
+  }
+
+  const parsed = copilotChatRequestSchema.safeParse(body);
+  if (!parsed.success) {
+    return json(400, { error: "INVALID_BODY" });
+  }
+
   const gate = await authorizeEdgeUser({ db: admin.database, userId, action: "copilot:chat" });
   if (!gate.allowed || !userId) {
     return json(gate.reason === "UNAUTHENTICATED" || !userId ? 401 : 403, {
@@ -190,6 +225,7 @@ export default async function (req: Request): Promise<Response> {
           url: Deno.env.get("OPENROUTER_CHAT_URL") ?? DEFAULT_OPENROUTER_CHAT_URL,
         });
 
+  let sessionId = parsed.data.session_id ?? "";
   const stream = new ReadableStream({
     async start(controller) {
       const emit = (event: CopilotChatEvent): void => {
@@ -201,15 +237,27 @@ export default async function (req: Request): Promise<Response> {
           policyOutcome,
           llm,
           portfolioSummary: undefined,
-          executeTool: (name, args) =>
-            executeReadTool({
+          executeTool: (name, args) => {
+            if (isWriteTool(name)) {
+              return executeWriteTool({
+                name,
+                args,
+                admin,
+                baseUrl,
+                token,
+                userId,
+                sessionId,
+              });
+            }
+            return executeReadTool({
               name,
               args,
               admin,
               baseUrl,
               token,
               userId,
-            }),
+            });
+          },
           persist: {
             async createSession(title) {
               await admin.database
@@ -224,7 +272,9 @@ export default async function (req: Request): Promise<Response> {
               if (error) {
                 throw new Error(error.message);
               }
-              return copilotSessionSchema.parse(asRows<CopilotSession>(data)[0]);
+              const created = copilotSessionSchema.parse(asRows<CopilotSession>(data)[0]);
+              sessionId = created.id;
+              return created;
             },
             async appendMessage(row) {
               await requireOwnedCopilotSession(admin, userId, row.sessionId);
@@ -408,4 +458,432 @@ async function executeReadTool(input: {
     default:
       throw new Error(`UNKNOWN_TOOL:${input.name}`);
   }
+}
+
+async function executeWriteTool(input: {
+  name: string;
+  args: unknown;
+  admin: ReturnType<typeof createAdminClient>;
+  baseUrl: string;
+  token: string;
+  userId: string;
+  sessionId: string;
+}): Promise<unknown> {
+  const db = input.admin.database;
+  const countRpc = await db.rpc("count_copilot_user_actions_today", {
+    p_user_id: input.userId,
+  });
+  const actionsToday = Number(countRpc.data ?? 0);
+  const monitorsRpc = await db.rpc("count_user_monitors", { p_user_id: input.userId });
+  const monitorsCount = Number(monitorsRpc.data ?? 0);
+  let args = input.args;
+  if (input.name === "propose_order" && args && typeof args === "object") {
+    const row = args as Record<string, unknown>;
+    if (typeof row.last_price !== "number" && typeof row.symbol === "string") {
+      const inst = await db.from("instruments").select("id").eq("symbol", row.symbol.toUpperCase());
+      const instrument = asRows<{ id: string }>(inst.data)[0];
+      if (instrument) {
+        const quotes = await db
+          .from("quotes_latest")
+          .select("last")
+          .eq("instrument_id", instrument.id);
+        const last = asRows<{ last: number }>(quotes.data)[0]?.last;
+        if (typeof last === "number") {
+          args = { ...row, last_price: last };
+        }
+      }
+    }
+  }
+  const ports: WriteActionPorts = {
+    evaluatePolicy: async (context) => {
+      try {
+        const evaluated = await invokeSibling({
+          baseUrl: input.baseUrl,
+          slug: "rules-service",
+          token: input.token,
+          body: { op: "evaluateDomain", domain: "ai_action_policy", context },
+        });
+        if (evaluated && typeof evaluated === "object" && "outcome" in evaluated) {
+          return (evaluated as { outcome: unknown }).outcome;
+        }
+      } catch {
+        // published table unavailable
+      }
+      return evaluateWritePolicyBaseline(context);
+    },
+    persistAction: async (row) =>
+      persistOwnedCopilotAction({
+        userId: input.userId,
+        row,
+        requireOwnedSession: (sessionId) =>
+          requireOwnedCopilotSession(input.admin, input.userId, sessionId),
+        insert: async (owned) => {
+          await db.from("copilot_actions").insert([toActionInsert(owned)]);
+          return owned;
+        },
+      }),
+    updateAction: async (row) => {
+      await db
+        .from("copilot_actions")
+        .update({
+          status: row.status,
+          executed_ref: row.executed_ref,
+          reject_reason: row.reject_reason,
+          policy_outcome: row.policy_outcome,
+          updated_at: row.updated_at,
+        })
+        .eq("id", row.id)
+        .eq("user_id", input.userId);
+      return row;
+    },
+    execute: async (tool, payload) =>
+      executeManualWriteOnEdge({
+        tool,
+        payload,
+        admin: input.admin,
+        baseUrl: input.baseUrl,
+        token: input.token,
+        userId: input.userId,
+        sessionId: input.sessionId,
+      }),
+  };
+  return handleWriteToolCall({
+    userId: input.userId,
+    sessionId: input.sessionId,
+    tool: input.name,
+    args,
+    actionsToday,
+    monitorsCount,
+    ports,
+  });
+}
+
+async function decideCopilotActionOnEdge(input: {
+  admin: ReturnType<typeof createAdminClient>;
+  baseUrl: string;
+  token: string;
+  userId: string;
+  body: unknown;
+}): Promise<Response> {
+  const parsed = copilotOrchestratorDecideRequestSchema.safeParse(
+    input.body && typeof input.body === "object"
+      ? { op: "decide", ...(input.body as Record<string, unknown>) }
+      : input.body,
+  );
+  if (!parsed.success) {
+    return json(400, { error: "INVALID_BODY" });
+  }
+  const db = input.admin.database;
+  const loaded = await db
+    .from("copilot_actions")
+    .select("*")
+    .eq("id", parsed.data.action_id)
+    .eq("user_id", input.userId)
+    .limit(1);
+  const existingRow = asRows<CopilotAction>(loaded.data)[0];
+  if (!existingRow) {
+    return json(404, { error: "ACTION_NOT_FOUND" });
+  }
+  const existing = copilotActionSchema.parse(existingRow);
+  try {
+    await requireOwnedCopilotSession(input.admin, input.userId, existing.session_id);
+    const row = await decidePersistedAction({
+      action: existing,
+      decision: parsed.data.decision,
+      feedback: parsed.data.feedback,
+      ports: {
+        evaluatePolicy: async () => ({ decision: "require_approval" }),
+        persistAction: async (next) =>
+          persistOwnedCopilotAction({
+            userId: input.userId,
+            row: next,
+            requireOwnedSession: (sessionId) =>
+              requireOwnedCopilotSession(input.admin, input.userId, sessionId),
+            insert: async (owned) => {
+              await db.from("copilot_actions").insert([toActionInsert(owned)]);
+              return owned;
+            },
+          }),
+        updateAction: async (next) => {
+          await db
+            .from("copilot_actions")
+            .update({
+              status: next.status,
+              executed_ref: next.executed_ref,
+              reject_reason: next.reject_reason,
+              policy_outcome: next.policy_outcome,
+              updated_at: next.updated_at,
+            })
+            .eq("id", next.id)
+            .eq("user_id", input.userId);
+          return next;
+        },
+        execute: async (tool, payload) =>
+          executeManualWriteOnEdge({
+            tool,
+            payload,
+            admin: input.admin,
+            baseUrl: input.baseUrl,
+            token: input.token,
+            userId: input.userId,
+            sessionId: existing.session_id,
+          }),
+      },
+    });
+    await db.from("audit_log").insert([
+      {
+        user_id: input.userId,
+        action: `copilot:action:${parsed.data.decision}`,
+        entity_type: "copilot_actions",
+        entity_id: row.id,
+        payload: { tool: row.tool, status: row.status },
+      },
+    ]);
+    return json(200, { action: row });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "ACTION_DECIDE_FAILED";
+    const status = message === COPILOT_SESSION_NOT_FOUND ? 404 : 400;
+    return json(status, { error: message });
+  }
+}
+
+function toActionInsert(row: CopilotAction): Record<string, unknown> {
+  return {
+    id: row.id,
+    user_id: row.user_id,
+    session_id: row.session_id,
+    tool: row.tool,
+    payload: row.payload,
+    policy_outcome: row.policy_outcome,
+    status: row.status,
+    executed_ref: row.executed_ref,
+    reject_reason: row.reject_reason,
+  };
+}
+
+async function executeManualWriteOnEdge(input: {
+  tool: CopilotWriteToolName;
+  payload: Record<string, unknown>;
+  admin: ReturnType<typeof createAdminClient>;
+  baseUrl: string;
+  token: string;
+  userId: string;
+  sessionId?: string;
+}): Promise<{ ref?: string; error?: string; reject_reason?: string }> {
+  const db = input.admin.database;
+  const actionName =
+    input.tool === "propose_order"
+      ? "trade:create"
+      : input.tool === "create_alert"
+        ? "alerts:create"
+        : input.tool === "create_watchlist_item"
+          ? "watchlist:item:create"
+          : "copilot:act";
+  const gate = await authorizeEdgeUser({ db, userId: input.userId, action: actionName });
+  if (!gate.allowed) {
+    return { error: gate.reason ?? "NOT_ALLOWED" };
+  }
+  if (input.tool === "propose_order") {
+    const created = await invokeSibling({
+      baseUrl: input.baseUrl,
+      slug: "order-service/orders",
+      token: input.token,
+      body: {
+        op: "create",
+        last_price: input.payload.last_price,
+        draft: {
+          symbol: input.payload.symbol,
+          side: input.payload.side,
+          qty: input.payload.qty,
+          order_type: input.payload.order_type ?? "market",
+          limit_price: input.payload.limit_price ?? null,
+          stop_price: input.payload.stop_price ?? null,
+          tif: input.payload.tif ?? "DAY",
+        },
+      },
+    });
+    const order =
+      created && typeof created === "object" && "order" in created
+        ? (created as { order: { id?: string; reject_reason?: string | null } }).order
+        : undefined;
+    if (!order?.id) {
+      return { error: "ORDER_CREATE_FAILED" };
+    }
+    return { ref: order.id, reject_reason: order.reject_reason ?? undefined };
+  }
+  if (input.tool === "create_watchlist_item") {
+    const symbol = String(input.payload.symbol ?? "").toUpperCase();
+    const inst = await db.from("instruments").select("id,symbol").eq("symbol", symbol);
+    const instrument = asRows<{ id: string; symbol: string }>(inst.data)[0];
+    if (!instrument) {
+      return { error: "SYMBOL_NOT_FOUND" };
+    }
+    const requestedWatchlistId =
+      typeof input.payload.watchlist_id === "string" ? input.payload.watchlist_id : undefined;
+    return insertOwnedWatchlistItemAsAdmin({
+      userId: input.userId,
+      watchlistId: requestedWatchlistId,
+      instrumentId: instrument.id,
+      ports: {
+        findWatchlist: async ({ id, userId }) => {
+          let query = db.from("watchlists").select("id,user_id").eq("user_id", userId);
+          if (id) {
+            query = query.eq("id", id);
+          }
+          const lists = await query.limit(1);
+          return asRows<{ id: string; user_id: string }>(lists.data)[0] ?? null;
+        },
+        createDefaultWatchlist: async (userId) => {
+          await db.from("watchlists").insert([{ user_id: userId, name: "Default" }]);
+          const again = await db
+            .from("watchlists")
+            .select("id,user_id")
+            .eq("user_id", userId)
+            .limit(1);
+          const created = asRows<{ id: string; user_id: string }>(again.data)[0];
+          if (!created) {
+            throw new Error("WATCHLIST_MISSING");
+          }
+          return created;
+        },
+        countItems: async (watchlistId) => {
+          const items = await db
+            .from("watchlist_items")
+            .select("id")
+            .eq("watchlist_id", watchlistId);
+          return asRows(items.data).length;
+        },
+        insertItem: async (row) => {
+          await db.from("watchlist_items").insert([row]);
+          const created = await db
+            .from("watchlist_items")
+            .select("id")
+            .eq("watchlist_id", row.watchlist_id)
+            .eq("instrument_id", row.instrument_id);
+          return asRows<{ id: string }>(created.data)[0] ?? null;
+        },
+      },
+    });
+  }
+  if (input.tool === "create_alert") {
+    const parsed = createAlertToolInputSchema.parse(input.payload);
+    const inst = await db
+      .from("instruments")
+      .select("id,symbol")
+      .eq("symbol", parsed.symbol.toUpperCase());
+    const instrument = asRows<{ id: string; symbol: string }>(inst.data)[0];
+    if (!instrument) {
+      return { error: "SYMBOL_NOT_FOUND" };
+    }
+    const condition = compileAlertTemplate({
+      kind: parsed.kind,
+      threshold: parsed.threshold,
+    });
+    await db.from("alert_rules").insert([
+      {
+        user_id: input.userId,
+        instrument_id: instrument.id,
+        name: parsed.name ?? `${parsed.kind} ${instrument.symbol}`,
+        kind: parsed.kind,
+        condition,
+        active: true,
+      },
+    ]);
+    const created = await db
+      .from("alert_rules")
+      .select("id")
+      .eq("user_id", input.userId)
+      .order("created_at", { ascending: false })
+      .limit(1);
+    const row = asRows<{ id: string }>(created.data)[0];
+    return row ? { ref: row.id } : { error: "ALERT_CREATE_FAILED" };
+  }
+  if (input.tool === "create_monitor") {
+    const instruction =
+      typeof input.payload.nl_instruction === "string" ? input.payload.nl_instruction : "";
+    let compiled = compileMonitorInstruction(instruction);
+    if (!compiled) {
+      const llmMode = (Deno.env.get("MERIDIAN_COPILOT_LLM") ?? "").trim().toLowerCase();
+      if (llmMode === "fake") {
+        return { error: "MONITOR_COMPILE_FAILED" };
+      }
+      const apiKey = Deno.env.get("OPENROUTER_API_KEY");
+      if (!apiKey) {
+        return { error: "MONITOR_COMPILE_FAILED" };
+      }
+      try {
+        compiled = await compileMonitorInstructionWithLlm({
+          nl_instruction: instruction,
+          completeJson: async (prompt) => {
+            const response = await fetch(
+              Deno.env.get("OPENROUTER_CHAT_URL") ?? DEFAULT_OPENROUTER_CHAT_URL,
+              {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${apiKey}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  model: Deno.env.get("OPENROUTER_CHAT_MODEL") ?? DEFAULT_OPENROUTER_CHAT_MODEL,
+                  messages: [{ role: "user", content: prompt }],
+                }),
+              },
+            );
+            const body: unknown = await response.json();
+            const content =
+              body &&
+              typeof body === "object" &&
+              "choices" in body &&
+              Array.isArray((body as { choices?: unknown }).choices)
+                ? ((body as { choices: Array<{ message?: { content?: string } }> }).choices[0]
+                    ?.message?.content ?? "")
+                : "";
+            return content;
+          },
+        });
+      } catch (error) {
+        return {
+          error: error instanceof Error ? error.message : "MONITOR_COMPILE_FAILED",
+        };
+      }
+    }
+    const name =
+      (typeof input.payload.name === "string" && input.payload.name) ||
+      compiled.name ||
+      instruction.slice(0, 72);
+    await db.from("monitors").insert([
+      {
+        user_id: input.userId,
+        session_id: input.sessionId ?? null,
+        name,
+        nl_instruction: instruction,
+        compiled_condition: compiled.compiled_condition,
+        scope: compiled.scope,
+        cadence: compiled.cadence ?? "5m",
+        active: true,
+        propose_action: compiled.propose_action ?? null,
+      },
+    ]);
+    const createdMon = await db
+      .from("monitors")
+      .select("id")
+      .eq("user_id", input.userId)
+      .order("created_at", { ascending: false })
+      .limit(1);
+    const monitor = asRows<{ id: string }>(createdMon.data)[0];
+    if (!monitor) {
+      return { error: "MONITOR_CREATE_FAILED" };
+    }
+    await db.from("audit_log").insert([
+      {
+        user_id: input.userId,
+        action: "monitors:create",
+        entity_type: "monitors",
+        entity_id: monitor.id,
+        payload: { name, tool: "create_monitor" },
+      },
+    ]);
+    return { ref: monitor.id };
+  }
+  return { error: `UNKNOWN_WRITE_TOOL:${input.tool}` };
 }

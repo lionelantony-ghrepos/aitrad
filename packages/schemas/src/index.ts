@@ -34,5 +34,7 @@ export * from "./news-search";
 export * from "./fundamentals";
 export * from "./screener";
 export * from "./alerts";
+export * from "./monitors";
 export * from "./admin-users";
 export * from "./copilot";
+export * from "./briefs";

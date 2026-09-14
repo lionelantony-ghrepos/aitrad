@@ -156,3 +156,50 @@ PRD named this migration 0012; 0012 is fundamentals.
 | Object                    | Access                                                                                    |
 | ------------------------- | ----------------------------------------------------------------------------------------- |
 | `copilot_messages` INSERT | Must be caller `user_id` **and** `EXISTS` parent `copilot_sessions` owned by `auth.uid()` |
+
+## 0019 contents
+
+| Table / object                     | Access                                                                                        |
+| ---------------------------------- | --------------------------------------------------------------------------------------------- |
+| `copilot_actions`                  | Owner RLS SELECT/INSERT/UPDATE (`user_id = auth.uid()`); INSERT requires owned parent session |
+| `count_copilot_user_actions_today` | EXECUTE `project_admin` (DT-AI-01 `actions_today`)                                            |
+
+PRD named this migration 0013; 0013 is screener.
+
+## 0020 contents
+
+| Object            | Access                                                                                      |
+| ----------------- | ------------------------------------------------------------------------------------------- |
+| `copilot_actions` | JWT **SELECT-only** (owner RLS). INSERT/UPDATE/DELETE `project_admin` (orchestrator decide) |
+
+## 0021 contents
+
+| Table / object        | Access                                                               |
+| --------------------- | -------------------------------------------------------------------- |
+| `monitors`            | Owner RLS CRUD (`user_id = auth.uid()`); `project_admin` full        |
+| `alerts.monitor_id`   | Optional FK; `alert_rule_id` nullable with XOR check vs `monitor_id` |
+| `count_user_monitors` | EXECUTE `project_admin` (DT-AI-01 `monitors_count`)                  |
+
+PRD named this migration 0014; 0014 is already alerts.
+
+## 0022 contents
+
+| Object     | Access                                                                                          |
+| ---------- | ----------------------------------------------------------------------------------------------- |
+| `monitors` | JWT INSERT (owner fields, not `last_run`); JWT UPDATE (`name`, `active`, `throttle_state` only) |
+|            | `last_run` / compiled eval columns: `project_admin` / `monitor-runner` only                     |
+
+## 0023 contents
+
+| Table / object                  | Access                                                                               |
+| ------------------------------- | ------------------------------------------------------------------------------------ |
+| `profiles.morning_brief_opt_in` | Authenticated may INSERT/UPDATE the opt-in column (existing profile grants)          |
+| `briefs`                        | Owner RLS SELECT; 0023 also granted JWT INSERT/UPDATE/DELETE — tightened by **0024** |
+
+PRD named this migration 0015; 0015 is news embeddings.
+
+## 0024 contents
+
+| Object   | Access                                                                                        |
+| -------- | --------------------------------------------------------------------------------------------- |
+| `briefs` | JWT **SELECT-only** (owner RLS). INSERT/UPDATE/DELETE `project_admin` (`brief-service` admin) |
