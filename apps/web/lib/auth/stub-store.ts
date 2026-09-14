@@ -2,6 +2,7 @@ import { assertOwnedCopilotSession } from "@meridian/copilot";
 import {
   createRulesAdminMemory,
   paperAccountSeed,
+  appendAuditChainRow,
   type RulesAdminMemory,
 } from "@meridian/rules-engine";
 import { tryReserveBuyingPower, releaseBuyingPower } from "@meridian/paper-engine";
@@ -41,6 +42,7 @@ import type {
   Monitor,
   CopilotAction,
   Brief,
+  AuditLog,
 } from "@meridian/schemas";
 
 export type StubUser = {
@@ -65,6 +67,8 @@ type StubState = {
   copilotAudit: Array<{ user_id: string; action: string; payload: unknown }>;
   copilotMonitors: Monitor[];
   briefs: Brief[];
+  auditLogs: AuditLog[];
+  auditRetentionDays: number | null;
   copilotForceRateLimitUserIds: Set<string>;
   orders: OrderRecord[];
   executions: ExecutionRecord[];
@@ -93,6 +97,8 @@ function createState(): StubState {
     copilotAudit: [],
     copilotMonitors: [],
     briefs: [],
+    auditLogs: [],
+    auditRetentionDays: null,
     copilotForceRateLimitUserIds: new Set(),
     orders: [],
     executions: [],
@@ -195,6 +201,65 @@ export function stubListUsers(): AdminUserRow[] {
     display_name: state.profiles.get(user.id)?.display_name ?? null,
     role: state.roles.get(user.id) ?? "trader",
   }));
+}
+
+export function stubEnsureAuditFixture(): void {
+  const state = getStubState();
+  if (state.auditLogs.length > 0) {
+    return;
+  }
+  const user = [...state.usersById.values()][0];
+  const first = appendAuditChainRow(null, {
+    id: "11111111-1111-4111-8111-111111111111",
+    user_id: user?.id ?? null,
+    action: "provision-account",
+    entity_type: "account",
+    entity_id: "22222222-2222-4222-8222-222222222222",
+    payload: { created: { profile: true, account: true } },
+    created_at: "2026-09-14T09:00:00.000Z",
+  });
+  const second = appendAuditChainRow(first, {
+    id: "33333333-3333-4333-8333-333333333333",
+    user_id: user?.id ?? null,
+    action: "trade:create",
+    entity_type: "orders",
+    entity_id: "44444444-4444-4444-8444-444444444444",
+    payload: { status: "accepted", symbol: "AAPL" },
+    created_at: "2026-09-14T09:05:00.000Z",
+  });
+  state.auditLogs.push(first, second);
+}
+
+export function stubListAudit(filter: {
+  user_id?: string;
+  action?: string;
+  entity_type?: string;
+  entity_id?: string;
+}): AuditLog[] {
+  stubEnsureAuditFixture();
+  return getStubState().auditLogs.filter((row) => {
+    if (filter.user_id && row.user_id !== filter.user_id) {
+      return false;
+    }
+    if (filter.action && row.action !== filter.action) {
+      return false;
+    }
+    if (filter.entity_type && row.entity_type !== filter.entity_type) {
+      return false;
+    }
+    if (filter.entity_id && row.entity_id !== filter.entity_id) {
+      return false;
+    }
+    return true;
+  });
+}
+
+export function stubGetAuditRetention(): number | null {
+  return getStubState().auditRetentionDays;
+}
+
+export function stubSetAuditRetention(days: number | null): void {
+  getStubState().auditRetentionDays = days;
 }
 
 export function stubLoadProvision(userId: string): {

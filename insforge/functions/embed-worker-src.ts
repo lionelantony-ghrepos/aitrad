@@ -19,6 +19,7 @@ import {
   runEmbedCycle,
   type GatewayEmbedResult,
 } from "../../packages/rag/src/index.ts";
+import { writeAuditLog } from "./_shared/audit.ts";
 
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -145,13 +146,11 @@ export default async function (req: Request): Promise<Response> {
     },
   });
 
-  await admin.database.from("audit_log").insert([
-    {
-      action: "embed-worker",
-      entity_type: "news_embeddings",
-      payload: { op: parsed.data.op, ...result },
-    },
-  ]);
+  await writeAuditLog(admin.database, {
+    action: "embed-worker",
+    entity_type: "news_embeddings",
+    payload: { op: parsed.data.op, ...result },
+  });
 
   return json(200, embedWorkerResponseSchema.parse(result));
 }

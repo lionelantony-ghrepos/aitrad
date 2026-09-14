@@ -20,6 +20,7 @@ import {
 } from "../../packages/rules-engine/src/index.ts";
 import { groundedMonitorExplanation } from "../../packages/copilot/src/monitor-explain.ts";
 import { formatVectorLiteral, hashEmbed } from "../../packages/rag/src/index.ts";
+import { writeAuditLog } from "./_shared/audit.ts";
 
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -406,15 +407,14 @@ export default async function (req: Request): Promise<Response> {
       read: false,
       created_at: firedAt,
     });
-    await admin.database.from("audit_log").insert([
-      {
-        user_id: draft.user_id,
-        action: "monitor:fire",
-        entity_type: "monitors",
-        entity_id: draft.monitor_id,
-        payload: { alert_id: id },
-      },
-    ]);
+    await writeAuditLog(admin.database, {
+      user_id: draft.user_id,
+      action: "monitor:fire",
+      entity_type: "monitors",
+      entity_id: draft.monitor_id,
+      payload: { alert_id: id },
+      after: { alert_id: id },
+    });
     const published = await admin.database.rpc("publish_alert_event", {
       p_user_id: draft.user_id,
       payload: { kind: "alert", alert },

@@ -1,5 +1,7 @@
 import { createClient } from "npm:@insforge/sdk";
 
+import { writeAuditLog } from "./_shared/audit.ts";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -117,15 +119,14 @@ export default async function (req: Request): Promise<Response> {
   }
 
   if (created.profile || created.account) {
-    await client.database.from("audit_log").insert([
-      {
-        user_id: userId,
-        action: "provision-account",
-        entity_type: "account",
-        entity_id: account.id,
-        payload: { created },
-      },
-    ]);
+    await writeAuditLog(client.database, {
+      user_id: userId,
+      action: "provision-account",
+      entity_type: "account",
+      entity_id: account.id,
+      payload: { created },
+      after: created,
+    });
   }
 
   return json(200, { profile, account, created });

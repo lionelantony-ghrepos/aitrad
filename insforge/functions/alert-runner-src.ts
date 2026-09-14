@@ -20,6 +20,7 @@ import {
   type AlertMarketContext,
   type AlertRuleSnapshot,
 } from "../../packages/rules-engine/src/index.ts";
+import { writeAuditLog } from "./_shared/audit.ts";
 
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -286,15 +287,14 @@ export default async function (req: Request): Promise<Response> {
       read: false,
       created_at: firedAt,
     });
-    await admin.database.from("audit_log").insert([
-      {
-        user_id: draft.user_id,
-        action: "alert:fire",
-        entity_type: "alerts",
-        entity_id: id,
-        payload: { alert_rule_id: draft.alert_rule_id, message: draft.message },
-      },
-    ]);
+    await writeAuditLog(admin.database, {
+      user_id: draft.user_id,
+      action: "alert:fire",
+      entity_type: "alerts",
+      entity_id: id,
+      payload: { alert_rule_id: draft.alert_rule_id, message: draft.message },
+      after: { message: draft.message },
+    });
     const published = await admin.database.rpc("publish_alert_event", {
       p_user_id: draft.user_id,
       payload: { kind: "alert", alert },

@@ -4739,7 +4739,7 @@ var profileSchema = external_exports.object({
   experience_level: experienceLevelSchema.nullable(),
   suitability_tier: suitabilityTierSchema.nullable(),
   objectives: external_exports.string().nullable(),
-  morning_brief_opt_in: external_exports.boolean().optional().default(false),
+  morning_brief_opt_in: external_exports.boolean().optional(),
   created_at: timestamptzSchema,
   updated_at: timestamptzSchema,
 });
@@ -4879,9 +4879,11 @@ var auditLogSchema = external_exports.object({
   entity_id: uuidSchema.nullable(),
   payload: external_exports.record(external_exports.unknown()),
   created_at: timestamptzSchema,
+  prev_hash: external_exports.string().nullable().optional(),
+  row_hash: external_exports.string().nullable().optional(),
 });
 var auditLogInsertSchema = external_exports.object({
-  user_id: uuidSchema,
+  user_id: uuidSchema.nullable(),
   action: external_exports.string().min(1),
   entity_type: external_exports.string().min(1),
   entity_id: uuidSchema.nullable().optional(),
@@ -6167,6 +6169,95 @@ var adminUsersAssignResponseSchema = external_exports.object({
   role: userRoleSchema,
 });
 
+// packages/schemas/src/audit-admin.ts
+var auditAdminOpSchema = external_exports.enum([
+  "list",
+  "timeline",
+  "verify",
+  "export",
+  "getConfig",
+  "setRetention",
+  "cron",
+]);
+var auditAdminFilterSchema = external_exports.object({
+  user_id: uuidSchema.optional(),
+  entity_type: external_exports.string().min(1).optional(),
+  entity_id: uuidSchema.optional(),
+  action: external_exports.string().min(1).optional(),
+  from: timestamptzSchema.optional(),
+  to: timestamptzSchema.optional(),
+  limit: external_exports.coerce.number().int().positive().max(500).optional(),
+  offset: external_exports.coerce.number().int().nonnegative().optional(),
+});
+var auditAdminListRequestSchema = auditAdminFilterSchema.extend({
+  op: external_exports.literal("list"),
+});
+var auditAdminTimelineRequestSchema = external_exports.object({
+  op: external_exports.literal("timeline"),
+  entity_type: external_exports.string().min(1),
+  entity_id: uuidSchema,
+});
+var auditAdminVerifyRequestSchema = external_exports.object({
+  op: external_exports.literal("verify"),
+  from: timestamptzSchema.optional(),
+  to: timestamptzSchema.optional(),
+});
+var auditAdminExportRequestSchema = auditAdminFilterSchema.extend({
+  op: external_exports.literal("export"),
+});
+var auditAdminGetConfigRequestSchema = external_exports.object({
+  op: external_exports.literal("getConfig"),
+});
+var auditAdminSetRetentionRequestSchema = external_exports.object({
+  op: external_exports.literal("setRetention"),
+  days: external_exports.coerce.number().int().positive().nullable(),
+});
+var auditAdminCronRequestSchema = external_exports.object({
+  op: external_exports.literal("cron"),
+  force: external_exports.boolean().optional(),
+});
+var auditAdminRequestSchema = external_exports.discriminatedUnion("op", [
+  auditAdminListRequestSchema,
+  auditAdminTimelineRequestSchema,
+  auditAdminVerifyRequestSchema,
+  auditAdminExportRequestSchema,
+  auditAdminGetConfigRequestSchema,
+  auditAdminSetRetentionRequestSchema,
+  auditAdminCronRequestSchema,
+]);
+var auditChainVerifyResultSchema = external_exports.object({
+  ok: external_exports.boolean(),
+  checked: external_exports.number().int().nonnegative(),
+  broken_id: uuidSchema.nullable(),
+  expected_hash: external_exports.string().nullable(),
+  actual_hash: external_exports.string().nullable(),
+  reason: external_exports.string().nullable(),
+});
+var auditAdminListResponseSchema = external_exports.object({
+  rows: external_exports.array(auditLogSchema),
+  total: external_exports.number().int().nonnegative(),
+  can_write: external_exports.boolean(),
+});
+var auditAdminTimelineResponseSchema = external_exports.object({
+  rows: external_exports.array(auditLogSchema),
+});
+var auditAdminExportResponseSchema = external_exports.object({
+  csv: external_exports.string(),
+  rows: external_exports.number().int().nonnegative(),
+});
+var auditAdminConfigResponseSchema = external_exports.object({
+  retention_days: external_exports.number().int().positive().nullable(),
+  chain: auditChainVerifyResultSchema,
+  can_write: external_exports.boolean(),
+});
+var auditAdminCronResponseSchema = external_exports.object({
+  verified: external_exports.boolean(),
+  chain: auditChainVerifyResultSchema,
+  purged: external_exports.number().int().nonnegative(),
+  alerted: external_exports.number().int().nonnegative(),
+  skipped: external_exports.boolean(),
+});
+
 // packages/schemas/src/copilot.ts
 var copilotReadToolNameSchema = external_exports.enum([
   "get_quote",
@@ -6456,6 +6547,29 @@ function newsShocksForSymbols(items) {
   }));
 }
 
+// insforge/functions/_shared/audit.ts
+async function writeAuditLog(db, row) {
+  const payload = { ...(row.payload ?? {}) };
+  if (row.before !== void 0) {
+    payload.before = row.before;
+  }
+  if (row.after !== void 0) {
+    payload.after = row.after;
+  }
+  const insert = await db.from("audit_log").insert([
+    {
+      user_id: row.user_id ?? null,
+      action: row.action,
+      entity_type: row.entity_type,
+      entity_id: row.entity_id ?? null,
+      payload,
+    },
+  ]);
+  if (insert.error) {
+    throw new Error(insert.error.message);
+  }
+}
+
 // insforge/functions/market-tick-src.ts
 function json(status, body) {
   return new Response(JSON.stringify(body), {
@@ -6742,22 +6856,33 @@ async function market_tick_src_default(req) {
         },
       );
     } catch {}
+    try {
+      await fetch(
+        `${(Deno.env.get("INSFORGE_INTERNAL_URL") ?? Deno.env.get("INSFORGE_BASE_URL") ?? "").replace(/\/+$/, "")}/functions/audit-service`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${expected}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ op: "cron" }),
+        },
+      );
+    } catch {}
   }
-  await admin.database.from("audit_log").insert([
-    {
-      action: "market-tick",
-      entity_type: "quotes_latest",
-      payload: {
-        session: result.session,
-        ticksApplied: result.ticksApplied,
-        published: result.publishes.length,
-        paused: flags.paused,
-        consumeForcePrice: result.consumeForcePrice,
-        matching,
-        alerting,
-      },
+  await writeAuditLog(admin.database, {
+    action: "market-tick",
+    entity_type: "quotes_latest",
+    payload: {
+      session: result.session,
+      ticksApplied: result.ticksApplied,
+      published: result.publishes.length,
+      paused: flags.paused,
+      consumeForcePrice: result.consumeForcePrice,
+      matching,
+      alerting,
     },
-  ]);
+  });
   return json(200, {
     session: result.session,
     ticksApplied: result.ticksApplied,

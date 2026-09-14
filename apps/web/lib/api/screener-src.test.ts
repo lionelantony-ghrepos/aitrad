@@ -25,7 +25,7 @@ describe("screener edge function orchestration", () => {
     expect(src).toContain("CRITERIA_COMPILE_FAILED");
     expect(src).toContain('admin.database.rpc("exec_screener"');
     expect(src).toContain("p_params: compiled.params");
-    expect(src).toContain("audit_log");
+    expect(src).toContain("writeAuditLog");
     expect(src).toContain('action: "screener:run"');
     expect(src).not.toContain("${criteria");
     expect(src.indexOf("compileScreenerSql")).toBeLessThan(src.indexOf('rpc("exec_screener"'));

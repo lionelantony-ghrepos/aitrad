@@ -33,6 +33,7 @@
     "functions:bundle:copilot-orchestrator": "node scripts/bundle-copilot-orchestrator.mjs",
     "functions:bundle:monitor-runner": "node scripts/bundle-monitor-runner.mjs",
     "functions:bundle:brief-service": "node scripts/bundle-brief-service.mjs",
+    "functions:bundle:audit-service": "node scripts/bundle-audit-service.mjs",
     "prepare": "husky"
   },
   "dependencies": {

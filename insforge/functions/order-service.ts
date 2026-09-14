@@ -4325,6 +4325,7 @@ var profileSchema = external_exports.object({
   experience_level: experienceLevelSchema.nullable(),
   suitability_tier: suitabilityTierSchema.nullable(),
   objectives: external_exports.string().nullable(),
+  morning_brief_opt_in: external_exports.boolean().optional(),
   created_at: timestamptzSchema,
   updated_at: timestamptzSchema,
 });
@@ -4335,6 +4336,7 @@ var profileInsertSchema = external_exports
     experience_level: experienceLevelSchema.nullable().optional(),
     suitability_tier: suitabilityTierSchema.nullable().optional(),
     objectives: external_exports.string().nullable().optional(),
+    morning_brief_opt_in: external_exports.boolean().optional(),
   })
   .strict();
 var profileAdminInsertSchema = profileInsertSchema.extend({
@@ -4463,9 +4465,11 @@ var auditLogSchema = external_exports.object({
   entity_id: uuidSchema.nullable(),
   payload: external_exports.record(external_exports.unknown()),
   created_at: timestamptzSchema,
+  prev_hash: external_exports.string().nullable().optional(),
+  row_hash: external_exports.string().nullable().optional(),
 });
 var auditLogInsertSchema = external_exports.object({
-  user_id: uuidSchema,
+  user_id: uuidSchema.nullable(),
   action: external_exports.string().min(1),
   entity_type: external_exports.string().min(1),
   entity_id: uuidSchema.nullable().optional(),
@@ -5542,7 +5546,8 @@ var alertCreateRequestSchema = external_exports
 var alertInstanceSchema = external_exports.object({
   id: uuidSchema,
   user_id: uuidSchema,
-  alert_rule_id: uuidSchema,
+  alert_rule_id: uuidSchema.nullable(),
+  monitor_id: uuidSchema.nullable().optional(),
   instrument_id: uuidSchema.nullable(),
   fired_at: timestamptzSchema,
   message: external_exports.string().min(1),
@@ -5553,7 +5558,8 @@ var alertInstanceSchema = external_exports.object({
 var alertInstanceInsertSchema = external_exports
   .object({
     user_id: uuidSchema,
-    alert_rule_id: uuidSchema,
+    alert_rule_id: uuidSchema.nullable().optional(),
+    monitor_id: uuidSchema.nullable().optional(),
     instrument_id: uuidSchema.nullable().optional(),
     fired_at: timestamptzSchema.optional(),
     message: external_exports.string().min(1),
@@ -5585,6 +5591,140 @@ var evaluateAlertsRequestSchema = external_exports
   .strict();
 var alertConditionListSchema = external_exports.array(decisionConditionSchema).min(1);
 
+// packages/schemas/src/monitors.ts
+var MONITOR_FACT_INPUTS = [
+  "position_day_pct",
+  "portfolio_day_pct",
+  "pct_chg",
+  "last",
+  "volume",
+  "rsi_14",
+  "news_sentiment",
+];
+var monitorFactInputSchema = external_exports.enum(MONITOR_FACT_INPUTS);
+var monitorCadenceSchema = external_exports.enum(["5m", "15m", "1h", "1d"]);
+var monitorScopeKindSchema = external_exports.enum(["symbols", "sector", "portfolio"]);
+var monitorScopeSchema = external_exports
+  .object({
+    kind: monitorScopeKindSchema,
+    symbols: external_exports
+      .array(external_exports.string().trim().min(1).max(16))
+      .max(50)
+      .optional(),
+    sector: external_exports.string().trim().min(1).max(64).optional(),
+  })
+  .strict()
+  .superRefine((scope, ctx) => {
+    if (scope.kind === "symbols" && (!scope.symbols || scope.symbols.length === 0)) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        message: "SCOPE_SYMBOLS_REQUIRED",
+      });
+    }
+    if (scope.kind === "sector" && !scope.sector) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        message: "SCOPE_SECTOR_REQUIRED",
+      });
+    }
+  });
+var compiledMonitorConditionSchema = decisionRowSchema.superRefine((row, ctx) => {
+  if (row.outputs.decision !== "fire") {
+    ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message: "MONITOR_OUTPUT_FIRE" });
+  }
+  if (row.conditions.length < 1) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      message: "MONITOR_CONDITION_REQUIRED",
+    });
+  }
+  for (const cell of row.conditions) {
+    const input = monitorFactInputSchema.safeParse(cell.input);
+    if (!input.success) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        message: `MONITOR_FACT_UNKNOWN:${cell.input}`,
+      });
+    }
+  }
+});
+var monitorCompileResultSchema = external_exports
+  .object({
+    name: external_exports.string().trim().min(1).max(80).optional(),
+    cadence: monitorCadenceSchema.optional(),
+    scope: monitorScopeSchema,
+    compiled_condition: compiledMonitorConditionSchema,
+    propose_action: external_exports.record(external_exports.unknown()).nullable().optional(),
+  })
+  .strict();
+var monitorSchema = external_exports.object({
+  id: uuidSchema,
+  user_id: uuidSchema,
+  session_id: uuidSchema.nullable().optional(),
+  name: external_exports.string().min(1),
+  nl_instruction: external_exports.string().min(1),
+  compiled_condition: compiledMonitorConditionSchema,
+  scope: monitorScopeSchema,
+  cadence: monitorCadenceSchema,
+  last_run: timestamptzSchema.nullable(),
+  active: external_exports.boolean(),
+  throttle_state: alertThrottleStateSchema,
+  propose_action: external_exports.record(external_exports.unknown()).nullable().optional(),
+  created_at: timestamptzSchema,
+  updated_at: timestamptzSchema,
+});
+var monitorInsertSchema = external_exports
+  .object({
+    user_id: uuidSchema,
+    session_id: uuidSchema.nullable().optional(),
+    name: external_exports.string().min(1),
+    nl_instruction: external_exports.string().min(1),
+    compiled_condition: compiledMonitorConditionSchema,
+    scope: monitorScopeSchema,
+    cadence: monitorCadenceSchema.optional(),
+    last_run: timestamptzSchema.nullable().optional(),
+    active: external_exports.boolean().optional(),
+    throttle_state: alertThrottleStateSchema.optional(),
+    propose_action: external_exports.record(external_exports.unknown()).nullable().optional(),
+  })
+  .strict();
+var monitorOwnerPatchSchema = external_exports
+  .object({
+    name: external_exports.string().min(1).optional(),
+    active: external_exports.boolean().optional(),
+    throttle_state: alertThrottleStateSchema.optional(),
+  })
+  .strict();
+var monitorPatchSchema = monitorOwnerPatchSchema
+  .extend({
+    last_run: timestamptzSchema.nullable().optional(),
+  })
+  .strict();
+var monitorCreateRequestSchema = external_exports
+  .object({
+    name: external_exports.string().trim().min(1).max(80).optional(),
+    nl_instruction: external_exports.string().trim().min(1).max(2e3),
+    symbols: external_exports.array(external_exports.string().trim().min(1).max(16)).optional(),
+    session_id: uuidSchema.optional(),
+  })
+  .strict();
+var monitorRunnerRequestSchema = external_exports
+  .object({
+    clock: timestamptzSchema.optional(),
+    force: external_exports.boolean().optional(),
+    force_position_day_pct: external_exports.number().optional(),
+    user_id: uuidSchema.optional(),
+  })
+  .strict();
+var monitorRunnerResponseSchema = external_exports.object({
+  evaluated: external_exports.number().int().nonnegative(),
+  fired: external_exports.number().int().nonnegative(),
+  suppressed: external_exports.number().int().nonnegative(),
+});
+var monitorLlmConditionCellSchema = decisionConditionSchema.extend({
+  input: monitorFactInputSchema,
+});
+
 // packages/schemas/src/admin-users.ts
 var userRoleSchema = rulesAdminRoleSchema;
 var adminUsersOpSchema = external_exports.enum(["list", "assign"]);
@@ -5613,6 +5753,357 @@ var adminUsersAssignResponseSchema = external_exports.object({
   ok: external_exports.literal(true),
   user_id: uuidSchema,
   role: userRoleSchema,
+});
+
+// packages/schemas/src/audit-admin.ts
+var auditAdminOpSchema = external_exports.enum([
+  "list",
+  "timeline",
+  "verify",
+  "export",
+  "getConfig",
+  "setRetention",
+  "cron",
+]);
+var auditAdminFilterSchema = external_exports.object({
+  user_id: uuidSchema.optional(),
+  entity_type: external_exports.string().min(1).optional(),
+  entity_id: uuidSchema.optional(),
+  action: external_exports.string().min(1).optional(),
+  from: timestamptzSchema.optional(),
+  to: timestamptzSchema.optional(),
+  limit: external_exports.coerce.number().int().positive().max(500).optional(),
+  offset: external_exports.coerce.number().int().nonnegative().optional(),
+});
+var auditAdminListRequestSchema = auditAdminFilterSchema.extend({
+  op: external_exports.literal("list"),
+});
+var auditAdminTimelineRequestSchema = external_exports.object({
+  op: external_exports.literal("timeline"),
+  entity_type: external_exports.string().min(1),
+  entity_id: uuidSchema,
+});
+var auditAdminVerifyRequestSchema = external_exports.object({
+  op: external_exports.literal("verify"),
+  from: timestamptzSchema.optional(),
+  to: timestamptzSchema.optional(),
+});
+var auditAdminExportRequestSchema = auditAdminFilterSchema.extend({
+  op: external_exports.literal("export"),
+});
+var auditAdminGetConfigRequestSchema = external_exports.object({
+  op: external_exports.literal("getConfig"),
+});
+var auditAdminSetRetentionRequestSchema = external_exports.object({
+  op: external_exports.literal("setRetention"),
+  days: external_exports.coerce.number().int().positive().nullable(),
+});
+var auditAdminCronRequestSchema = external_exports.object({
+  op: external_exports.literal("cron"),
+  force: external_exports.boolean().optional(),
+});
+var auditAdminRequestSchema = external_exports.discriminatedUnion("op", [
+  auditAdminListRequestSchema,
+  auditAdminTimelineRequestSchema,
+  auditAdminVerifyRequestSchema,
+  auditAdminExportRequestSchema,
+  auditAdminGetConfigRequestSchema,
+  auditAdminSetRetentionRequestSchema,
+  auditAdminCronRequestSchema,
+]);
+var auditChainVerifyResultSchema = external_exports.object({
+  ok: external_exports.boolean(),
+  checked: external_exports.number().int().nonnegative(),
+  broken_id: uuidSchema.nullable(),
+  expected_hash: external_exports.string().nullable(),
+  actual_hash: external_exports.string().nullable(),
+  reason: external_exports.string().nullable(),
+});
+var auditAdminListResponseSchema = external_exports.object({
+  rows: external_exports.array(auditLogSchema),
+  total: external_exports.number().int().nonnegative(),
+  can_write: external_exports.boolean(),
+});
+var auditAdminTimelineResponseSchema = external_exports.object({
+  rows: external_exports.array(auditLogSchema),
+});
+var auditAdminExportResponseSchema = external_exports.object({
+  csv: external_exports.string(),
+  rows: external_exports.number().int().nonnegative(),
+});
+var auditAdminConfigResponseSchema = external_exports.object({
+  retention_days: external_exports.number().int().positive().nullable(),
+  chain: auditChainVerifyResultSchema,
+  can_write: external_exports.boolean(),
+});
+var auditAdminCronResponseSchema = external_exports.object({
+  verified: external_exports.boolean(),
+  chain: auditChainVerifyResultSchema,
+  purged: external_exports.number().int().nonnegative(),
+  alerted: external_exports.number().int().nonnegative(),
+  skipped: external_exports.boolean(),
+});
+
+// packages/schemas/src/copilot.ts
+var copilotReadToolNameSchema = external_exports.enum([
+  "get_quote",
+  "get_bars",
+  "search_news",
+  "get_fundamentals",
+  "screen_instruments",
+  "get_portfolio",
+  "explain_rule_decision",
+]);
+var copilotWriteToolNameSchema = external_exports.enum([
+  "create_watchlist_item",
+  "create_alert",
+  "propose_order",
+  "create_monitor",
+]);
+var copilotToolNameSchema = external_exports.union([
+  copilotReadToolNameSchema,
+  copilotWriteToolNameSchema,
+]);
+var createWatchlistItemToolInputSchema = external_exports.object({
+  symbol: external_exports.string().trim().min(1).max(16),
+  watchlist_id: uuidSchema.optional(),
+});
+var createAlertToolInputSchema = external_exports.object({
+  symbol: external_exports.string().trim().min(1).max(16),
+  kind: alertKindSchema,
+  threshold: numericSchema.optional(),
+  name: external_exports.string().trim().min(1).optional(),
+});
+var proposeOrderToolInputSchema = external_exports.object({
+  symbol: external_exports.string().trim().min(1).max(16),
+  side: orderSideSchema,
+  qty: external_exports.number().positive().finite(),
+  order_type: orderTypeSchema.default("market"),
+  limit_price: external_exports.number().finite().nullable().optional(),
+  stop_price: external_exports.number().finite().nullable().optional(),
+  tif: tifSchema.default("DAY"),
+  last_price: numericSchema.optional(),
+});
+var createMonitorToolInputSchema = external_exports.object({
+  name: external_exports.string().trim().min(1).max(80).optional(),
+  nl_instruction: external_exports.string().trim().min(1).max(2e3),
+  symbols: external_exports.array(external_exports.string().trim().min(1).max(16)).optional(),
+});
+var copilotActionStatusSchema = external_exports.enum([
+  "proposed",
+  "auto_approved",
+  "approved",
+  "rejected",
+  "executed",
+  "failed",
+]);
+var copilotActionSchema = external_exports.object({
+  id: uuidSchema,
+  user_id: uuidSchema,
+  session_id: uuidSchema,
+  tool: copilotWriteToolNameSchema,
+  payload: external_exports.record(external_exports.unknown()),
+  policy_outcome: external_exports.unknown(),
+  status: copilotActionStatusSchema,
+  executed_ref: external_exports.string().nullable(),
+  reject_reason: external_exports.string().nullable(),
+  created_at: timestamptzSchema,
+  updated_at: timestamptzSchema,
+});
+var copilotActionDecisionSchema = external_exports.enum(["approve", "reject"]);
+var copilotActionDecideRequestSchema = external_exports.object({
+  action_id: uuidSchema,
+  decision: copilotActionDecisionSchema,
+  feedback: external_exports.string().trim().max(2e3).optional(),
+});
+var copilotOrchestratorDecideRequestSchema = copilotActionDecideRequestSchema.extend({
+  op: external_exports.literal("decide"),
+});
+var copilotOrchestratorDecideResponseSchema = external_exports.object({
+  action: copilotActionSchema,
+});
+var writeToolResultSchema = external_exports.object({
+  status: external_exports.enum([
+    "awaiting_approval",
+    "auto_approved",
+    "executed",
+    "blocked",
+    "failed",
+    "rate_limited",
+  ]),
+  message: external_exports.string(),
+  action: copilotActionSchema.optional(),
+  executed_ref: external_exports.string().optional(),
+  reject_reason: external_exports.string().optional(),
+});
+var getQuoteToolInputSchema = external_exports.object({
+  symbol: external_exports.string().trim().min(1).max(16),
+});
+var getBarsToolInputSchema = external_exports.object({
+  symbol: external_exports.string().trim().min(1).max(16),
+  range: chartRangeSchema.default("1M"),
+});
+var getFundamentalsToolInputSchema = external_exports.object({
+  symbol: external_exports.string().trim().min(1).max(16),
+});
+var screenInstrumentsToolInputSchema = external_exports.object({
+  sector: external_exports.string().trim().min(1).optional(),
+  criteria: screenerCriteriaSchema.optional(),
+  sort: screenerSortSchema.optional(),
+});
+var getPortfolioToolInputSchema = external_exports.object({
+  range: equityCurveRangeSchema.optional(),
+});
+var explainRuleDecisionToolInputSchema = external_exports.object({
+  audit_id: external_exports.string().min(1),
+});
+var copilotMessageRoleSchema = external_exports.enum(["system", "user", "assistant", "tool"]);
+var copilotToolCallRecordSchema = external_exports.object({
+  id: external_exports.string().min(1),
+  name: external_exports.string().min(1),
+  arguments: external_exports.unknown(),
+  result: external_exports.unknown().optional(),
+  error: external_exports.string().optional(),
+});
+var copilotSessionSchema = external_exports.object({
+  id: uuidSchema,
+  user_id: uuidSchema,
+  title: external_exports.string().min(1),
+  created_at: timestamptzSchema,
+  updated_at: timestamptzSchema,
+});
+var copilotMessageSchema = external_exports.object({
+  id: uuidSchema,
+  session_id: uuidSchema,
+  user_id: uuidSchema,
+  role: copilotMessageRoleSchema,
+  content: external_exports.string(),
+  tool_calls: external_exports.array(copilotToolCallRecordSchema),
+  created_at: timestamptzSchema,
+});
+var copilotCitationSchema = external_exports.object({
+  kind: external_exports.enum(["news", "des"]),
+  id: external_exports.string().min(1),
+  label: external_exports.string().min(1),
+  headline: external_exports.string().optional(),
+  symbol: external_exports.string().optional(),
+});
+var copilotChatRequestSchema = external_exports.object({
+  session_id: uuidSchema.optional(),
+  message: external_exports.string().trim().min(1).max(4e3),
+  active_symbol: external_exports.string().trim().min(1).max(16).optional(),
+});
+var copilotChatEventSchema = external_exports.discriminatedUnion("type", [
+  external_exports.object({ type: external_exports.literal("session"), session_id: uuidSchema }),
+  external_exports.object({
+    type: external_exports.literal("tool_start"),
+    name: external_exports.string().min(1),
+    label: external_exports.string().min(1),
+    call_id: external_exports.string().min(1),
+  }),
+  external_exports.object({
+    type: external_exports.literal("tool_end"),
+    name: external_exports.string().min(1),
+    call_id: external_exports.string().min(1),
+    ok: external_exports.boolean(),
+  }),
+  external_exports.object({
+    type: external_exports.literal("token"),
+    text: external_exports.string(),
+  }),
+  external_exports.object({
+    type: external_exports.literal("message"),
+    role: external_exports.literal("assistant"),
+    content: external_exports.string(),
+    citations: external_exports.array(copilotCitationSchema),
+  }),
+  external_exports.object({
+    type: external_exports.literal("rate_limited"),
+    message: external_exports.string().min(1),
+  }),
+  external_exports.object({
+    type: external_exports.literal("error"),
+    message: external_exports.string().min(1),
+  }),
+  external_exports.object({
+    type: external_exports.literal("action"),
+    action: copilotActionSchema,
+  }),
+]);
+var copilotSessionsResponseSchema = external_exports.object({
+  sessions: external_exports.array(copilotSessionSchema),
+});
+var copilotSessionDetailSchema = external_exports.object({
+  session: copilotSessionSchema,
+  messages: external_exports.array(copilotMessageSchema),
+});
+
+// packages/schemas/src/briefs.ts
+var briefKindSchema = external_exports.enum(["morning", "instrument", "portfolio"]);
+var briefSchema = external_exports.object({
+  id: uuidSchema,
+  user_id: uuidSchema,
+  kind: briefKindSchema,
+  subject: external_exports.string().min(1),
+  content_md: external_exports.string(),
+  data: external_exports.record(external_exports.unknown()),
+  pdf_key: external_exports.string().nullable(),
+  pdf_url: external_exports.string().nullable(),
+  created_at: timestamptzSchema,
+});
+var briefGenerateRequestSchema = external_exports
+  .object({
+    op: external_exports.literal("generate").optional(),
+    kind: briefKindSchema,
+    subject: external_exports.string().trim().min(1).max(32).optional(),
+  })
+  .strict();
+var briefListRequestSchema = external_exports
+  .object({
+    op: external_exports.literal("list").optional(),
+    kind: briefKindSchema.optional(),
+  })
+  .strict();
+var briefExportRequestSchema = external_exports
+  .object({
+    op: external_exports.literal("export"),
+    brief_id: uuidSchema,
+  })
+  .strict();
+var briefCronRequestSchema = external_exports
+  .object({
+    op: external_exports.literal("cron"),
+    force: external_exports.boolean().optional(),
+  })
+  .strict();
+var briefServiceRequestSchema = external_exports.discriminatedUnion("op", [
+  briefGenerateRequestSchema.extend({ op: external_exports.literal("generate") }),
+  briefListRequestSchema.extend({ op: external_exports.literal("list") }),
+  briefExportRequestSchema,
+  briefCronRequestSchema,
+]);
+var briefGenerateResponseSchema = external_exports.object({
+  brief: briefSchema,
+  citations: external_exports.array(copilotCitationSchema),
+});
+var briefListResponseSchema = external_exports.object({
+  briefs: external_exports.array(briefSchema),
+});
+var briefExportResponseSchema = external_exports.object({
+  brief: briefSchema,
+  download_url: external_exports.string().min(1),
+});
+var briefCronResponseSchema = external_exports.object({
+  generated: external_exports.number().int().nonnegative(),
+  skipped: external_exports.number().int().nonnegative(),
+});
+var portfolioAnalysisFactsSchema = external_exports.object({
+  max_position_pct: external_exports.number().finite(),
+  max_sector_pct: external_exports.number().finite(),
+  portfolio_beta: external_exports.number().finite(),
+  cash_pct: external_exports.number().finite(),
+  positions_count: external_exports.number().int().nonnegative(),
+  equity: external_exports.number().finite(),
 });
 
 // packages/schemas/src/index.ts
@@ -6904,6 +7395,37 @@ function resolveRulesServiceApiKey(env) {
   return key;
 }
 
+// packages/rules-engine/src/monitor-cycle.ts
+var CADENCE_MS = {
+  "5m": 5 * 6e4,
+  "15m": 15 * 6e4,
+  "1h": 60 * 6e4,
+  "1d": 24 * 60 * 6e4,
+};
+
+// insforge/functions/_shared/audit.ts
+async function writeAuditLog(db, row) {
+  const payload = { ...(row.payload ?? {}) };
+  if (row.before !== void 0) {
+    payload.before = row.before;
+  }
+  if (row.after !== void 0) {
+    payload.after = row.after;
+  }
+  const insert = await db.from("audit_log").insert([
+    {
+      user_id: row.user_id ?? null,
+      action: row.action,
+      entity_type: row.entity_type,
+      entity_id: row.entity_id ?? null,
+      payload,
+    },
+  ]);
+  if (insert.error) {
+    throw new Error(insert.error.message);
+  }
+}
+
 // insforge/functions/_shared/entitlements.ts
 function asRows(data) {
   return Array.isArray(data) ? data : [];
@@ -7387,15 +7909,15 @@ async function order_service_src_default(req) {
         reserved_amount: 0,
         updated_at: updatedAt,
       };
-      await client.database.from("audit_log").insert([
-        {
-          user_id: userId,
-          action: "trade:cancel",
-          entity_type: "orders",
-          entity_id: cancelled.id,
-          payload: { from: current.status, to: "cancelled" },
-        },
-      ]);
+      await writeAuditLog(client.database, {
+        user_id: userId,
+        action: "trade:cancel",
+        entity_type: "orders",
+        entity_id: cancelled.id,
+        payload: { from: current.status, to: "cancelled" },
+        before: { status: current.status },
+        after: { status: "cancelled" },
+      });
       await publishOrder(admin2, userId, cancelled);
       return json(200, { order: cancelled });
     }
@@ -7495,22 +8017,21 @@ async function order_service_src_default(req) {
     if (!parsedRow) {
       throw new Error("ORDER_CREATE_EMPTY");
     }
-    await client.database.from("audit_log").insert([
-      {
-        user_id: userId,
-        action: "trade:create",
-        entity_type: "orders",
-        entity_id: parsedRow.id,
-        payload: {
-          status: parsedRow.status,
-          symbol: draft.symbol,
-          reject_reason: parsedRow.reject_reason,
-          rule_audit_id: parsedRow.rule_audit_id,
-          group_id: groupId,
-          legs: created.length,
-        },
+    await writeAuditLog(client.database, {
+      user_id: userId,
+      action: "trade:create",
+      entity_type: "orders",
+      entity_id: parsedRow.id,
+      payload: {
+        status: parsedRow.status,
+        symbol: draft.symbol,
+        reject_reason: parsedRow.reject_reason,
+        rule_audit_id: parsedRow.rule_audit_id,
+        group_id: groupId,
+        legs: created.length,
       },
-    ]);
+      after: { status: parsedRow.status, symbol: draft.symbol },
+    });
     for (const row of created) {
       await publishOrder(admin, userId, row);
     }

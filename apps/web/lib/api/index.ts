@@ -6,6 +6,7 @@ export { createMarketBarsRepository } from "./market-bars";
 export { createQuotesLatestRepository } from "./quotes-latest";
 export { createMarketCalendarRepository } from "./market-calendar";
 export { createAuditLogRepository } from "./audit-log";
+export { auditServiceUrl, invokeAuditService } from "./audit-service";
 export { createFeatureFlagsRepository } from "./feature-flags";
 export {
   containsArrayFilter,

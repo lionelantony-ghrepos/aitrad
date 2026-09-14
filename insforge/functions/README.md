@@ -102,3 +102,10 @@ npx -y @insforge/cli functions deploy brief-service --file insforge/functions/br
 ```
 
 `brief-service` accepts `POST` `{ op: "generate" | "list" | "export" | "cron" }`. Generate/list/export use user JWT + `authorize` `copilot:chat`. Generators compose `assemblePortfolio`, `search-news`, fundamentals, and alerts; Portfolio Health evaluates `portfolio_analysis` (DT-RISK-02) and the LLM may only narrate those facts. Cron is service-key, opt-in `profiles.morning_brief_opt_in`, simulated session OPEN. Export renders PDF into the `briefs` storage bucket. Apply migrations **0023 then 0024** (`briefs` is JWT SELECT-only; content writes stay on the admin client). Create bucket `briefs` before live PDF export.
+
+```bash
+pnpm functions:bundle:audit-service
+npx -y @insforge/cli functions deploy audit-service --file insforge/functions/audit-service.ts --name "Audit service"
+```
+
+`audit-service` accepts `POST` `{ op: "list" | "timeline" | "verify" | "export" | "getConfig" | "setRetention" | "cron" }`. User JWT + `authorize` `audit:read` (DT-ENT-01) for browse/verify/export; `audit:write` for retention. Cron is service-key (invoked from `market-tick` once per UTC day): `verify_audit_chain`, alert admins via `audit:chain_mismatch` rows, optional `apply_audit_retention`. Apply migration **0025** first. Hashes are computed in SQL on insert (`prev_hash`, `row_hash`).

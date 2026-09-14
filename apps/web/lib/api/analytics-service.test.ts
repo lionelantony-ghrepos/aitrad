@@ -35,7 +35,7 @@ describe("analytics-service orchestration", () => {
     expect(analyticsSrc).toContain('from("portfolio_snapshots")');
     expect(analyticsSrc).toContain('action: "portfolio:snapshot"');
     expect(analyticsSrc).toContain("dailySnapshotDate");
-    expect(analyticsSrc).toContain("audit_log");
+    expect(analyticsSrc).toContain("writeAuditLog");
     expect(analyticsSrc).toContain("rsi14Last");
     expect(analyticsSrc).toContain("instrument_daily_rsi");
     expect(analyticsSrc).toContain('op: "rsi"');
