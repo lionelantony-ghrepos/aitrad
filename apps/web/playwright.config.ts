@@ -21,5 +21,12 @@ export default defineConfig({
       E2E_AUTH_STUB: "1",
     },
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    { name: "chromium", testIgnore: /[/\\]regression[/\\]/, use: { ...devices["Desktop Chrome"] } },
+    {
+      name: "regression",
+      testDir: "./e2e/regression",
+      use: { ...devices["Desktop Chrome"] },
+    },
+  ],
 });

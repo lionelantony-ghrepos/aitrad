@@ -41,3 +41,4 @@ export * from "./copilot";
 export * from "./briefs";
 export * from "./observability";
 export * from "./telemetry";
+export * from "./demo-seed";

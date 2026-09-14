@@ -109,6 +109,13 @@ Exported `*Schema` bindings discovered by static scan. Full OpenAPI from Zod is 
 - decision-table.ts: decisionRowSchema
 - decision-table.ts: decisionTableSchema
 - decision-table.ts: hitPolicySchema
+- demo-seed.ts: demoPortfolioRecordSchema
+- demo-seed.ts: demoPositionRecordSchema
+- demo-seed.ts: demoUserRecordSchema
+- demo-seed.ts: demoUsersFixtureSchema
+- demo-seed.ts: fullSeedCountsSchema
+- demo-seed.ts: releaseRunbookStepSchema
+- demo-seed.ts: seedAllStepSchema
 - entities.ts: accountInsertSchema
 - entities.ts: accountPatchSchema
 - entities.ts: accountSchema
