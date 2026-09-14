@@ -37,3 +37,4 @@ export * from "./alerts";
 export * from "./monitors";
 export * from "./admin-users";
 export * from "./copilot";
+export * from "./briefs";

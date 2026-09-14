@@ -9,17 +9,15 @@ function createAdminClient(config) {
   delete clientConfig.apiKey;
   return createClient({ ...clientConfig, accessToken: apiKey, isServerMode: true });
 }
-// insforge/functions/market-tick-src.ts
+// bundled from insforge/functions/brief-service-src.ts
 
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all) __defProp(target, name, { get: all[name], enumerable: true });
 };
 
-// insforge/functions/market-tick-src.ts
+// insforge/functions/brief-service-src.ts
 // packages/mock-data/src/calendar.ts
-var MINUTES_PER_SESSION = 390;
-var GBM_SESSIONS_PER_YEAR = 252;
 function pad2(n) {
   return String(n).padStart(2, "0");
 }
@@ -200,438 +198,26 @@ function isNyseSession(isoDate) {
   return !nyseHolidays(year).has(isoDate);
 }
 
-// packages/mock-data/src/rng.ts
-function hashSymbolSeed(symbol, seed) {
-  let h = seed >>> 0;
-  for (let i = 0; i < symbol.length; i += 1) {
-    h = Math.imul(h ^ symbol.charCodeAt(i), 16777619);
-  }
-  return h >>> 0;
-}
-function mulberry32(seed) {
-  let a = seed >>> 0;
-  return () => {
-    a = (a + 1831565813) >>> 0;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-function gaussian(rng) {
-  const u1 = Math.max(rng(), Number.EPSILON);
-  const u2 = rng();
-  return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
-}
-
-// packages/mock-data/src/sim-params.ts
-var DT_SIM_01_DEFAULTS = {
-  gapEventProbPerDay: 0,
-  gapRangePct: [0, 0],
-  volMultiplier: 1,
-  driftNudgeBpsPerSentiment: 0,
-};
-var DT_SIM_01_ROWS = [
-  {
-    when: () => true,
-    apply: (acc) => ({ ...acc, gapEventProbPerDay: 0.02, gapRangePct: [1, 6] }),
-  },
-  {
-    when: (ctx) => ctx.betaClass === "high",
-    apply: (acc) => ({ ...acc, volMultiplier: 1.8 }),
-  },
-  {
-    when: (ctx) => ctx.betaClass === "low",
-    apply: (acc) => ({ ...acc, volMultiplier: 0.6 }),
-  },
-  {
-    when: (ctx) => ctx.newsSentimentShock,
-    apply: (acc) => ({ ...acc, driftNudgeBpsPerSentiment: 30 }),
-  },
-];
-function evaluateSim(ctx) {
-  return DT_SIM_01_ROWS.reduce(
-    (acc, row) => (row.when(ctx) ? row.apply(acc) : acc),
-    DT_SIM_01_DEFAULTS,
-  );
-}
-function simParamsForBeta(betaClass) {
-  return evaluateSim({ betaClass, newsSentimentShock: false });
-}
-var ANNUAL_SIGMA = {
-  low: 0.15,
-  medium: 0.28,
-  high: 0.55,
-};
-function annualSigma(betaClass) {
-  return ANNUAL_SIGMA[betaClass] * simParamsForBeta(betaClass).volMultiplier;
-}
-function newsSentimentDriftNudgeBps(sentiment, newsSentimentShock, betaClass = "medium") {
-  const params = evaluateSim({ betaClass, newsSentimentShock });
-  return sentiment * params.driftNudgeBpsPerSentiment;
-}
-
-// packages/mock-data/src/generator.ts
-function roundToTick(price, tickSize) {
-  if (tickSize <= 0) {
-    throw new Error("TICK_SIZE_POSITIVE");
-  }
-  const n = Math.round(price / tickSize);
-  return Number((n * tickSize).toFixed(10));
-}
-function enforceOhlc(o, h, l, c, tickSize) {
-  let open = roundToTick(o, tickSize);
-  let high = roundToTick(h, tickSize);
-  let low = roundToTick(l, tickSize);
-  let close = roundToTick(c, tickSize);
-  const minOc = Math.min(open, close);
-  const maxOc = Math.max(open, close);
-  if (low > minOc) {
-    low = minOc;
-  }
-  if (high < maxOc) {
-    high = maxOc;
-  }
-  if (low <= 0) {
-    low = tickSize;
-  }
-  if (open < low) {
-    open = low;
-  }
-  if (close < low) {
-    close = low;
-  }
-  if (open > high) {
-    open = high;
-  }
-  if (close > high) {
-    close = high;
-  }
-  return { o: open, h: high, l: low, c: close };
-}
-
-// packages/mock-data/src/feed.ts
-var MAX_QUOTE_BATCHES_PER_SEC = 4;
-function stepGbmPrice(input) {
-  const seed = input.seed ?? 42;
-  const last = roundToTick(Math.max(input.tickSize, input.last), input.tickSize);
-  if (!input.sessionOpen) {
-    return { last, appliedGap: false };
-  }
-  let price = last;
-  let appliedGap = false;
-  const sim = simParamsForBeta(input.betaClass);
-  if (input.sessionOpenStart) {
-    const dayId = Math.floor(input.simEpochSec / 86400);
-    const gapRng = mulberry32(hashSymbolSeed(`${input.symbol}:gap:${dayId}`, seed));
-    if (gapRng() < sim.gapEventProbPerDay) {
-      const lo = sim.gapRangePct[0];
-      const hi = sim.gapRangePct[1];
-      const mag = (lo + gapRng() * (hi - lo)) / 100;
-      const sign = gapRng() < 0.5 ? -1 : 1;
-      price *= 1 + sign * mag;
-      appliedGap = true;
-    }
-  }
-  const sigma = annualSigma(input.betaClass);
-  const dt = 1 / (GBM_SESSIONS_PER_YEAR * MINUTES_PER_SESSION * 60);
-  const muRng = mulberry32(hashSymbolSeed(`${input.symbol}:mu`, seed));
-  const mu = 0.06 + 0.08 * gaussian(muRng);
-  const zRng = mulberry32(hashSymbolSeed(`${input.symbol}:z:${input.simEpochSec}`, seed));
-  const z = gaussian(zRng);
-  price *= Math.exp((mu - (sigma * sigma) / 2) * dt + sigma * Math.sqrt(dt) * z);
-  return { last: roundToTick(Math.max(input.tickSize, price), input.tickSize), appliedGap };
-}
-function minuteBucketTs(iso) {
-  const d = new Date(iso);
-  d.setUTCSeconds(0, 0);
-  return d.toISOString();
-}
-function rollMinuteBar(current, tick) {
-  const bucket = minuteBucketTs(tick.ts);
-  const startBar = (open, ts) => {
-    const ohlc2 = enforceOhlc(open, open, open, open, tick.tickSize);
-    return {
-      timeframe: "1m",
-      ts,
-      ...ohlc2,
-      v: tick.volumeDelta,
-    };
-  };
-  if (!current) {
-    return { completed: null, current: startBar(tick.last, bucket) };
-  }
-  if (current.ts !== bucket) {
-    return { completed: current, current: startBar(tick.last, bucket) };
-  }
-  const ohlc = enforceOhlc(
-    current.o,
-    Math.max(current.h, tick.last),
-    Math.min(current.l, tick.last),
-    tick.last,
-    tick.tickSize,
-  );
-  return {
-    completed: null,
-    current: { ...current, ...ohlc, v: current.v + tick.volumeDelta },
-  };
-}
-function coalesceQuoteBatches(items, maxPerSec = MAX_QUOTE_BATCHES_PER_SEC) {
-  if (items.length <= maxPerSec) {
-    return [...items];
-  }
-  if (maxPerSec <= 1) {
-    return items.length === 0 ? [] : [items[items.length - 1]];
-  }
-  const out = [];
-  let prev = -1;
-  for (let i = 0; i < maxPerSec; i += 1) {
-    const idx = Math.round((i * (items.length - 1)) / (maxPerSec - 1));
-    if (idx === prev) {
-      continue;
-    }
-    const item = items[idx];
-    if (item !== void 0) {
-      out.push(item);
-      prev = idx;
-    }
-  }
-  return out;
-}
-function asRecord(value) {
-  if (typeof value === "object" && value !== null && !Array.isArray(value)) {
-    return value;
-  }
-  return null;
-}
-function parsePaused(value) {
-  if (value === true || value === "true") {
-    return true;
-  }
-  const rec = asRecord(value);
-  if (rec && "paused" in rec) {
-    return rec.paused === true || rec.paused === "true";
-  }
-  return false;
-}
-function parseSpeed(value) {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return value;
-  }
-  if (typeof value === "string" && value.trim() !== "") {
-    const n = Number(value);
-    return Number.isFinite(n) ? n : void 0;
-  }
-  const rec = asRecord(value);
-  if (rec && typeof rec.speed === "number" && Number.isFinite(rec.speed)) {
-    return rec.speed;
-  }
-  return void 0;
-}
-function parseForce(value) {
-  const rec = asRecord(value);
-  if (!rec) {
-    return null;
-  }
-  const symbol = rec.symbol;
-  const price = rec.price;
-  if (typeof symbol === "string" && price !== void 0 && Number.isFinite(Number(price))) {
-    return { symbol, price: Number(price) };
-  }
-  return null;
-}
-function parseFeedControls(rows) {
-  let paused = false;
-  let speed = 1;
-  let forcePrice = null;
-  for (const row of rows) {
-    if (row.key === "feed.paused") {
-      paused = parsePaused(row.value);
-    } else if (row.key === "feed.speed") {
-      const parsed = parseSpeed(row.value);
-      if (parsed !== void 0) {
-        speed = parsed;
-      }
-    } else if (row.key === "feed.force_price") {
-      forcePrice = parseForce(row.value);
-    }
-  }
-  return { paused, speed, forcePrice };
-}
-function barWriteKey(bar) {
-  return `${bar.instrument_id}${bar.timeframe}${minuteBucketTs(bar.ts)}`;
-}
-function mergeBarWrites(first, next) {
-  const ts = minuteBucketTs(first.ts);
-  return {
-    instrument_id: first.instrument_id,
-    timeframe: first.timeframe,
-    ts,
-    o: first.o,
-    h: Math.max(first.h, next.h),
-    l: Math.min(first.l, next.l),
-    c: next.c,
-    v: first.v + next.v,
-  };
-}
-function normalizeBarsToUpsert(bars) {
-  const order = [];
-  const byKey = /* @__PURE__ */ new Map();
-  for (const bar of bars) {
-    const canonical = { ...bar, ts: minuteBucketTs(bar.ts) };
-    const key = barWriteKey(canonical);
-    const prior = byKey.get(key);
-    if (prior === void 0) {
-      order.push(key);
-      byKey.set(key, canonical);
-    } else {
-      byKey.set(key, mergeBarWrites(prior, canonical));
-    }
-  }
-  return order.map((key) => byKey.get(key));
-}
-function spreadQuote(last, tickSize, volume, ts, prevClose) {
-  const rounded = roundToTick(Math.max(tickSize, last), tickSize);
-  const bid = roundToTick(Math.max(tickSize, rounded - tickSize), tickSize);
-  const ask = roundToTick(rounded + tickSize, tickSize);
-  return {
-    instrument_id: "",
-    bid: Math.min(bid, rounded),
-    ask: Math.max(ask, rounded),
-    last: rounded,
-    prev_close: prevClose,
-    volume,
-    ts,
-  };
-}
-function volumePerSecond(avgVolume, sessionMinutes) {
-  const seconds = Math.max(1, sessionMinutes * 60);
-  return Math.max(1, Math.round(avgVolume / seconds));
-}
-function runFeedInvocation(input) {
-  const seed = input.seed ?? 42;
-  const now = new Date(input.nowIso);
-  const session = nyseSessionState(now, input.calendar);
-  const byId = new Map(input.quotes.map((q) => [q.instrument_id, { ...q }]));
-  const currentBar = /* @__PURE__ */ new Map();
-  for (const bar of normalizeBarsToUpsert(
-    input.minuteBars.map((row) => ({ ...row, ts: minuteBucketTs(row.ts) })),
-  )) {
-    currentBar.set(bar.instrument_id, {
-      timeframe: bar.timeframe,
-      ts: bar.ts,
-      o: bar.o,
-      h: bar.h,
-      l: bar.l,
-      c: bar.c,
-      v: bar.v,
-    });
-  }
-  let consumeForcePrice = false;
-  if (input.flags.forcePrice) {
-    consumeForcePrice = true;
-    const target = input.instruments.find((i) => i.symbol === input.flags.forcePrice?.symbol);
-    if (target) {
-      const q = byId.get(target.id);
-      if (q) {
-        const next = spreadQuote(
-          input.flags.forcePrice.price,
-          target.tick_size,
-          q.volume,
-          q.ts,
-          q.prev_close,
-        );
-        next.instrument_id = q.instrument_id;
-        byId.set(target.id, next);
-      }
-    }
-  }
-  const ticks =
-    input.flags.paused || input.flags.speed <= 0
-      ? 0
-      : Math.max(0, Math.round(input.flags.speed * input.intervalSeconds));
-  const snapshots = [];
-  const barsToUpsert = [];
-  const shockBySymbol = new Map((input.newsShocks ?? []).map((row) => [row.symbol, row.sentiment]));
-  const nudged = /* @__PURE__ */ new Set();
-  for (let k = 0; k < ticks; k += 1) {
-    const sim = new Date(now.getTime() + (k + 1) * 1e3);
-    const simIso = sim.toISOString();
-    const open = nyseSessionState(sim, input.calendar) === "OPEN";
-    const prev = nyseSessionState(new Date(sim.getTime() - 1e3), input.calendar) === "OPEN";
-    const sessionOpenStart = open && !prev;
-    const partsDate = lookupSession(nyClockParts(sim).dateKey, input.calendar);
-    const sessionMinutes = partsDate
-      ? partsDate.close_minute - partsDate.open_minute
-      : MINUTES_PER_SESSION;
-    for (const inst of input.instruments) {
-      const q = byId.get(inst.id);
-      if (!q) {
-        continue;
-      }
-      let lastPx = q.last;
-      if (open && !nudged.has(inst.symbol)) {
-        const sentiment = shockBySymbol.get(inst.symbol);
-        if (sentiment !== void 0) {
-          const bps = newsSentimentDriftNudgeBps(sentiment, true, inst.beta_class);
-          lastPx = roundToTick(Math.max(inst.tick_size, lastPx * (1 + bps / 1e4)), inst.tick_size);
-          nudged.add(inst.symbol);
-        }
-      }
-      const stepped = stepGbmPrice({
-        last: lastPx,
-        tickSize: inst.tick_size,
-        betaClass: inst.beta_class,
-        symbol: inst.symbol,
-        simEpochSec: Math.floor(sim.getTime() / 1e3),
-        seed,
-        sessionOpen: open,
-        sessionOpenStart,
-      });
-      const volDelta = open ? volumePerSecond(inst.avg_volume, sessionMinutes) : 0;
-      const next = spreadQuote(
-        stepped.last,
-        inst.tick_size,
-        q.volume + volDelta,
-        simIso,
-        q.prev_close,
-      );
-      next.instrument_id = q.instrument_id;
-      byId.set(inst.id, next);
-      if (open) {
-        const rolled = rollMinuteBar(currentBar.get(inst.id) ?? null, {
-          last: next.last,
-          volumeDelta: volDelta,
-          ts: simIso,
-          tickSize: inst.tick_size,
-        });
-        if (rolled.completed) {
-          barsToUpsert.push({ ...rolled.completed, instrument_id: inst.id });
-        }
-        currentBar.set(inst.id, rolled.current);
-      }
-    }
-    snapshots.push([...byId.values()].map((q) => ({ ...q })));
-  }
-  for (const [instrumentId, bar] of currentBar) {
-    barsToUpsert.push({ ...bar, instrument_id: instrumentId });
-  }
-  const quotesOut = [...byId.values()];
-  let publishes = [];
-  if (ticks > 0 && session === "OPEN") {
-    publishes = coalesceQuoteBatches(snapshots, MAX_QUOTE_BATCHES_PER_SEC);
-  } else if (consumeForcePrice && ticks === 0) {
-    publishes = [quotesOut.map((q) => ({ ...q }))];
-  }
-  return {
-    session,
-    ticksApplied: ticks,
-    quotes: quotesOut,
-    barsToUpsert: normalizeBarsToUpsert(barsToUpsert),
-    publishes,
-    consumeForcePrice,
-  };
-}
+// packages/mock-data/src/expected-counts.ts
+var EXPECTED_INSTRUMENTS = 150;
+var MINUTE_BARS_PER_INSTRUMENT = 1950;
+var EXPECTED_MINUTE_BARS_TOTAL = EXPECTED_INSTRUMENTS * MINUTE_BARS_PER_INSTRUMENT;
+var SEED_COUNT_SQL = `
+SELECT
+  (SELECT COUNT(*)::int FROM public.instruments) AS instruments,
+  (SELECT COUNT(*)::int FROM public.market_bars WHERE timeframe = '1d') AS daily_bars,
+  (SELECT COUNT(*)::int FROM public.market_bars WHERE timeframe = '1m') AS minute_bars,
+  (SELECT COUNT(*)::int FROM public.quotes_latest) AS quotes,
+  COALESCE((SELECT MIN(cnt)::int FROM (
+    SELECT COUNT(*) AS cnt FROM public.market_bars WHERE timeframe = '1d' GROUP BY instrument_id
+  ) d), 0) AS min_daily_per_instrument,
+  COALESCE((SELECT MIN(cnt)::int FROM (
+    SELECT COUNT(*) AS cnt FROM public.market_bars WHERE timeframe = '1m' GROUP BY instrument_id
+  ) m), 0) AS min_minute_per_instrument,
+  (SELECT COUNT(*)::int FROM public.news_items) AS news_items,
+  (SELECT COUNT(*)::int FROM public.news_embeddings) AS news_embeddings,
+  (SELECT COUNT(*)::int FROM public.fundamentals) AS fundamentals
+`.trim();
 
 // node_modules/.pnpm/zod@3.25.76/node_modules/zod/v3/external.js
 var external_exports = {};
@@ -4739,7 +4325,7 @@ var profileSchema = external_exports.object({
   experience_level: experienceLevelSchema.nullable(),
   suitability_tier: suitabilityTierSchema.nullable(),
   objectives: external_exports.string().nullable(),
-  morning_brief_opt_in: external_exports.boolean().optional().default(false),
+  morning_brief_opt_in: external_exports.boolean().optional(),
   created_at: timestamptzSchema,
   updated_at: timestamptzSchema,
 });
@@ -5426,6 +5012,44 @@ var matchingRunnerResponseSchema = external_exports.object({
 
 // packages/schemas/src/analytics.ts
 var equityCurveRangeSchema = external_exports.enum(["1M", "3M", "1Y"]);
+function marketValue(qty, last) {
+  return qty * last;
+}
+function unrealizedPnl(qty, avgCost, last) {
+  return qty * (last - avgCost);
+}
+function dayPnl(qty, last, prevClose) {
+  return qty * (last - prevClose);
+}
+function costBasis(qty, avgCost) {
+  return Math.abs(qty) * avgCost;
+}
+function unrealizedPnlPct(qty, avgCost, last) {
+  const basis = costBasis(qty, avgCost);
+  if (basis === 0) {
+    return 0;
+  }
+  return (unrealizedPnl(qty, avgCost, last) / basis) * 100;
+}
+function buyingPowerFromCash(cash, reservedCash) {
+  return cash - reservedCash;
+}
+function markEquityFromPositions(cash, positions) {
+  let equity = cash;
+  for (const row of positions) {
+    if (!Number.isFinite(row.last)) {
+      continue;
+    }
+    equity += marketValue(row.qty, row.last);
+  }
+  return equity;
+}
+function weightPct(part, whole) {
+  if (whole === 0) {
+    return 0;
+  }
+  return (part / whole) * 100;
+}
 var portfolioPositionViewSchema = external_exports.object({
   id: uuidSchema,
   instrument_id: uuidSchema,
@@ -5494,6 +5118,63 @@ var analyticsRsiRequestSchema = external_exports
 var analyticsRsiResponseSchema = external_exports.object({
   written: external_exports.number().int().nonnegative(),
 });
+function assemblePortfolio(input) {
+  const open = input.positions.filter((row) => row.qty !== 0);
+  const equity = markEquityFromPositions(
+    input.account.cash,
+    open.map((row) => ({ qty: row.qty, last: row.last })),
+  );
+  const buyingPower = buyingPowerFromCash(input.account.cash, input.account.reserved_cash);
+  const positions = open.map((row) => {
+    const mkt = marketValue(row.qty, row.last);
+    return {
+      id: row.id,
+      instrument_id: row.instrument_id,
+      symbol: row.symbol,
+      sector: row.sector,
+      qty: row.qty,
+      avg_cost: row.avg_cost,
+      last: row.last,
+      prev_close: row.prev_close,
+      market_value: mkt,
+      unrealized_pnl: unrealizedPnl(row.qty, row.avg_cost, row.last),
+      realized_pnl: row.realized_pnl,
+      day_pnl: dayPnl(row.qty, row.last, row.prev_close),
+      weight_pct: weightPct(mkt, equity),
+      unrealized_pnl_pct: unrealizedPnlPct(row.qty, row.avg_cost, row.last),
+    };
+  });
+  const dayTotal = positions.reduce((sum, row) => sum + row.day_pnl, 0);
+  const byPosition = positions.map((row) => ({
+    key: row.symbol,
+    market_value: row.market_value,
+    weight_pct: row.weight_pct,
+  }));
+  const sectorMap = /* @__PURE__ */ new Map();
+  for (const row of positions) {
+    const key = row.sector && row.sector.length > 0 ? row.sector : "Unknown";
+    sectorMap.set(key, (sectorMap.get(key) ?? 0) + row.market_value);
+  }
+  const bySector = [...sectorMap.entries()].map(([key, value]) => ({
+    key,
+    market_value: value,
+    weight_pct: weightPct(value, equity),
+  }));
+  return {
+    account: {
+      account_id: input.account.id,
+      cash: input.account.cash,
+      reserved_cash: input.account.reserved_cash,
+      buying_power: buyingPower,
+      equity,
+      day_pnl: dayTotal,
+      currency: input.account.currency,
+    },
+    positions,
+    allocations: { by_position: byPosition, by_sector: bySector },
+    snapshots: input.snapshots ?? [],
+  };
+}
 
 // packages/schemas/src/news.ts
 var newsEventTypeSchema = external_exports.enum([
@@ -6266,6 +5947,7 @@ var getBarsToolInputSchema = external_exports.object({
   symbol: external_exports.string().trim().min(1).max(16),
   range: chartRangeSchema.default("1M"),
 });
+var searchNewsToolInputSchema = newsSearchRequestSchema;
 var getFundamentalsToolInputSchema = external_exports.object({
   symbol: external_exports.string().trim().min(1).max(16),
 });
@@ -6420,6 +6102,7 @@ var briefCronResponseSchema = external_exports.object({
   generated: external_exports.number().int().nonnegative(),
   skipped: external_exports.number().int().nonnegative(),
 });
+var BRIEFS_BUCKET = "briefs";
 var portfolioAnalysisFactsSchema = external_exports.object({
   max_position_pct: external_exports.number().finite(),
   max_sector_pct: external_exports.number().finite(),
@@ -6439,333 +6122,2223 @@ var seedEnvSchema = external_exports.object({
   INSFORGE_API_KEY: external_exports.string().min(1),
 });
 
-// packages/mock-data/src/news.ts
-function newsShocksForSymbols(items) {
-  const latest = /* @__PURE__ */ new Map();
-  for (const item of items) {
-    for (const symbol of item.symbols) {
-      const prior = latest.get(symbol);
-      if (!prior || item.ts >= prior.ts) {
-        latest.set(symbol, { ts: item.ts, sentiment: item.sentiment });
-      }
+// packages/rules-engine/src/evaluate.ts
+function evaluate(table, context, clock) {
+  const parsed = decisionTableSchema.parse(table);
+  return evaluateParsed(parsed, context, clock);
+}
+function evaluateParsed(table, context, clock) {
+  const trace = [];
+  const matched = [];
+  for (const row of table.rows) {
+    const effective = isEffective(row, clock);
+    const cells = row.conditions.map((condition) => ({
+      input: condition.input,
+      op: condition.op,
+      passed: evaluateCondition(condition, context),
+    }));
+    const conditionsPass = cells.every((cell) => cell.passed);
+    const rowMatched = effective && conditionsPass;
+    const outputs = interpolateOutputs(row.outputs, context);
+    trace.push({
+      rowId: row.id,
+      priority: row.priority,
+      effective,
+      cells,
+      matched: rowMatched,
+      outputs,
+    });
+    if (rowMatched) {
+      matched.push({ row, outputs });
     }
   }
-  return [...latest.entries()].map(([symbol, row]) => ({
-    symbol,
-    sentiment: row.sentiment,
-  }));
+  matched.sort((a, b) => a.row.priority - b.row.priority || a.row.id.localeCompare(b.row.id));
+  const matchedRows = matched.map((item) => item.row);
+  const defaultOutputs = interpolateOutputs(table.default_outputs, context);
+  const outcome = applyHitPolicy(
+    table.hit_policy,
+    matched.map((item) => item.outputs),
+    defaultOutputs,
+  );
+  return { outcome, matchedRows, trace };
+}
+function applyHitPolicy(policy, matchedOutputs, defaultOutputs) {
+  if (matchedOutputs.length === 0) {
+    return policy === "COLLECT" ? [defaultOutputs] : defaultOutputs;
+  }
+  if (policy === "FIRST") {
+    return matchedOutputs[0] ?? defaultOutputs;
+  }
+  if (policy === "ALL") {
+    return Object.assign({}, ...matchedOutputs);
+  }
+  return matchedOutputs;
+}
+function isEffective(row, clock) {
+  const clockMs = clock.getTime();
+  if (row.effective_from != null && row.effective_from !== "") {
+    if (clockMs < Date.parse(row.effective_from)) {
+      return false;
+    }
+  }
+  if (row.effective_to != null && row.effective_to !== "") {
+    if (clockMs >= Date.parse(row.effective_to)) {
+      return false;
+    }
+  }
+  return true;
+}
+function evaluateCondition(condition, context) {
+  const left = context[condition.input];
+  const passed = matchOperator(condition.op, left, condition.value);
+  return condition.negate === true ? !passed : passed;
+}
+function matchOperator(op, left, right) {
+  switch (op) {
+    case "any":
+      return true;
+    case "is_null":
+      return left === null || left === void 0;
+    case "eq":
+      return Object.is(left, right);
+    case "neq":
+      return !Object.is(left, right);
+    case "lt":
+      return relational(left, right, (ord) => ord < 0);
+    case "lte":
+      return relational(left, right, (ord) => ord <= 0);
+    case "gt":
+      return relational(left, right, (ord) => ord > 0);
+    case "gte":
+      return relational(left, right, (ord) => ord >= 0);
+    case "in":
+      return Array.isArray(right) && right.some((item) => Object.is(left, item));
+    case "not_in":
+      return Array.isArray(right) && !right.some((item) => Object.is(left, item));
+    case "between":
+      return inBetween(left, right);
+    case "regex":
+      return matchRegex(left, right);
+  }
+}
+function relational(left, right, pred) {
+  const ord = compareOrd(left, right);
+  if (ord === null) {
+    return false;
+  }
+  return pred(ord);
+}
+function compareOrd(left, right) {
+  if (typeof left === "number" && typeof right === "number") {
+    if (!Number.isFinite(left) || !Number.isFinite(right)) {
+      return null;
+    }
+    if (left === right) {
+      return 0;
+    }
+    return left < right ? -1 : 1;
+  }
+  if (typeof left === "string" && typeof right === "string") {
+    if (left === right) {
+      return 0;
+    }
+    return left < right ? -1 : 1;
+  }
+  return null;
+}
+function inBetween(left, right) {
+  if (!Array.isArray(right) || right.length !== 2) {
+    return false;
+  }
+  const lo = right[0];
+  const hi = right[1];
+  const geLo = relational(left, lo, (ord) => ord >= 0);
+  const leHi = relational(left, hi, (ord) => ord <= 0);
+  return geLo && leHi;
+}
+function matchRegex(left, right) {
+  if (typeof right !== "string") {
+    return false;
+  }
+  try {
+    return new RegExp(right).test(String(left));
+  } catch {
+    return false;
+  }
+}
+function interpolateOutputs(outputs, context) {
+  const next = {};
+  for (const [key, value] of Object.entries(outputs)) {
+    next[key] = typeof value === "string" ? interpolateMessage(value, context) : value;
+  }
+  return next;
+}
+function interpolateMessage(message, context) {
+  return message.replace(/\$\{([A-Za-z_][A-Za-z0-9_]*)\}/g, (_full, field) => {
+    const value = context[field];
+    if (value === void 0 || value === null) {
+      return "";
+    }
+    return String(value);
+  });
 }
 
-// insforge/functions/market-tick-src.ts
-function json(status, body) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
+// packages/rules-engine/src/authorize.ts
+function decisionFromOutcome(outcome) {
+  if (!outcome || typeof outcome !== "object" || !("decision" in outcome)) {
+    return "deny";
+  }
+  const decision = outcome.decision;
+  if (decision === "allow" || decision === "deny" || decision === "require_approval") {
+    return decision;
+  }
+  return "deny";
 }
-function asRows(data) {
-  return Array.isArray(data) ? data : [];
+function authorizeResultFromOutcome(outcome) {
+  const decision = decisionFromOutcome(outcome);
+  return {
+    allowed: decision === "allow",
+    decision,
+    reason: decision === "allow" ? void 0 : "FORBIDDEN",
+  };
 }
-function flagValue(row) {
-  if (typeof row.key !== "string") {
+function authorizeFromTable(input) {
+  if (!input.userId) {
+    return { allowed: false, decision: "deny", reason: "UNAUTHENTICATED" };
+  }
+  if (input.action.length === 0) {
+    return { allowed: false, decision: "deny", reason: "ACTION_REQUIRED" };
+  }
+  const role = input.role && input.role.length > 0 ? input.role : "unknown";
+  const result = evaluate(
+    input.table,
+    { role, action: input.action },
+    input.clock ?? /* @__PURE__ */ new Date(),
+  );
+  return authorizeResultFromOutcome(result.outcome);
+}
+async function authorize(input) {
+  if (!input.userId) {
+    return { allowed: false, decision: "deny", reason: "UNAUTHENTICATED" };
+  }
+  if (input.action.length === 0) {
+    return { allowed: false, decision: "deny", reason: "ACTION_REQUIRED" };
+  }
+  if (input.ports) {
+    const role = (await input.ports.loadRole(input.userId)) ?? "unknown";
+    const evaluated = await input.ports.evaluateEntitlements({ role, action: input.action });
+    return authorizeResultFromOutcome(evaluated.outcome);
+  }
+  if (input.table) {
+    return authorizeFromTable({
+      userId: input.userId,
+      action: input.action,
+      role: input.role,
+      table: input.table,
+      clock: input.clock,
+    });
+  }
+  return { allowed: false, decision: "deny", reason: "FORBIDDEN" };
+}
+
+// packages/rules-engine/src/doc05-fixtures.ts
+var dtRisk01 = {
+  id: "DT-RISK-01",
+  hit_policy: "FIRST",
+  default_outputs: { decision: "allow" },
+  rows: [
+    {
+      id: "1",
+      priority: 1,
+      conditions: [{ input: "exceeds_buying_power", op: "eq", value: true }],
+      outputs: { decision: "reject", reason_code: "RISK_BUYING_POWER" },
+    },
+    {
+      id: "2",
+      priority: 2,
+      conditions: [{ input: "order_notional", op: "gt", value: 5e4 }],
+      outputs: { decision: "reject", reason_code: "RISK_MAX_NOTIONAL" },
+    },
+    {
+      id: "3",
+      priority: 3,
+      conditions: [
+        { input: "position_pct_post", op: "gt", value: 25 },
+        { input: "experience_level", op: "eq", value: "novice" },
+      ],
+      outputs: { decision: "reject", reason_code: "RISK_CONCENTRATION_NOVICE" },
+    },
+    {
+      id: "4",
+      priority: 4,
+      conditions: [{ input: "position_pct_post", op: "gt", value: 40 }],
+      outputs: { decision: "reject", reason_code: "RISK_CONCENTRATION" },
+    },
+    {
+      id: "5",
+      priority: 5,
+      conditions: [{ input: "orders_today", op: "gte", value: 100 }],
+      outputs: { decision: "reject", reason_code: "RISK_DAILY_ORDER_CAP" },
+    },
+    {
+      id: "6",
+      priority: 6,
+      conditions: [
+        { input: "instrument_beta_class", op: "eq", value: "high" },
+        { input: "experience_level", op: "eq", value: "novice" },
+        { input: "order_notional", op: "gt", value: 5e3 },
+      ],
+      outputs: { decision: "require_ack", reason_code: "RISK_HIGH_BETA_ACK" },
+    },
+    {
+      id: "7",
+      priority: 7,
+      conditions: [
+        { input: "side", op: "eq", value: "sell" },
+        { input: "exceeds_position_qty", op: "eq", value: true },
+      ],
+      outputs: { decision: "reject", reason_code: "RISK_NO_SHORTING" },
+    },
+  ],
+};
+var dtVal01 = {
+  id: "DT-VAL-01",
+  hit_policy: "COLLECT",
+  default_outputs: { decision: "valid" },
+  rows: [
+    {
+      id: "1",
+      priority: 1,
+      conditions: [{ input: "qty", op: "lte", value: 0 }],
+      outputs: {
+        decision: "reject",
+        reason_code: "VAL_QTY_POSITIVE",
+        message: "Quantity must be positive.",
+      },
+    },
+    {
+      id: "2",
+      priority: 2,
+      conditions: [{ input: "qty", op: "gt", value: 1e4 }],
+      outputs: { decision: "reject", reason_code: "VAL_QTY_MAX" },
+    },
+    {
+      id: "3",
+      priority: 3,
+      conditions: [
+        { input: "order_type", op: "in", value: ["limit", "stop_limit"] },
+        { input: "limit_price", op: "is_null" },
+      ],
+      outputs: { decision: "reject", reason_code: "VAL_LIMIT_REQUIRED" },
+    },
+    {
+      id: "4",
+      priority: 4,
+      conditions: [
+        { input: "order_type", op: "in", value: ["stop", "stop_limit"] },
+        { input: "stop_price", op: "is_null" },
+      ],
+      outputs: { decision: "reject", reason_code: "VAL_STOP_REQUIRED" },
+    },
+    {
+      id: "5",
+      priority: 5,
+      conditions: [
+        { input: "order_type", op: "eq", value: "limit" },
+        { input: "side", op: "eq", value: "buy" },
+        { input: "limit_far_above_last", op: "eq", value: true },
+      ],
+      outputs: { decision: "warn", reason_code: "VAL_LIMIT_FAR" },
+    },
+    {
+      id: "6",
+      priority: 6,
+      conditions: [{ input: "instrument_status", op: "neq", value: "active" }],
+      outputs: { decision: "reject", reason_code: "VAL_HALTED" },
+    },
+    {
+      id: "7",
+      priority: 7,
+      conditions: [
+        { input: "tif", op: "eq", value: "IOC" },
+        { input: "order_type", op: "neq", value: "limit" },
+      ],
+      outputs: { decision: "reject", reason_code: "VAL_IOC_LIMIT_ONLY" },
+    },
+    {
+      id: "8",
+      priority: 8,
+      conditions: [{ input: "price_not_on_tick", op: "eq", value: true }],
+      outputs: { decision: "reject", reason_code: "VAL_TICK_SIZE" },
+    },
+  ],
+};
+var dtFee01 = {
+  id: "DT-FEE-01",
+  hit_policy: "ALL",
+  default_outputs: { commission_usd: 0 },
+  rows: [
+    {
+      id: "1",
+      priority: 1,
+      conditions: [{ input: "side", op: "any" }],
+      outputs: { commission_usd: 0 },
+    },
+    {
+      id: "2",
+      priority: 2,
+      conditions: [{ input: "side", op: "eq", value: "sell" }],
+      outputs: {
+        sec_fee: "notional_x_sec_rate",
+        taf: "qty_x_taf_capped",
+        sec_rate: 278e-7,
+        taf_per_share: 166e-6,
+        taf_cap: 8.3,
+      },
+    },
+    {
+      id: "3",
+      priority: 3,
+      conditions: [{ input: "account_tier", op: "eq", value: "pro" }],
+      outputs: { data_fee_monthly: 0 },
+    },
+  ],
+};
+
+// packages/rules-engine/src/baseline-tables.ts
+var dtVal02 = {
+  id: "DT-VAL-02",
+  hit_policy: "COLLECT",
+  default_outputs: { decision: "valid" },
+  rows: [
+    {
+      id: "1",
+      priority: 1,
+      conditions: [
+        { input: "group_type", op: "eq", value: "bracket" },
+        { input: "side", op: "eq", value: "buy" },
+        { input: "tp_not_above_entry", op: "eq", value: true },
+      ],
+      outputs: { decision: "reject", reason_code: "VAL_TP_ABOVE_ENTRY" },
+    },
+    {
+      id: "2",
+      priority: 2,
+      conditions: [
+        { input: "group_type", op: "eq", value: "bracket" },
+        { input: "side", op: "eq", value: "buy" },
+        { input: "sl_not_below_entry", op: "eq", value: true },
+      ],
+      outputs: { decision: "reject", reason_code: "VAL_SL_BELOW_ENTRY" },
+    },
+    {
+      id: "3",
+      priority: 3,
+      conditions: [
+        { input: "group_type", op: "eq", value: "bracket" },
+        { input: "legs_count", op: "neq", value: 3 },
+      ],
+      outputs: { decision: "reject", reason_code: "VAL_BRACKET_LEGS" },
+    },
+    {
+      id: "4",
+      priority: 4,
+      conditions: [
+        { input: "trail_type", op: "eq", value: "percent" },
+        { input: "trail_value", op: "between", value: [0.1, 50], negate: true },
+      ],
+      outputs: { decision: "reject", reason_code: "VAL_TRAIL_RANGE" },
+    },
+    {
+      id: "5",
+      priority: 5,
+      conditions: [
+        { input: "group_type", op: "eq", value: "oco" },
+        { input: "legs_count", op: "neq", value: 2 },
+      ],
+      outputs: { decision: "reject", reason_code: "VAL_OCO_LEGS" },
+    },
+  ],
+};
+var dtHrs01 = {
+  id: "DT-HRS-01",
+  hit_policy: "FIRST",
+  default_outputs: { decision: "allow" },
+  rows: [
+    {
+      id: "1",
+      priority: 1,
+      conditions: [
+        { input: "session", op: "eq", value: "closed" },
+        { input: "order_type", op: "eq", value: "market" },
+      ],
+      outputs: { decision: "reject", reason_code: "HRS_MARKET_CLOSED" },
+    },
+    {
+      id: "2",
+      priority: 2,
+      conditions: [
+        { input: "session", op: "eq", value: "closed" },
+        { input: "order_type", op: "in", value: ["limit", "stop", "stop_limit"] },
+      ],
+      outputs: { decision: "queue_for_open" },
+    },
+    {
+      id: "3",
+      priority: 3,
+      conditions: [{ input: "session", op: "eq", value: "open" }],
+      outputs: { decision: "allow" },
+    },
+  ],
+};
+var dtExec01 = {
+  id: "DT-EXEC-01",
+  hit_policy: "FIRST",
+  default_outputs: { slippage_bps: 5, liquidity_cap_pct_adv: 5 },
+  rows: [
+    {
+      id: "4a",
+      priority: 1,
+      conditions: [
+        { input: "avg_volume_band", op: "eq", value: "high" },
+        { input: "large_notional", op: "eq", value: true },
+      ],
+      outputs: { slippage_bps: 7, liquidity_cap_pct_adv: 10 },
+    },
+    {
+      id: "4b",
+      priority: 2,
+      conditions: [
+        { input: "avg_volume_band", op: "eq", value: "medium" },
+        { input: "large_notional", op: "eq", value: true },
+      ],
+      outputs: { slippage_bps: 10, liquidity_cap_pct_adv: 5 },
+    },
+    {
+      id: "4c",
+      priority: 3,
+      conditions: [
+        { input: "avg_volume_band", op: "eq", value: "low" },
+        { input: "large_notional", op: "eq", value: true },
+      ],
+      outputs: { slippage_bps: 20, liquidity_cap_pct_adv: 2 },
+    },
+    {
+      id: "1",
+      priority: 4,
+      conditions: [{ input: "avg_volume_band", op: "eq", value: "high" }],
+      outputs: { slippage_bps: 2, liquidity_cap_pct_adv: 10 },
+    },
+    {
+      id: "2",
+      priority: 5,
+      conditions: [{ input: "avg_volume_band", op: "eq", value: "medium" }],
+      outputs: { slippage_bps: 5, liquidity_cap_pct_adv: 5 },
+    },
+    {
+      id: "3",
+      priority: 6,
+      conditions: [{ input: "avg_volume_band", op: "eq", value: "low" }],
+      outputs: { slippage_bps: 15, liquidity_cap_pct_adv: 2 },
+    },
+  ],
+};
+var dtAi01 = {
+  id: "DT-AI-01",
+  hit_policy: "FIRST",
+  default_outputs: { decision: "require_approval" },
+  rows: [
+    {
+      id: "4",
+      priority: 1,
+      conditions: [
+        { input: "tool", op: "eq", value: "propose_order" },
+        { input: "order_notional", op: "gt", value: 5e4 },
+      ],
+      outputs: { decision: "block" },
+    },
+    {
+      id: "5",
+      priority: 2,
+      conditions: [{ input: "messages_today", op: "gt", value: 200 }],
+      outputs: { decision: "rate_limit", message: "Daily copilot quota reached." },
+    },
+    {
+      id: "1",
+      priority: 3,
+      conditions: [{ input: "tool", op: "eq", value: "propose_order" }],
+      outputs: { decision: "require_approval" },
+    },
+    {
+      id: "2",
+      priority: 4,
+      conditions: [
+        { input: "tool", op: "in", value: ["create_watchlist_item", "create_alert"] },
+        { input: "actions_today", op: "lt", value: 50 },
+      ],
+      outputs: { decision: "auto_approve" },
+    },
+    {
+      id: "3",
+      priority: 5,
+      conditions: [
+        { input: "tool", op: "eq", value: "create_monitor" },
+        { input: "monitors_count", op: "lt", value: 20 },
+      ],
+      outputs: { decision: "auto_approve" },
+    },
+  ],
+};
+var dtEnt01 = {
+  id: "DT-ENT-01",
+  hit_policy: "FIRST",
+  default_outputs: { decision: "deny" },
+  rows: [
+    {
+      id: "2",
+      priority: 1,
+      conditions: [{ input: "role", op: "eq", value: "admin" }],
+      outputs: { decision: "allow" },
+    },
+    {
+      id: "1",
+      priority: 2,
+      conditions: [
+        { input: "role", op: "eq", value: "trader" },
+        {
+          input: "action",
+          op: "regex",
+          value: "^(trade|watchlist|alerts|copilot|screener):|^portfolio:read$",
+        },
+      ],
+      outputs: { decision: "allow" },
+    },
+    {
+      id: "3",
+      priority: 3,
+      conditions: [
+        { input: "role", op: "eq", value: "compliance" },
+        { input: "action", op: "in", value: ["audit:read", "rules:read"] },
+      ],
+      outputs: { decision: "allow" },
+    },
+    {
+      id: "4",
+      priority: 4,
+      conditions: [
+        { input: "role", op: "eq", value: "compliance" },
+        { input: "action", op: "regex", value: "^trade:" },
+      ],
+      outputs: { decision: "deny" },
+    },
+    {
+      id: "5",
+      priority: 5,
+      conditions: [
+        { input: "role", op: "eq", value: "trader" },
+        {
+          input: "action",
+          op: "in",
+          value: [
+            "rules:evaluate",
+            "provision-account",
+            "profile-wizard",
+            "news:search",
+            "chart:bars",
+          ],
+        },
+      ],
+      outputs: { decision: "allow" },
+    },
+  ],
+};
+var dtAlrt01 = {
+  id: "DT-ALRT-01",
+  hit_policy: "FIRST",
+  default_outputs: { decision: "deliver" },
+  rows: [
+    {
+      id: "1",
+      priority: 1,
+      conditions: [{ input: "same_rule_fired_within_min", op: "lt", value: 15 }],
+      outputs: { decision: "suppress" },
+    },
+    {
+      id: "2",
+      priority: 2,
+      conditions: [{ input: "rule_fires_today", op: "gte", value: 20 }],
+      outputs: { decision: "suppress_and_pause_rule" },
+    },
+    {
+      id: "3",
+      priority: 3,
+      conditions: [{ input: "user_alerts_today", op: "gte", value: 100 }],
+      outputs: { decision: "suppress" },
+    },
+  ],
+};
+var dtRisk02 = {
+  id: "DT-RISK-02",
+  hit_policy: "COLLECT",
+  default_outputs: { flags: [] },
+  rows: [
+    {
+      id: "1",
+      priority: 1,
+      conditions: [{ input: "max_position_pct", op: "gt", value: 25 }],
+      outputs: { flag: "CONCENTRATION_POSITION" },
+    },
+    {
+      id: "2",
+      priority: 2,
+      conditions: [{ input: "max_sector_pct", op: "gt", value: 40 }],
+      outputs: { flag: "CONCENTRATION_SECTOR" },
+    },
+    {
+      id: "3",
+      priority: 3,
+      conditions: [{ input: "portfolio_beta", op: "gt", value: 1.4 }],
+      outputs: { flag: "HIGH_BETA_TILT" },
+    },
+    {
+      id: "4",
+      priority: 4,
+      conditions: [{ input: "cash_pct", op: "gt", value: 30 }],
+      outputs: { flag: "CASH_DRAG" },
+    },
+    {
+      id: "5",
+      priority: 5,
+      conditions: [
+        { input: "positions_count", op: "lt", value: 3 },
+        { input: "equity", op: "gt", value: 1e4 },
+      ],
+      outputs: { flag: "LOW_DIVERSIFICATION" },
+    },
+  ],
+};
+var dtSuit01 = {
+  id: "DT-SUIT-01",
+  hit_policy: "FIRST",
+  default_outputs: { suitability_tier: "standard" },
+  rows: [
+    {
+      id: "1",
+      priority: 1,
+      conditions: [{ input: "experience_level", op: "eq", value: "novice" }],
+      outputs: { suitability_tier: "conservative" },
+    },
+    {
+      id: "2",
+      priority: 2,
+      conditions: [{ input: "experience_level", op: "eq", value: "intermediate" }],
+      outputs: { suitability_tier: "standard" },
+    },
+    {
+      id: "3",
+      priority: 3,
+      conditions: [{ input: "experience_level", op: "eq", value: "advanced" }],
+      outputs: { suitability_tier: "full" },
+    },
+  ],
+};
+var dtSim01 = {
+  id: "DT-SIM-01",
+  hit_policy: "ALL",
+  default_outputs: { regime: "normal" },
+  rows: [
+    {
+      id: "1",
+      priority: 1,
+      conditions: [{ input: "beta_class", op: "any" }],
+      outputs: { gap_event_prob_per_day: 0.02, gap_range_pct: [1, 6] },
+    },
+    {
+      id: "2",
+      priority: 2,
+      conditions: [{ input: "beta_class", op: "eq", value: "high" }],
+      outputs: { vol_multiplier: 1.8 },
+    },
+    {
+      id: "3",
+      priority: 3,
+      conditions: [{ input: "beta_class", op: "eq", value: "low" }],
+      outputs: { vol_multiplier: 0.6 },
+    },
+    {
+      id: "4",
+      priority: 4,
+      conditions: [{ input: "news_sentiment_shock", op: "eq", value: true }],
+      outputs: { drift_nudge_bps_per_sentiment: 30 },
+    },
+  ],
+};
+var TABLES = {
+  "DT-VAL-01": dtVal01,
+  "DT-VAL-02": dtVal02,
+  "DT-RISK-01": dtRisk01,
+  "DT-HRS-01": dtHrs01,
+  "DT-EXEC-01": dtExec01,
+  "DT-FEE-01": dtFee01,
+  "DT-AI-01": dtAi01,
+  "DT-ENT-01": dtEnt01,
+  "DT-ALRT-01": dtAlrt01,
+  "DT-RISK-02": dtRisk02,
+  "DT-SUIT-01": dtSuit01,
+  "DT-SIM-01": dtSim01,
+};
+function baselineTable(key) {
+  const table = TABLES[key];
+  if (!table) {
+    throw new Error(`UNKNOWN_BASELINE_TABLE:${key}`);
+  }
+  return table;
+}
+
+// packages/rules-engine/src/evaluate-domain.ts
+function assembleDecisionTable(input) {
+  return {
+    id: input.tableKey,
+    hit_policy: input.hit_policy,
+    default_outputs: input.default_outputs,
+    rows: input.rows.map((row) => ({
+      id: row.row_key,
+      priority: row.priority,
+      conditions: row.conditions,
+      outputs: row.outputs,
+      effective_from: row.effective_from ?? null,
+      effective_to: row.effective_to ?? null,
+    })),
+  };
+}
+function resolveRulesServiceApiKey(env) {
+  const key = env.API_KEY ?? env.INSFORGE_API_KEY;
+  if (typeof key !== "string" || key.length === 0) {
     return null;
   }
-  return { key: row.key, value: row.value };
+  return key;
 }
-async function market_tick_src_default(req) {
-  if (req.method !== "POST") {
-    return json(405, { error: "METHOD_NOT_ALLOWED" });
-  }
-  const expected = Deno.env.get("API_KEY") ?? Deno.env.get("INSFORGE_API_KEY");
-  const authHeader = req.headers.get("Authorization");
-  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
-  if (!expected || token !== expected) {
-    return json(401, { error: "UNAUTHENTICATED" });
-  }
-  const intervalRaw = Deno.env.get("MARKET_TICK_INTERVAL_SECONDS");
-  const intervalSeconds = intervalRaw === void 0 ? 1 : Number(intervalRaw);
-  if (!Number.isFinite(intervalSeconds) || intervalSeconds <= 0) {
-    return json(500, { error: "INTERVAL_INVALID" });
-  }
-  const admin = createAdminClient({
-    baseUrl: Deno.env.get("INSFORGE_INTERNAL_URL") ?? Deno.env.get("INSFORGE_BASE_URL"),
-    apiKey: expected,
-  });
-  const { data: flagData, error: flagErr } = await admin.database
-    .from("feature_flags")
-    .select("id,key,value")
-    .is("user_id", null);
-  if (flagErr) {
-    return json(500, { error: flagErr.message });
-  }
-  const flags = parseFeedControls(
-    asRows(flagData)
-      .map(flagValue)
-      .filter((row) => row !== null),
-  );
-  const { data: calData, error: calErr } = await admin.database
-    .from("market_calendar")
-    .select("session_date,venue,session_kind,open_minute,close_minute")
-    .eq("venue", "NYSE");
-  if (calErr) {
-    return json(500, { error: calErr.message });
-  }
-  const calendar = asRows(calData).map((row) => ({
-    session_date: String(row.session_date).slice(0, 10),
-    venue: "NYSE",
-    session_kind: row.session_kind,
-    open_minute: Number(row.open_minute),
-    close_minute: Number(row.close_minute),
-  }));
-  const { data: instData, error: instErr } = await admin.database
-    .from("instruments")
-    .select("id,symbol,tick_size,beta_class,avg_volume")
-    .eq("status", "active");
-  if (instErr) {
-    return json(500, { error: instErr.message });
-  }
-  const instruments = asRows(instData)
-    .filter(
-      (row) => row.beta_class === "low" || row.beta_class === "medium" || row.beta_class === "high",
-    )
-    .map((row) => ({
-      id: row.id,
-      symbol: row.symbol,
-      tick_size: Number(row.tick_size),
-      beta_class: row.beta_class,
-      avg_volume: Number(row.avg_volume ?? 1),
-    }));
-  const { data: quoteData, error: quoteErr } = await admin.database
-    .from("quotes_latest")
-    .select("*");
-  if (quoteErr) {
-    return json(500, { error: quoteErr.message });
-  }
-  const quotes = asRows(quoteData).map((row) => ({
-    instrument_id: row.instrument_id,
-    bid: Number(row.bid),
-    ask: Number(row.ask),
-    last: Number(row.last),
-    prev_close: Number(row.prev_close),
-    volume: Number(row.volume),
-    ts: row.ts,
-  }));
-  const minuteBars = [];
-  const buckets = [...new Set(quotes.map((q) => minuteBucketTs(q.ts)))];
-  if (buckets.length > 0) {
-    const { data: barData, error: barErr } = await admin.database
-      .from("market_bars")
-      .select("instrument_id,timeframe,ts,o,h,l,c,v")
-      .eq("timeframe", "1m")
-      .in("ts", buckets);
-    if (barErr) {
-      return json(500, { error: barErr.message });
+
+// packages/rules-engine/src/monitor-cycle.ts
+var CADENCE_MS = {
+  "5m": 5 * 6e4,
+  "15m": 15 * 6e4,
+  "1h": 60 * 6e4,
+  "1d": 24 * 60 * 6e4,
+};
+
+// packages/copilot/src/tools.ts
+var READ_TOOL_LABELS = {
+  get_quote: "Looking up quote\u2026",
+  get_bars: "Loading bars\u2026",
+  search_news: "Searching news\u2026",
+  get_fundamentals: "Loading fundamentals\u2026",
+  screen_instruments: "Screening instruments\u2026",
+  get_portfolio: "Loading portfolio\u2026",
+  explain_rule_decision: "Explaining rule decision\u2026",
+};
+var WRITE_TOOL_LABELS = {
+  create_watchlist_item: "Adding to watchlist\u2026",
+  create_alert: "Creating alert\u2026",
+  propose_order: "Proposing order\u2026",
+  create_monitor: "Creating monitor\u2026",
+};
+var READ_TOOLS = [
+  {
+    name: "get_quote",
+    description: "Latest bid/ask/last/volume for a US equity or ETF symbol.",
+    label: READ_TOOL_LABELS.get_quote,
+    inputSchema: getQuoteToolInputSchema,
+    jsonSchema: {
+      type: "object",
+      properties: { symbol: { type: "string" } },
+      required: ["symbol"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "get_bars",
+    description: "OHLCV bars for a symbol (1D minute, otherwise daily).",
+    label: READ_TOOL_LABELS.get_bars,
+    inputSchema: getBarsToolInputSchema,
+    jsonSchema: {
+      type: "object",
+      properties: {
+        symbol: { type: "string" },
+        range: { type: "string", enum: ["1D", "1W", "1M", "1Y", "5Y"] },
+      },
+      required: ["symbol"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "search_news",
+    description: "Semantic news search. Returns items with ids to cite as [news:<id>].",
+    label: READ_TOOL_LABELS.search_news,
+    inputSchema: searchNewsToolInputSchema,
+    jsonSchema: {
+      type: "object",
+      properties: {
+        query: { type: "string" },
+        symbols: { type: "array", items: { type: "string" } },
+        since: { type: "string" },
+        limit: { type: "integer" },
+      },
+      required: ["query"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "get_fundamentals",
+    description: "DES fundamentals: valuation, income, margins, analyst mix.",
+    label: READ_TOOL_LABELS.get_fundamentals,
+    inputSchema: getFundamentalsToolInputSchema,
+    jsonSchema: {
+      type: "object",
+      properties: { symbol: { type: "string" } },
+      required: ["symbol"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "screen_instruments",
+    description: "Run the instrument screener. Prefer sector plus optional full criteria.",
+    label: READ_TOOL_LABELS.screen_instruments,
+    inputSchema: screenInstrumentsToolInputSchema,
+    jsonSchema: {
+      type: "object",
+      properties: {
+        sector: { type: "string" },
+        criteria: { type: "object" },
+        sort: { type: "object" },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "get_portfolio",
+    description: "Paper portfolio: cash, equity, positions, P&L. Never invent these figures.",
+    label: READ_TOOL_LABELS.get_portfolio,
+    inputSchema: getPortfolioToolInputSchema,
+    jsonSchema: {
+      type: "object",
+      properties: { range: { type: "string", enum: ["1M", "3M", "1Y"] } },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "explain_rule_decision",
+    description: "Explain a rule_audit row (matched decision-table rows and outcome).",
+    label: READ_TOOL_LABELS.explain_rule_decision,
+    inputSchema: explainRuleDecisionToolInputSchema,
+    jsonSchema: {
+      type: "object",
+      properties: { audit_id: { type: "string" } },
+      required: ["audit_id"],
+      additionalProperties: false,
+    },
+  },
+];
+var WRITE_TOOLS = [
+  {
+    name: "create_watchlist_item",
+    description: "Add a symbol to the user's watchlist. May auto-execute per AI action policy.",
+    label: WRITE_TOOL_LABELS.create_watchlist_item,
+    inputSchema: createWatchlistItemToolInputSchema,
+    jsonSchema: {
+      type: "object",
+      properties: {
+        symbol: { type: "string" },
+        watchlist_id: { type: "string" },
+      },
+      required: ["symbol"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "create_alert",
+    description: "Create a price or news alert. May auto-execute per AI action policy.",
+    label: WRITE_TOOL_LABELS.create_alert,
+    inputSchema: createAlertToolInputSchema,
+    jsonSchema: {
+      type: "object",
+      properties: {
+        symbol: { type: "string" },
+        kind: {
+          type: "string",
+          enum: [
+            "price_cross_above",
+            "price_cross_below",
+            "pct_chg",
+            "volume",
+            "rsi",
+            "news_sentiment",
+          ],
+        },
+        threshold: { type: "number" },
+        name: { type: "string" },
+      },
+      required: ["symbol", "kind"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "propose_order",
+    description:
+      "Propose a paper order. Orders always require explicit user approval before order-service.",
+    label: WRITE_TOOL_LABELS.propose_order,
+    inputSchema: proposeOrderToolInputSchema,
+    jsonSchema: {
+      type: "object",
+      properties: {
+        symbol: { type: "string" },
+        side: { type: "string", enum: ["buy", "sell"] },
+        qty: { type: "number" },
+        order_type: { type: "string", enum: ["market", "limit", "stop", "stop_limit"] },
+        limit_price: { type: "number" },
+        stop_price: { type: "number" },
+        tif: { type: "string", enum: ["DAY", "GTC", "IOC"] },
+        last_price: { type: "number" },
+      },
+      required: ["symbol", "side", "qty"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "create_monitor",
+    description:
+      "Create a standing monitor from a natural-language instruction. Compiles to a rules-engine condition.",
+    label: WRITE_TOOL_LABELS.create_monitor,
+    inputSchema: createMonitorToolInputSchema,
+    jsonSchema: {
+      type: "object",
+      properties: {
+        name: { type: "string" },
+        nl_instruction: { type: "string" },
+        symbols: { type: "array", items: { type: "string" } },
+      },
+      required: ["nl_instruction"],
+      additionalProperties: false,
+    },
+  },
+];
+
+// packages/copilot/src/citations.ts
+var NEWS_RE = /\[news:([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\]/gi;
+var DES_RE = /\[des:([A-Z][A-Z0-9.]{0,9})\]/g;
+function extractCitations(text, newsMeta) {
+  const out = [];
+  const seen = /* @__PURE__ */ new Set();
+  for (const match of text.matchAll(NEWS_RE)) {
+    const id = match[1];
+    if (!id || seen.has(`news:${id}`)) {
+      continue;
     }
-    for (const row of asRows(barData)) {
-      minuteBars.push({
-        instrument_id: row.instrument_id,
-        timeframe: "1m",
-        ts: row.ts,
-        o: Number(row.o),
-        h: Number(row.h),
-        l: Number(row.l),
-        c: Number(row.c),
-        v: Number(row.v),
+    seen.add(`news:${id}`);
+    const meta = newsMeta.get(id);
+    out.push(
+      copilotCitationSchema.parse({
+        kind: "news",
+        id,
+        label: "news",
+        headline: meta?.headline,
+        symbol: meta?.symbol,
+      }),
+    );
+  }
+  for (const match of text.matchAll(DES_RE)) {
+    const symbol = match[1];
+    if (!symbol || seen.has(`des:${symbol}`)) {
+      continue;
+    }
+    seen.add(`des:${symbol}`);
+    out.push(
+      copilotCitationSchema.parse({
+        kind: "des",
+        id: symbol,
+        label: symbol,
+        symbol,
+      }),
+    );
+  }
+  return out;
+}
+function newsMetaFromToolResults(results) {
+  const map = /* @__PURE__ */ new Map();
+  for (const result of results) {
+    const items = collectNewsItems(result);
+    for (const item of items) {
+      map.set(item.id, { headline: item.headline, symbol: item.symbols?.[0] });
+    }
+  }
+  return map;
+}
+function collectNewsItems(value) {
+  if (!value || typeof value !== "object") {
+    return [];
+  }
+  const record = value;
+  const bag = Array.isArray(record.items) ? record.items : Array.isArray(value) ? value : [];
+  const out = [];
+  for (const row of bag) {
+    if (!row || typeof row !== "object") {
+      continue;
+    }
+    const item = row;
+    if (typeof item.id === "string") {
+      out.push({
+        id: item.id,
+        headline: typeof item.headline === "string" ? item.headline : void 0,
+        symbols: Array.isArray(item.symbols)
+          ? item.symbols.filter((s) => typeof s === "string")
+          : void 0,
       });
     }
   }
-  const nowIso = /* @__PURE__ */ new Date().toISOString();
-  const newsSince = new Date(Date.parse(nowIso) - 12e4).toISOString();
-  let newsShocks = [];
-  const { data: newsData, error: newsErr } = await admin.database
-    .from("news_items")
-    .select("ts,symbols,sentiment")
-    .gte("ts", newsSince);
-  if (newsErr && !/news_items/i.test(newsErr.message)) {
-    return json(500, { error: newsErr.message });
-  }
-  if (!newsErr) {
-    newsShocks = newsShocksForSymbols(
-      asRows(newsData).map((row) => ({
-        ts: row.ts,
-        symbols: Array.isArray(row.symbols) ? row.symbols : [],
-        sentiment: Number(row.sentiment),
-      })),
-    );
-  }
-  const result = runFeedInvocation({
-    nowIso,
-    intervalSeconds,
-    calendar,
-    flags,
-    instruments,
-    quotes,
-    minuteBars,
-    newsShocks,
+  return out;
+}
+
+// packages/copilot/src/monitor-golden.ts
+function fire(input, op, value) {
+  return {
+    id: "monitor",
+    priority: 1,
+    conditions: [{ input, op, value }],
+    outputs: { decision: "fire" },
+  };
+}
+var MONITOR_GOLDEN_EXPECTED = [
+  {
+    nl: "tell me if any position drops 5% in a day",
+    expected: {
+      name: "Position day drop 5%",
+      cadence: "5m",
+      scope: { kind: "portfolio" },
+      compiled_condition: fire("position_day_pct", "lte", -5),
+      propose_action: null,
+    },
+  },
+  {
+    nl: "watch semis for negative news",
+    expected: {
+      name: "semiconductors negative news",
+      cadence: "5m",
+      scope: { kind: "sector", sector: "semiconductors" },
+      compiled_condition: fire("news_sentiment", "lt", 0),
+      propose_action: null,
+    },
+  },
+  {
+    nl: "alert if AAPL drops 3% today",
+    expected: {
+      name: "AAPL drop 3%",
+      cadence: "5m",
+      scope: { kind: "symbols", symbols: ["AAPL"] },
+      compiled_condition: fire("pct_chg", "lte", -3),
+      propose_action: null,
+    },
+  },
+  {
+    nl: "watch NVDA if last rises above 150",
+    expected: {
+      name: "NVDA last above 150",
+      cadence: "5m",
+      scope: { kind: "symbols", symbols: ["NVDA"] },
+      compiled_condition: fire("last", "gte", 150),
+      propose_action: null,
+    },
+  },
+  {
+    nl: "tell me if my portfolio is down 2% on the day",
+    expected: {
+      name: "Portfolio day drop 2%",
+      cadence: "5m",
+      scope: { kind: "portfolio" },
+      compiled_condition: fire("portfolio_day_pct", "lte", -2),
+      propose_action: null,
+    },
+  },
+  {
+    nl: "watch MSFT volume above 1000000",
+    expected: {
+      name: "MSFT volume",
+      cadence: "5m",
+      scope: { kind: "symbols", symbols: ["MSFT"] },
+      compiled_condition: fire("volume", "gt", 1e6),
+      propose_action: null,
+    },
+  },
+  {
+    nl: "if TSLA RSI goes below 30",
+    expected: {
+      name: "TSLA RSI",
+      cadence: "5m",
+      scope: { kind: "symbols", symbols: ["TSLA"] },
+      compiled_condition: fire("rsi_14", "lt", 30),
+      propose_action: null,
+    },
+  },
+  {
+    nl: "watch energy sector for drops of 4%",
+    expected: {
+      name: "energy drop 4%",
+      cadence: "5m",
+      scope: { kind: "sector", sector: "energy" },
+      compiled_condition: fire("pct_chg", "lte", -4),
+      propose_action: null,
+    },
+  },
+  {
+    nl: "notify me when SPY is up 1% today",
+    expected: {
+      name: "SPY up 1%",
+      cadence: "5m",
+      scope: { kind: "symbols", symbols: ["SPY"] },
+      compiled_condition: fire("pct_chg", "gte", 1),
+      propose_action: null,
+    },
+  },
+  {
+    nl: "watch my positions for negative news",
+    expected: {
+      name: "Positions negative news",
+      cadence: "5m",
+      scope: { kind: "portfolio" },
+      compiled_condition: fire("news_sentiment", "lt", 0),
+      propose_action: null,
+    },
+  },
+];
+
+// packages/copilot/src/grounding.ts
+var FIGURE_RE = /\$?\d+(?:,\d{3})*(?:\.\d+)?%?/g;
+function extractFigures(text) {
+  const found = text.match(FIGURE_RE) ?? [];
+  return found.filter((token) => {
+    const digits = token.replace(/[^\d]/g, "");
+    if (digits.length === 4 && digits.startsWith("20")) {
+      return false;
+    }
+    return digits.length > 0;
   });
-  if (result.quotes.length > 0) {
-    const { error } = await admin.database.from("quotes_latest").upsert(
-      result.quotes.map((q) => ({
-        instrument_id: q.instrument_id,
-        bid: q.bid,
-        ask: q.ask,
-        last: q.last,
-        prev_close: q.prev_close,
-        volume: q.volume,
-        ts: q.ts,
-      })),
-      { onConflict: "instrument_id" },
+}
+function ungroundedFigures(text, toolPayloads) {
+  const haystack = toolPayloads
+    .map((row) => JSON.stringify(row))
+    .join(" ")
+    .toLowerCase();
+  return extractFigures(text).filter((figure) => {
+    const normalized = figure.replace(/[$,%]/g, "").toLowerCase();
+    return !haystack.includes(normalized);
+  });
+}
+function assertGroundedOrThrow(text, toolPayloads) {
+  const bad = ungroundedFigures(text, toolPayloads);
+  if (bad.length > 0) {
+    throw new Error(`UNTOOLED_FIGURES:${bad.join(",")}`);
+  }
+}
+
+// packages/copilot/src/brief-facts.ts
+function betaClassToAnalysisBeta(cls) {
+  if (cls === "high") {
+    return 1.5;
+  }
+  if (cls === "low") {
+    return 0.7;
+  }
+  return 1;
+}
+function round2(n) {
+  return Math.round(n * 100) / 100;
+}
+function portfolioAnalysisFactsFromBook(input) {
+  const { portfolio } = input;
+  const equity = portfolio.account.equity;
+  const maxPos = portfolio.allocations.by_position.reduce(
+    (max, row) => Math.max(max, row.weight_pct),
+    0,
+  );
+  const maxSector = portfolio.allocations.by_sector.reduce(
+    (max, row) => Math.max(max, row.weight_pct),
+    0,
+  );
+  let beta = 0;
+  if (equity > 0 && portfolio.positions.length > 0) {
+    let weighted = 0;
+    for (const row of portfolio.positions) {
+      const explicit = input.betaBySymbol?.[row.symbol];
+      const fromClass = betaClassToAnalysisBeta(input.betaClassBySymbol?.[row.symbol]);
+      const b = typeof explicit === "number" ? explicit : fromClass;
+      weighted += (row.market_value / equity) * b;
+    }
+    beta = weighted;
+  }
+  const cashPct = equity === 0 ? 0 : (portfolio.account.cash / equity) * 100;
+  return portfolioAnalysisFactsSchema.parse({
+    max_position_pct: round2(maxPos),
+    max_sector_pct: round2(maxSector),
+    portfolio_beta: round2(beta),
+    cash_pct: round2(cashPct),
+    positions_count: portfolio.positions.length,
+    equity: round2(equity),
+  });
+}
+function flagsFromCollectOutcome(outcome) {
+  const rows = Array.isArray(outcome) ? outcome : [outcome];
+  const flags = [];
+  for (const row of rows) {
+    if (!row || typeof row !== "object") {
+      continue;
+    }
+    const flag = row.flag;
+    if (typeof flag === "string" && flag.length > 0) {
+      flags.push(flag);
+    }
+  }
+  return flags;
+}
+
+// packages/copilot/src/briefs.ts
+function buildBriefPrompt(pack) {
+  const rules = [
+    "You are Meridian Copilot writing a research brief.",
+    "Never invent prices, P&L, percents, or other figures. Copy numbers from the JSON exactly.",
+    "Cite news as [news:uuid] and instruments as [des:SYMBOL].",
+    "Not financial advice. Terse markdown.",
+  ];
+  if (pack.kind === "portfolio") {
+    rules.push(
+      "Portfolio Health: the FACTS and FLAGS JSON is the source of truth from DT-RISK-02.",
+      "Narrate flags; every numeric claim must equal a fact value.",
     );
-    if (error) {
-      return json(500, { error: error.message });
+  }
+  return `${rules.join("\n")}
+
+JSON:
+${JSON.stringify(pack)}`;
+}
+function renderHealthMarkdown(pack) {
+  const { facts, flags, audit_id } = pack;
+  const flagLines =
+    flags.length === 0
+      ? "- No analysis flags from DT-RISK-02."
+      : flags.map((flag) => `- ${flag}`).join("\n");
+  return [
+    "# Portfolio Health",
+    "",
+    `Equity ${facts.equity}. Cash ${facts.cash_pct}%. Positions ${facts.positions_count}.`,
+    `Max position ${facts.max_position_pct}%. Max sector ${facts.max_sector_pct}%. Portfolio beta ${facts.portfolio_beta}.`,
+    "",
+    "## Flags (DT-RISK-02)",
+    flagLines,
+    "",
+    `Rule audit ${audit_id}. Numbers are the analysis facts, not estimates.`,
+  ].join("\n");
+}
+function renderMorningMarkdown(pack) {
+  const cites = pack.news
+    .slice(0, 3)
+    .map((item) => `[news:${item.id}]`)
+    .join(" ");
+  const symbols = pack.news.flatMap((item) => item.symbols ?? []).slice(0, 3);
+  const des = symbols.map((s) => `[des:${s}]`).join(" ");
+  return [
+    "# Morning Brief",
+    "",
+    `Session ${pack.session} as of ${pack.as_of}.`,
+    pack.news.length > 0 ? `Headlines ${cites} ${des}`.trim() : "No cited news in the digest.",
+    "Figures below come from the portfolio and watchlist JSON only.",
+  ].join("\n");
+}
+function renderInstrumentMarkdown(pack) {
+  const cites = pack.news
+    .slice(0, 3)
+    .map((item) => `[news:${item.id}]`)
+    .join(" ");
+  return [
+    `# Instrument Brief ${pack.symbol}`,
+    "",
+    `Thesis-style summary for [des:${pack.symbol}].`,
+    cites.length > 0 ? `Cited news ${cites}.` : "No news citations.",
+    "Fundamentals numbers must come from the JSON pack.",
+  ].join("\n");
+}
+function citationsForPack(pack, markdown) {
+  const news = pack.kind === "portfolio" ? [] : pack.news;
+  return extractCitations(markdown, newsMetaFromToolResults([{ items: news }])).map((row) =>
+    copilotCitationSchema.parse(row),
+  );
+}
+function assertHealthFiguresMatchAudit(markdown, pack) {
+  assertGroundedOrThrow(markdown, [
+    pack.facts,
+    pack.outcome,
+    { flags: pack.flags, audit_id: pack.audit_id },
+  ]);
+  const fromRules = flagsFromCollectOutcome(pack.outcome);
+  if (JSON.stringify([...fromRules].sort()) !== JSON.stringify([...pack.flags].sort())) {
+    throw new Error("HEALTH_FLAG_NOT_IN_OUTCOME");
+  }
+  for (const flag of fromRules) {
+    if (!markdown.includes(flag)) {
+      throw new Error(`HEALTH_FLAG_MISSING:${flag}`);
     }
   }
-  if (result.barsToUpsert.length > 0) {
-    const { error } = await admin.database.from("market_bars").upsert(
-      result.barsToUpsert.map((b) => ({
-        instrument_id: b.instrument_id,
-        timeframe: "1m",
-        ts: b.ts,
-        o: b.o,
-        h: b.h,
-        l: b.l,
-        c: b.c,
-        v: b.v,
-      })),
-      { onConflict: "instrument_id,timeframe,ts" },
-    );
-    if (error) {
-      return json(500, { error: error.message });
-    }
-  }
-  const symbolById = new Map(instruments.map((i) => [i.id, i.symbol]));
-  for (const snapshot of result.publishes) {
-    const payload = {
-      ts: snapshot[0]?.ts ?? nowIso,
-      ticks: snapshot.map((q) => ({
-        ...q,
-        symbol: symbolById.get(q.instrument_id),
-      })),
-    };
-    const { error } = await admin.database.rpc("publish_quotes_batch", { payload });
-    if (error) {
-      return json(500, { error: error.message });
-    }
-  }
-  if (result.consumeForcePrice) {
-    await admin.database
-      .from("feature_flags")
-      .delete()
-      .eq("key", "feed.force_price")
-      .is("user_id", null);
-  }
-  const matchTicks = result.publishes.flat().map((q) => ({
-    ...q,
-    symbol: symbolById.get(q.instrument_id),
-  }));
-  let matching = { ok: true };
-  if (matchTicks.length > 0) {
-    try {
-      const matchRes = await fetch(
-        `${(Deno.env.get("INSFORGE_INTERNAL_URL") ?? Deno.env.get("INSFORGE_BASE_URL") ?? "").replace(/\/+$/, "")}/functions/matching-runner`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${expected}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ ticks: matchTicks }),
-        },
-      );
-      const matchBody = await matchRes.json();
-      if (!matchRes.ok) {
-        matching = { ok: false, error: `MATCHING_${matchRes.status}` };
-      } else if (matchBody && typeof matchBody === "object" && "fills" in matchBody) {
-        matching = { ok: true, fills: Number(matchBody.fills) };
+}
+function fakeBriefLlm() {
+  return {
+    async complete(messages) {
+      const pack = packFromMessages(messages);
+      if (!pack) {
+        return { content: "Unable to write brief without JSON pack." };
       }
-    } catch (error) {
-      matching = {
-        ok: false,
-        error: error instanceof Error ? error.message : "MATCHING_UNAVAILABLE",
+      if (pack.kind === "portfolio") {
+        return { content: renderHealthMarkdown(pack) };
+      }
+      if (pack.kind === "morning") {
+        return { content: renderMorningMarkdown(pack) };
+      }
+      return { content: renderInstrumentMarkdown(pack) };
+    },
+  };
+}
+async function generateBriefMarkdown(input) {
+  const prompt = buildBriefPrompt(input.pack);
+  const turn = await input.llm.complete([{ role: "user", content: prompt }]);
+  let content = turn.content ?? "";
+  if (input.pack.kind === "portfolio") {
+    try {
+      assertHealthFiguresMatchAudit(content, input.pack);
+    } catch {
+      content = renderHealthMarkdown(input.pack);
+      assertHealthFiguresMatchAudit(content, input.pack);
+    }
+  } else {
+    const payloads =
+      input.pack.kind === "morning"
+        ? [input.pack.portfolio, input.pack.watchlist_movers, input.pack.news, input.pack.alerts]
+        : [input.pack.fundamentals, input.pack.news, { symbol: input.pack.symbol }];
+    try {
+      assertGroundedOrThrow(content, payloads);
+    } catch {
+      content =
+        input.pack.kind === "morning"
+          ? renderMorningMarkdown(input.pack)
+          : renderInstrumentMarkdown(input.pack);
+    }
+  }
+  return { content_md: content, citations: citationsForPack(input.pack, content) };
+}
+function packFromMessages(messages) {
+  const text = [...messages].reverse().find((row) => row.role === "user")?.content ?? "";
+  const idx = text.indexOf("JSON:");
+  if (idx < 0) {
+    return null;
+  }
+  try {
+    return JSON.parse(text.slice(idx + 5).trim());
+  } catch {
+    return null;
+  }
+}
+
+// packages/copilot/src/brief-pdf.ts
+function renderBriefPdf(title, markdown) {
+  const lines = [`${title}`, "", ...wrapText(stripMarkdown(markdown), 86)];
+  const content = buildPageStream(lines.slice(0, 48));
+  const objects = [
+    "1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj\n",
+    "2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj\n",
+    "3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >> endobj\n",
+    `4 0 obj << /Length ${content.length} >> stream
+${content}endstream
+endobj
+`,
+    "5 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Courier >> endobj\n",
+  ];
+  let body = "%PDF-1.4\n";
+  const offsets = [0];
+  for (const obj of objects) {
+    offsets.push(body.length);
+    body += obj;
+  }
+  const xrefAt = body.length;
+  let xref = `xref
+0 ${objects.length + 1}
+0000000000 65535 f 
+`;
+  for (let i = 1; i <= objects.length; i += 1) {
+    xref += `${String(offsets[i]).padStart(10, "0")} 00000 n 
+`;
+  }
+  body += xref;
+  body += `trailer << /Size ${objects.length + 1} /Root 1 0 R >>
+startxref
+${xrefAt}
+%%EOF
+`;
+  return new TextEncoder().encode(body);
+}
+function stripMarkdown(text) {
+  return text
+    .replace(/\[news:[0-9a-f-]{36}\]/gi, "[news]")
+    .replace(/\[des:([A-Z0-9.]+)\]/g, "$1")
+    .replace(/[#*_`]/g, "")
+    .replace(/\r\n/g, "\n");
+}
+function wrapText(text, width) {
+  const out = [];
+  for (const raw of text.split("\n")) {
+    if (raw.length === 0) {
+      out.push("");
+      continue;
+    }
+    let rest = raw;
+    while (rest.length > width) {
+      const slice = rest.slice(0, width);
+      const breakAt = slice.lastIndexOf(" ");
+      const take = breakAt > 40 ? breakAt : width;
+      out.push(rest.slice(0, take));
+      rest = rest.slice(take).trimStart();
+    }
+    out.push(rest);
+  }
+  return out;
+}
+function pdfEscape(text) {
+  return text.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
+}
+function buildPageStream(lines) {
+  const cmds = ["BT", "/F1 10 Tf", "50 760 Td", "12 TL"];
+  for (const line of lines) {
+    cmds.push(`(${pdfEscape(line)}) Tj`, "T*");
+  }
+  cmds.push("ET", "");
+  return cmds.join("\n");
+}
+
+// packages/copilot/src/gateway.ts
+var DEFAULT_OPENROUTER_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions";
+var DEFAULT_OPENROUTER_CHAT_MODEL = "openai/gpt-4.1-mini";
+var completionSchema = external_exports.object({
+  choices: external_exports
+    .array(
+      external_exports.object({
+        message: external_exports
+          .object({
+            content: external_exports.string().nullable().optional(),
+            tool_calls: external_exports
+              .array(
+                external_exports.object({
+                  id: external_exports.string(),
+                  function: external_exports.object({
+                    name: external_exports.string(),
+                    arguments: external_exports.string(),
+                  }),
+                }),
+              )
+              .optional(),
+          })
+          .optional(),
+      }),
+    )
+    .min(1),
+});
+function toOpenAiMessages(messages) {
+  return messages.map((row) => {
+    if (row.role === "tool") {
+      return {
+        role: "tool",
+        content: row.content,
+        tool_call_id: row.tool_call_id,
+        name: row.name,
       };
     }
-  }
-  let alerting = { ok: true };
-  if (matchTicks.length > 0) {
-    try {
-      const alertRes = await fetch(
-        `${(Deno.env.get("INSFORGE_INTERNAL_URL") ?? Deno.env.get("INSFORGE_BASE_URL") ?? "").replace(/\/+$/, "")}/functions/alert-runner`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${expected}`,
-            "Content-Type": "application/json",
+    if (row.role === "assistant" && row.tool_calls && row.tool_calls.length > 0) {
+      return {
+        role: "assistant",
+        content: row.content || null,
+        tool_calls: row.tool_calls.map((call) => ({
+          id: call.id,
+          type: "function",
+          function: {
+            name: call.name,
+            arguments: JSON.stringify(call.arguments ?? {}),
           },
-          body: JSON.stringify({ ticks: matchTicks }),
-        },
-      );
-      const alertBody = await alertRes.json();
-      if (!alertRes.ok) {
-        alerting = { ok: false, error: `ALERT_RUNNER_${alertRes.status}` };
-      } else if (alertBody && typeof alertBody === "object" && "fired" in alertBody) {
-        alerting = { ok: true, fired: Number(alertBody.fired) };
-      }
-    } catch (error) {
-      alerting = {
-        ok: false,
-        error: error instanceof Error ? error.message : "ALERT_RUNNER_UNAVAILABLE",
+        })),
       };
     }
-    try {
-      await fetch(
-        `${(Deno.env.get("INSFORGE_INTERNAL_URL") ?? Deno.env.get("INSFORGE_BASE_URL") ?? "").replace(/\/+$/, "")}/functions/monitor-runner`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${expected}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({}),
+    return { role: row.role, content: row.content };
+  });
+}
+function openRouterBriefLlm(input) {
+  const fetchImpl = input.fetchImpl ?? fetch;
+  return {
+    async complete(messages) {
+      const response = await fetchImpl(input.url ?? DEFAULT_OPENROUTER_CHAT_URL, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${input.apiKey}`,
+          "Content-Type": "application/json",
         },
-      );
-    } catch {}
-    try {
-      await fetch(
-        `${(Deno.env.get("INSFORGE_INTERNAL_URL") ?? Deno.env.get("INSFORGE_BASE_URL") ?? "").replace(/\/+$/, "")}/functions/brief-service`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${expected}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ op: "cron" }),
-        },
-      );
-    } catch {}
+        body: JSON.stringify({
+          model: input.model ?? DEFAULT_OPENROUTER_CHAT_MODEL,
+          messages: toOpenAiMessages(messages),
+        }),
+      });
+      const raw = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(`GATEWAY_${response.status}`);
+      }
+      const parsed = completionSchema.parse(raw);
+      return { content: parsed.choices[0]?.message?.content ?? "" };
+    },
+  };
+}
+
+// insforge/functions/_shared/entitlements.ts
+function asRows(data) {
+  return Array.isArray(data) ? data : [];
+}
+async function loadUserRole(db, userId) {
+  const { data, error } = await db.from("user_roles").select("role").eq("user_id", userId);
+  if (error) {
+    throw new Error(error.message);
   }
-  await admin.database.from("audit_log").insert([
-    {
-      action: "market-tick",
-      entity_type: "quotes_latest",
-      payload: {
-        session: result.session,
-        ticksApplied: result.ticksApplied,
-        published: result.publishes.length,
-        paused: flags.paused,
-        consumeForcePrice: result.consumeForcePrice,
-        matching,
-        alerting,
+  const row = asRows(data)[0];
+  return row?.role ?? null;
+}
+async function loadPublishedEntitlementsTable(db) {
+  const { data: bindings, error: bindErr } = await db
+    .from("rule_bindings")
+    .select("domain,table_id")
+    .eq("domain", "entitlements");
+  if (bindErr) {
+    throw new Error(bindErr.message);
+  }
+  const tableIds = asRows(bindings).map((row) => row.table_id);
+  if (tableIds.length === 0) {
+    return null;
+  }
+  const wanted = new Set(tableIds);
+  const { data: tables, error: tableErr } = await db
+    .from("decision_tables")
+    .select("id,table_key,version,hit_policy,default_outputs,status")
+    .eq("status", "published");
+  if (tableErr) {
+    throw new Error(tableErr.message);
+  }
+  const published = asRows(tables).find((row) => wanted.has(row.id));
+  if (!published) {
+    return null;
+  }
+  const { data: rows, error: rowErr } = await db
+    .from("decision_rows")
+    .select("*")
+    .eq("table_id", published.id);
+  if (rowErr) {
+    throw new Error(rowErr.message);
+  }
+  return assembleDecisionTable({
+    tableKey: published.table_key,
+    hit_policy: published.hit_policy,
+    default_outputs: published.default_outputs,
+    rows: asRows(rows).map((row) => ({
+      row_key: row.row_key,
+      priority: row.priority,
+      conditions: decisionConditionSchema.array().parse(row.conditions),
+      outputs: decisionOutputsSchema.parse(row.outputs),
+      effective_from: row.effective_from,
+      effective_to: row.effective_to,
+    })),
+  });
+}
+async function authorizeEdgeUser(input) {
+  return authorize({
+    userId: input.userId,
+    action: input.action,
+    ports: {
+      loadRole: (id) => loadUserRole(input.db, id),
+      evaluateEntitlements: async (ctx) => {
+        const table =
+          (await loadPublishedEntitlementsTable(input.db)) ?? baselineTable("DT-ENT-01");
+        return evaluate(table, ctx, /* @__PURE__ */ new Date());
       },
     },
-  ]);
-  return json(200, {
-    session: result.session,
-    ticksApplied: result.ticksApplied,
-    published: result.publishes.length,
-    paused: flags.paused,
-    matching,
-    alerting,
   });
 }
 
-module.exports = market_tick_src_default;
+// insforge/functions/brief-service-src.ts
+var corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+function json(status, body) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+function asRows2(data) {
+  return Array.isArray(data) ? data : [];
+}
+function num(value, fallback = 0) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+function briefLlm() {
+  if (Deno.env.get("MERIDIAN_COPILOT_LLM") === "fake") {
+    return fakeBriefLlm();
+  }
+  const apiKey = Deno.env.get("OPENROUTER_API_KEY") ?? "";
+  if (!apiKey) {
+    return fakeBriefLlm();
+  }
+  return openRouterBriefLlm({
+    apiKey,
+    model: Deno.env.get("OPENROUTER_CHAT_MODEL") ?? DEFAULT_OPENROUTER_CHAT_MODEL,
+    url: Deno.env.get("OPENROUTER_CHAT_URL") ?? DEFAULT_OPENROUTER_CHAT_URL,
+  });
+}
+async function invokeSibling(input) {
+  const origin = input.baseUrl.replace(/\/+$/, "");
+  const response = await fetch(`${origin}/functions/${input.slug}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${input.token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(input.body),
+  });
+  const raw = await response.json().catch(() => ({ error: "SIBLING_UNAVAILABLE" }));
+  if (!response.ok) {
+    throw new Error(
+      typeof raw === "object" && raw && "error" in raw
+        ? String(raw.error)
+        : `SIBLING_${response.status}`,
+    );
+  }
+  return raw;
+}
+async function loadCalendar(admin) {
+  const { data, error } = await admin.database
+    .from("market_calendar")
+    .select("session_date,venue,session_kind,open_minute,close_minute");
+  if (error) {
+    throw new Error(error.message);
+  }
+  return asRows2(data).map((row) => ({
+    session_date: String(row.session_date).slice(0, 10),
+    venue: "NYSE",
+    session_kind: row.session_kind ?? "regular",
+    open_minute: num(row.open_minute),
+    close_minute: num(row.close_minute),
+  }));
+}
+async function loadPortfolioForUser(admin, userId) {
+  const [accountsRes, positionsRes, quotesRes, instrumentsRes] = await Promise.all([
+    admin.database
+      .from("accounts")
+      .select("id,user_id,cash_balance,reserved_cash,currency")
+      .eq("user_id", userId),
+    admin.database
+      .from("positions")
+      .select("id,user_id,account_id,instrument_id,symbol,qty,avg_cost,realized_pnl")
+      .eq("user_id", userId),
+    admin.database.from("quotes_latest").select("instrument_id,last,prev_close"),
+    admin.database.from("instruments").select("id,sector,beta_class,symbol"),
+  ]);
+  for (const res of [accountsRes, positionsRes, quotesRes, instrumentsRes]) {
+    if (res.error) {
+      throw new Error(res.error.message);
+    }
+  }
+  const account = asRows2(accountsRes.data)[0];
+  if (!account) {
+    throw new Error("ACCOUNT_MISSING");
+  }
+  const quotes = /* @__PURE__ */ new Map();
+  for (const row of asRows2(quotesRes.data)) {
+    quotes.set(String(row.instrument_id), { last: num(row.last), prev_close: num(row.prev_close) });
+  }
+  const sectors = /* @__PURE__ */ new Map();
+  for (const row of asRows2(instrumentsRes.data)) {
+    sectors.set(String(row.id), row.sector == null ? null : String(row.sector));
+  }
+  const marked = asRows2(positionsRes.data).map((row) => {
+    const instrumentId = String(row.instrument_id);
+    const quote = quotes.get(instrumentId);
+    return {
+      id: String(row.id),
+      instrument_id: instrumentId,
+      symbol: String(row.symbol),
+      sector: sectors.get(instrumentId) ?? null,
+      qty: num(row.qty),
+      avg_cost: num(row.avg_cost),
+      realized_pnl: num(row.realized_pnl),
+      last: quote?.last ?? 0,
+      prev_close: quote?.prev_close ?? 0,
+    };
+  });
+  return assemblePortfolio({
+    account: {
+      id: String(account.id),
+      cash: num(account.cash_balance),
+      reserved_cash: num(account.reserved_cash),
+      currency: String(account.currency ?? "USD"),
+    },
+    positions: marked,
+  });
+}
+async function betaClassBySymbol(admin) {
+  const { data, error } = await admin.database.from("instruments").select("symbol,beta_class");
+  if (error) {
+    throw new Error(error.message);
+  }
+  const out = {};
+  for (const row of asRows2(data)) {
+    const cls = row.beta_class;
+    if (cls === "low" || cls === "medium" || cls === "high") {
+      out[String(row.symbol)] = cls;
+    }
+  }
+  return out;
+}
+async function loadNewsItems(admin, symbols) {
+  const { data, error } = await admin.database
+    .from("news_items")
+    .select("id,headline,symbols,ts")
+    .order("ts", { ascending: false })
+    .limit(20);
+  if (error) {
+    throw new Error(error.message);
+  }
+  const wanted = new Set(symbols.map((s) => s.toUpperCase()));
+  const rows = asRows2(data).map((row) => ({
+    id: String(row.id),
+    headline: typeof row.headline === "string" ? row.headline : void 0,
+    symbols: Array.isArray(row.symbols) ? row.symbols.filter((s) => typeof s === "string") : [],
+  }));
+  if (wanted.size === 0) {
+    return rows.slice(0, 8);
+  }
+  const filtered = rows.filter((row) => row.symbols.some((s) => wanted.has(s.toUpperCase())));
+  return (filtered.length > 0 ? filtered : rows).slice(0, 8);
+}
+async function buildPack(input) {
+  const calendar = await loadCalendar(input.admin);
+  const now = /* @__PURE__ */ new Date();
+  const session = nyseSessionState(now, calendar);
+  const portfolio = await loadPortfolioForUser(input.admin, input.userId);
+  const posSymbols = portfolio.positions.map((row) => row.symbol);
+  if (input.kind === "portfolio") {
+    const facts = portfolioAnalysisFactsFromBook({
+      portfolio,
+      betaClassBySymbol: await betaClassBySymbol(input.admin),
+    });
+    const rules = evaluateDomainResponseSchema.parse(
+      await invokeSibling({
+        baseUrl: input.baseUrl,
+        slug: "rules-service",
+        token: input.apiKey,
+        body: {
+          op: "evaluateDomain",
+          domain: "portfolio_analysis",
+          context: facts,
+          userId: input.userId,
+        },
+      }),
+    );
+    return {
+      subject: "portfolio",
+      pack: {
+        kind: "portfolio",
+        facts,
+        flags: flagsFromCollectOutcome(rules.outcome),
+        outcome: rules.outcome,
+        audit_id: rules.auditId,
+        table_versions: rules.tableVersions,
+      },
+    };
+  }
+  if (input.kind === "instrument") {
+    const symbol = (input.subject ?? posSymbols[0] ?? "AAPL").toUpperCase();
+    const inst = await input.admin.database.from("instruments").select("*").eq("symbol", symbol);
+    const instrument = asRows2(inst.data)[0] ?? { symbol };
+    const instrumentId = typeof instrument.id === "string" ? instrument.id : null;
+    const fundRow = instrumentId
+      ? await input.admin.database
+          .from("fundamentals")
+          .select("*")
+          .eq("instrument_id", instrumentId)
+      : { data: [], error: null };
+    const news2 = await loadNewsItems(input.admin, [symbol]);
+    let cited = news2;
+    try {
+      const searched = await invokeSibling({
+        baseUrl: input.baseUrl,
+        slug: "search-news",
+        token: input.token,
+        body: { query: `${symbol} thesis`, symbols: [symbol], limit: 5 },
+      });
+      if (searched && typeof searched === "object" && "items" in searched) {
+        const items = searched.items;
+        if (Array.isArray(items) && items.length > 0) {
+          cited = items;
+        }
+      }
+    } catch {
+      cited = news2;
+    }
+    return {
+      subject: symbol,
+      pack: {
+        kind: "instrument",
+        symbol,
+        fundamentals: {
+          instrument,
+          fundamentals: asRows2(fundRow.data)[0] ?? null,
+        },
+        news: cited,
+      },
+    };
+  }
+  const lists = await input.admin.database
+    .from("watchlists")
+    .select("id")
+    .eq("user_id", input.userId);
+  const listIds = asRows2(lists.data).map((row) => String(row.id));
+  let watchSymbols = [];
+  if (listIds.length > 0) {
+    const items = await input.admin.database
+      .from("watchlist_items")
+      .select("instrument_id,watchlist_id");
+    const idToSymbol = new Map(
+      asRows2((await input.admin.database.from("instruments").select("id,symbol")).data).map(
+        (row) => [String(row.id), String(row.symbol)],
+      ),
+    );
+    watchSymbols = asRows2(items.data)
+      .filter((row) => listIds.includes(String(row.watchlist_id)))
+      .map((row) => idToSymbol.get(String(row.instrument_id)) ?? "")
+      .filter((s) => s.length > 0);
+  }
+  const instruments = await input.admin.database.from("instruments").select("id,symbol");
+  const symbolById = new Map(
+    asRows2(instruments.data).map((row) => [String(row.id), String(row.symbol)]),
+  );
+  const quotes = await input.admin.database
+    .from("quotes_latest")
+    .select("instrument_id,last,prev_close");
+  const wantedWatch = new Set(watchSymbols.map((s) => s.toUpperCase()));
+  const movers = asRows2(quotes.data)
+    .map((row) => {
+      const symbol = symbolById.get(String(row.instrument_id)) ?? "";
+      const last = num(row.last);
+      const prev = num(row.prev_close);
+      return {
+        symbol,
+        last,
+        prev_close: prev,
+        change_pct: prev === 0 ? 0 : ((last - prev) / prev) * 100,
+      };
+    })
+    .filter((row) => wantedWatch.has(row.symbol.toUpperCase()));
+  const alertsRes = await input.admin.database
+    .from("alerts")
+    .select("id,message,fired_at,payload")
+    .eq("user_id", input.userId)
+    .order("fired_at", { ascending: false })
+    .limit(10);
+  const symbols = [.../* @__PURE__ */ new Set([...posSymbols, ...watchSymbols])];
+  let news = await loadNewsItems(input.admin, symbols);
+  try {
+    const searched = await invokeSibling({
+      baseUrl: input.baseUrl,
+      slug: "search-news",
+      token: input.token,
+      body: {
+        query: `morning digest ${symbols.slice(0, 6).join(" ")}`.trim() || "markets",
+        symbols: symbols.slice(0, 8),
+        limit: 8,
+      },
+    });
+    if (searched && typeof searched === "object" && "items" in searched) {
+      const items = searched.items;
+      if (Array.isArray(items) && items.length > 0) {
+        news = items;
+      }
+    }
+  } catch {}
+  const today = nyClockParts(now).dateKey;
+  const todayCal = calendar.find((row) => row.session_date === today) ?? null;
+  return {
+    subject: "morning",
+    pack: {
+      kind: "morning",
+      as_of: now.toISOString(),
+      session,
+      portfolio,
+      watchlist_movers: movers,
+      news,
+      alerts: asRows2(alertsRes.data),
+      calendar: todayCal,
+    },
+  };
+}
+async function persistBrief(input) {
+  const insert = await input.admin.database.from("briefs").insert([
+    {
+      user_id: input.userId,
+      kind: input.kind,
+      subject: input.subject,
+      content_md: input.content_md,
+      data: input.data,
+      pdf_key: null,
+      pdf_url: null,
+    },
+  ]);
+  if (insert.error) {
+    throw new Error(insert.error.message);
+  }
+  const listed = await input.admin.database
+    .from("briefs")
+    .select("*")
+    .eq("user_id", input.userId)
+    .eq("kind", input.kind)
+    .eq("subject", input.subject)
+    .order("created_at", { ascending: false })
+    .limit(1);
+  if (listed.error) {
+    throw new Error(listed.error.message);
+  }
+  return briefSchema.parse(asRows2(listed.data)[0]);
+}
+async function generateForUser(input) {
+  const { pack, subject } = await buildPack(input);
+  const { content_md, citations } = await generateBriefMarkdown({ pack, llm: briefLlm() });
+  const brief = await persistBrief({
+    admin: input.admin,
+    userId: input.userId,
+    kind: input.kind,
+    subject,
+    content_md,
+    data: {
+      pack,
+      citations,
+    },
+  });
+  await input.admin.database.from("audit_log").insert([
+    {
+      user_id: input.userId,
+      action: "briefs:generate",
+      entity_type: "briefs",
+      entity_id: brief.id,
+      payload: { kind: input.kind, subject },
+    },
+  ]);
+  return { brief, citations };
+}
+async function brief_service_src_default(req) {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: corsHeaders });
+  }
+  if (req.method !== "POST") {
+    return json(405, { error: "METHOD_NOT_ALLOWED" });
+  }
+  const authHeader = req.headers.get("Authorization");
+  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  if (!token) {
+    return json(401, { error: "UNAUTHENTICATED" });
+  }
+  const baseUrl = Deno.env.get("INSFORGE_INTERNAL_URL") ?? Deno.env.get("INSFORGE_BASE_URL");
+  if (!baseUrl) {
+    return json(500, { error: "INSFORGE_URL_MISSING" });
+  }
+  let body = {};
+  try {
+    body = await req.json();
+  } catch {
+    body = {};
+  }
+  const apiKey = resolveRulesServiceApiKey({
+    API_KEY: Deno.env.get("API_KEY"),
+    INSFORGE_API_KEY: Deno.env.get("INSFORGE_API_KEY"),
+  });
+  if (!apiKey) {
+    return json(500, { error: "API_KEY_MISSING" });
+  }
+  const admin = createAdminClient({ baseUrl, apiKey });
+  const op =
+    body && typeof body === "object" && "op" in body ? String(body.op ?? "generate") : "generate";
+  if (op === "cron") {
+    if (token !== apiKey) {
+      return json(401, { error: "UNAUTHENTICATED" });
+    }
+    const force = body && typeof body === "object" && "force" in body ? Boolean(body.force) : false;
+    const calendar = await loadCalendar(admin);
+    const now = /* @__PURE__ */ new Date();
+    const session = nyseSessionState(now, calendar);
+    if (session !== "OPEN" && !force) {
+      return json(200, briefCronResponseSchema.parse({ generated: 0, skipped: 0 }));
+    }
+    const profiles = await admin.database
+      .from("profiles")
+      .select("user_id,morning_brief_opt_in")
+      .eq("morning_brief_opt_in", true);
+    if (profiles.error) {
+      return json(500, { error: profiles.error.message });
+    }
+    const today = now.toISOString().slice(0, 10);
+    let generated = 0;
+    let skipped = 0;
+    for (const row of asRows2(profiles.data)) {
+      const userId2 = String(row.user_id);
+      const existing = await admin.database
+        .from("briefs")
+        .select("id,created_at")
+        .eq("user_id", userId2)
+        .eq("kind", "morning")
+        .gte("created_at", `${today}T00:00:00.000Z`);
+      if (!force && asRows2(existing.data).length > 0) {
+        skipped += 1;
+        continue;
+      }
+      try {
+        await generateForUser({
+          admin,
+          baseUrl,
+          token: apiKey,
+          apiKey,
+          userId: userId2,
+          kind: "morning",
+        });
+        generated += 1;
+      } catch {
+        skipped += 1;
+      }
+    }
+    await admin.database.from("audit_log").insert([
+      {
+        user_id: null,
+        action: "briefs:cron",
+        entity_type: "briefs",
+        payload: { generated, skipped },
+      },
+    ]);
+    return json(200, briefCronResponseSchema.parse({ generated, skipped }));
+  }
+  const userClient = createClient({ baseUrl, accessToken: token });
+  const { data: userData } = await userClient.auth.getCurrentUser();
+  const userId = userData?.user?.id;
+  const gate = await authorizeEdgeUser({ db: admin.database, userId, action: "copilot:chat" });
+  if (!gate.allowed || !userId) {
+    return json(gate.reason === "UNAUTHENTICATED" || !userId ? 401 : 403, {
+      error: gate.reason ?? "UNAUTHENTICATED",
+    });
+  }
+  if (op === "list") {
+    const kind2 = body && typeof body === "object" && "kind" in body ? body.kind : void 0;
+    let query = admin.database
+      .from("briefs")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(50);
+    if (kind2 === "morning" || kind2 === "instrument" || kind2 === "portfolio") {
+      query = query.eq("kind", kind2);
+    }
+    const listed = await query;
+    if (listed.error) {
+      return json(500, { error: listed.error.message });
+    }
+    return json(
+      200,
+      briefListResponseSchema.parse({
+        briefs: asRows2(listed.data).map((row) => briefSchema.parse(row)),
+      }),
+    );
+  }
+  if (op === "export") {
+    const briefId =
+      body && typeof body === "object" && "brief_id" in body ? String(body.brief_id) : "";
+    const found = await admin.database
+      .from("briefs")
+      .select("*")
+      .eq("id", briefId)
+      .eq("user_id", userId)
+      .limit(1);
+    if (found.error) {
+      return json(500, { error: found.error.message });
+    }
+    const row = asRows2(found.data)[0];
+    if (!row) {
+      return json(404, { error: "BRIEF_NOT_FOUND" });
+    }
+    const brief = briefSchema.parse(row);
+    const pdf = renderBriefPdf(
+      brief.kind === "morning"
+        ? "Morning Brief"
+        : brief.kind === "instrument"
+          ? `Instrument Brief ${brief.subject}`
+          : "Portfolio Health",
+      brief.content_md,
+    );
+    const key = `${userId}/${brief.id}.pdf`;
+    const bucket = Deno.env.get("BRIEFS_BUCKET") ?? BRIEFS_BUCKET;
+    const blob = new Blob([pdf], { type: "application/pdf" });
+    const uploaded = await admin.storage.from(bucket).upload(key, blob);
+    if (uploaded.error || !uploaded.data) {
+      return json(500, { error: uploaded.error?.message ?? "PDF_UPLOAD_FAILED" });
+    }
+    const downloadUrl = uploaded.data.url;
+    const patch = await admin.database
+      .from("briefs")
+      .update({ pdf_key: uploaded.data.key, pdf_url: downloadUrl })
+      .eq("id", brief.id)
+      .eq("user_id", userId);
+    if (patch.error) {
+      return json(500, { error: patch.error.message });
+    }
+    await admin.database.from("audit_log").insert([
+      {
+        user_id: userId,
+        action: "briefs:export",
+        entity_type: "briefs",
+        entity_id: brief.id,
+        payload: { key: uploaded.data.key },
+      },
+    ]);
+    return json(
+      200,
+      briefExportResponseSchema.parse({
+        brief: { ...brief, pdf_key: uploaded.data.key, pdf_url: downloadUrl },
+        download_url: downloadUrl,
+      }),
+    );
+  }
+  const kind = body && typeof body === "object" && "kind" in body ? body.kind : void 0;
+  if (kind !== "morning" && kind !== "instrument" && kind !== "portfolio") {
+    return json(400, { error: "INVALID_BODY" });
+  }
+  const subject =
+    body && typeof body === "object" && typeof body.subject === "string" ? body.subject : void 0;
+  try {
+    const result = await generateForUser({
+      admin,
+      baseUrl,
+      token,
+      apiKey,
+      userId,
+      kind,
+      subject,
+    });
+    return json(200, briefGenerateResponseSchema.parse(result));
+  } catch (error) {
+    return json(500, { error: error instanceof Error ? error.message : "BRIEF_FAILED" });
+  }
+}
+
+module.exports = brief_service_src_default;

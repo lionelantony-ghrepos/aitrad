@@ -280,10 +280,10 @@ Seeded via `scripts/seed-all.ts` (see doc 06): 150 instruments, 5y daily + 5d 1m
 ### PBI-028 Briefs
 | ID | Criterion / Test | Pri | Status |
 |---|---|---|---|
-| AC-028-01 | All three brief kinds generate with citations; PDF export downloads | P1 | ☐ |
-| AC-028-02 | Portfolio Health numeric claims exactly equal rules output (no hallucinated figures) | P0 | ☐ |
-| TC-028-01 | Generate each kind on demo portfolio → renders, PDF link works (AC-028-01) | P1 | ☐ |
-| TC-028-02 | Parse brief numbers vs DT-RISK-02 audit output → equal (AC-028-02) | P0 | ☐ |
+| AC-028-01 | All three brief kinds generate with citations; PDF export downloads | P1 | ☑ |
+| AC-028-02 | Portfolio Health numeric claims exactly equal rules output (no hallucinated figures) | P0 | ☑ |
+| TC-028-01 | Generate each kind on demo portfolio → renders, PDF link works (AC-028-01) | P1 | ☑ |
+| TC-028-02 | Parse brief numbers vs DT-RISK-02 audit output → equal (AC-028-02) | P0 | ☑ |
 
 ### PBI-029 Audit completion
 | ID | Criterion / Test | Pri | Status |

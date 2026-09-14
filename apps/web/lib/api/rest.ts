@@ -33,6 +33,7 @@ export const recordTables = {
   copilot_messages: "copilot_messages",
   copilot_actions: "copilot_actions",
   monitors: "monitors",
+  briefs: "briefs",
 } as const;
 
 export type RecordTable = (typeof recordTables)[keyof typeof recordTables];

@@ -38,6 +38,7 @@ export { createFundamentalsRepository } from "./fundamentals";
 export { createScreensRepository } from "./screens";
 export { createAlertRulesRepository, createAlertsRepository } from "./alerts";
 export { createMonitorsRepository } from "./monitors";
+export { briefServiceUrl, createBriefsRepository, invokeBriefGenerate } from "./briefs";
 export {
   copilotOrchestratorUrl,
   invokeCopilotDecide,

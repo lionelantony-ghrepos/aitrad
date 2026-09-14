@@ -49,12 +49,33 @@ export {
 } from "./monitor-explain";
 export { extractCitations, newsMetaFromToolResults, splitMarkdownCitations } from "./citations";
 export { extractFigures, ungroundedFigures, assertGroundedOrThrow } from "./grounding";
+export {
+  generateBriefMarkdown,
+  fakeBriefLlm,
+  buildBriefPrompt,
+  renderHealthMarkdown,
+  renderMorningMarkdown,
+  renderInstrumentMarkdown,
+  assertHealthFiguresMatchAudit,
+  citationsForPack,
+  type BriefPack,
+  type MorningBriefPack,
+  type InstrumentBriefPack,
+  type PortfolioHealthPack,
+} from "./briefs";
+export {
+  portfolioAnalysisFactsFromBook,
+  flagsFromCollectOutcome,
+  betaClassToAnalysisBeta,
+} from "./brief-facts";
+export { renderBriefPdf } from "./brief-pdf";
 export { evaluateCopilotRateLimit, rateLimitFromAiPolicy } from "./rate-limit";
 export { COPILOT_SLASH_SUGGESTIONS, expandSlashPrompt, matchingSlashSuggestions } from "./slash";
 export {
   DEFAULT_OPENROUTER_CHAT_MODEL,
   DEFAULT_OPENROUTER_CHAT_URL,
   openRouterLlm,
+  openRouterBriefLlm,
 } from "./gateway";
 export { runCopilotRequest, type CopilotPersistPorts } from "./run-request";
 export {

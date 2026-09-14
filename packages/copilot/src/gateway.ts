@@ -101,3 +101,33 @@ export function openRouterLlm(input: {
     },
   };
 }
+
+export function openRouterBriefLlm(input: {
+  apiKey: string;
+  model?: string;
+  url?: string;
+  fetchImpl?: typeof fetch;
+}): LlmPort {
+  const fetchImpl = input.fetchImpl ?? fetch;
+  return {
+    async complete(messages: ChatMessage[]): Promise<LlmTurn> {
+      const response = await fetchImpl(input.url ?? DEFAULT_OPENROUTER_CHAT_URL, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${input.apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: input.model ?? DEFAULT_OPENROUTER_CHAT_MODEL,
+          messages: toOpenAiMessages(messages),
+        }),
+      });
+      const raw: unknown = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(`GATEWAY_${response.status}`);
+      }
+      const parsed = completionSchema.parse(raw);
+      return { content: parsed.choices[0]?.message?.content ?? "" };
+    },
+  };
+}
