@@ -14,6 +14,7 @@ export function BriefCard(props: { brief: Brief }): React.JSX.Element {
   const setActiveSymbol = useSymbolContext((s) => s.setActiveSymbol);
   const setNewsItem = useNewsFocus((s) => s.setItem);
   const [error, setError] = useState<string | null>(null);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(props.brief.pdf_url);
   const citations = splitMarkdownCitations(props.brief.content_md, []).flatMap((part) =>
     part.type === "citation" ? [part.citation] : [],
   );
@@ -51,6 +52,7 @@ export function BriefCard(props: { brief: Brief }): React.JSX.Element {
       setError(result.message);
       return;
     }
+    setPdfUrl(result.data.download_url);
     window.open(result.data.download_url, "_blank", "noopener,noreferrer");
   }
 
@@ -79,6 +81,16 @@ export function BriefCard(props: { brief: Brief }): React.JSX.Element {
         >
           Export PDF
         </button>
+        {pdfUrl ? (
+          <a
+            className="border border-primary px-1 text-primary"
+            data-testid={`brief-pdf-link-${props.brief.id}`}
+            href={pdfUrl}
+            download={`${props.brief.kind}-brief.pdf`}
+          >
+            Download
+          </a>
+        ) : null}
       </div>
       <div className="whitespace-pre-wrap font-mono tabular-nums" data-testid="brief-markdown">
         {parts.map((part, index) => {
