@@ -534,7 +534,7 @@ export default async function (req: Request): Promise<Response> {
         reserved_amount: 0,
         updated_at: updatedAt,
       };
-      await writeAuditLog(client.database, {
+      await writeAuditLog(admin.database, {
         user_id: userId,
         action: "trade:cancel",
         entity_type: "orders",
@@ -643,7 +643,7 @@ export default async function (req: Request): Promise<Response> {
     if (!parsedRow) {
       throw new Error("ORDER_CREATE_EMPTY");
     }
-    await writeAuditLog(client.database, {
+    await writeAuditLog(admin.database, {
       user_id: userId,
       action: "trade:create",
       entity_type: "orders",

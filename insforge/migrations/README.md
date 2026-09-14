@@ -217,4 +217,4 @@ PRD named this migration 0015; 0015 is news embeddings.
 
 | Object      | Access                                                                                                                                                                                                                                     |
 | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `audit_log` | JWT **no DML** (REVOKE SELECT/INSERT/UPDATE/DELETE from `anon`/`authenticated`; drop own RLS). INSERT/SELECT via `project_admin` (`writeAuditLog` / `audit-service` admin). Append-only UPDATE/DELETE triggers from 0001/0025 still apply. |
+| `audit_log` | JWT **no DML** (REVOKE SELECT/INSERT/UPDATE/DELETE from `anon`/`authenticated`; drop own RLS). INSERT/SELECT via `project_admin` (`writeAuditLog` / `audit-service` `append` / edge admin). Append-only UPDATE/DELETE triggers from 0001/0025 still apply. |

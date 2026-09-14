@@ -134,7 +134,13 @@ async function provision_account_default(req) {
     created.account = true;
   }
   if (created.profile || created.account) {
-    await writeAuditLog(client.database, {
+    const apiKey = Deno.env.get("API_KEY") ?? Deno.env.get("INSFORGE_API_KEY");
+    const baseUrl = Deno.env.get("INSFORGE_INTERNAL_URL") ?? Deno.env.get("INSFORGE_BASE_URL");
+    if (!apiKey || !baseUrl) {
+      return json(500, { error: "SERVICE_KEY_UNAVAILABLE" });
+    }
+    const admin = createAdminClient({ baseUrl, apiKey });
+    await writeAuditLog(admin.database, {
       user_id: userId,
       action: "provision-account",
       entity_type: "account",

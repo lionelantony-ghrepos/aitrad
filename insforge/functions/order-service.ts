@@ -5764,6 +5764,7 @@ var auditAdminOpSchema = external_exports.enum([
   "getConfig",
   "setRetention",
   "cron",
+  "append",
 ]);
 var auditAdminFilterSchema = external_exports.object({
   user_id: uuidSchema.optional(),
@@ -5802,6 +5803,13 @@ var auditAdminCronRequestSchema = external_exports.object({
   op: external_exports.literal("cron"),
   force: external_exports.boolean().optional(),
 });
+var auditAdminAppendRequestSchema = external_exports.object({
+  op: external_exports.literal("append"),
+  action: external_exports.string().min(1),
+  entity_type: external_exports.string().min(1),
+  entity_id: uuidSchema.nullable().optional(),
+  payload: external_exports.record(external_exports.unknown()).optional(),
+});
 var auditAdminRequestSchema = external_exports.discriminatedUnion("op", [
   auditAdminListRequestSchema,
   auditAdminTimelineRequestSchema,
@@ -5810,6 +5818,7 @@ var auditAdminRequestSchema = external_exports.discriminatedUnion("op", [
   auditAdminGetConfigRequestSchema,
   auditAdminSetRetentionRequestSchema,
   auditAdminCronRequestSchema,
+  auditAdminAppendRequestSchema,
 ]);
 var auditChainVerifyResultSchema = external_exports.object({
   ok: external_exports.boolean(),
@@ -5842,6 +5851,9 @@ var auditAdminCronResponseSchema = external_exports.object({
   purged: external_exports.number().int().nonnegative(),
   alerted: external_exports.number().int().nonnegative(),
   skipped: external_exports.boolean(),
+});
+var auditAdminAppendResponseSchema = external_exports.object({
+  ok: external_exports.literal(true),
 });
 
 // packages/schemas/src/copilot.ts
@@ -7909,7 +7921,7 @@ async function order_service_src_default(req) {
         reserved_amount: 0,
         updated_at: updatedAt,
       };
-      await writeAuditLog(client.database, {
+      await writeAuditLog(admin2.database, {
         user_id: userId,
         action: "trade:cancel",
         entity_type: "orders",
@@ -8017,7 +8029,7 @@ async function order_service_src_default(req) {
     if (!parsedRow) {
       throw new Error("ORDER_CREATE_EMPTY");
     }
-    await writeAuditLog(client.database, {
+    await writeAuditLog(admin.database, {
       user_id: userId,
       action: "trade:create",
       entity_type: "orders",
