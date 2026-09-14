@@ -314,10 +314,10 @@ Seeded via `scripts/seed-all.ts` (see doc 06): 150 instruments, 5y daily + 5d 1m
 ### PBI-031 Regression suite
 | ID | Criterion / Test | Pri | Status |
 |---|---|---|---|
-| AC-031-01 | All P0 TCs automated, tagged with TC ids, green on seeded env in CI | P0 | ☑ |
-| AC-031-02 | RELEASE.md runbook executes end-to-end | P0 | ☑ |
-| TC-031-01 | CI release-gate job green (AC-031-01) | P0 | ☑ |
-| TC-031-02 | Fresh env: runbook steps → deployable build (AC-031-02) | P0 | ☑ |
+| AC-031-01 | All P0 TCs automated, tagged with TC ids, green on seeded env in CI | P0 | ☐ |
+| AC-031-02 | RELEASE.md runbook executes end-to-end | P0 | ☐ |
+| TC-031-01 | CI release-gate job green (AC-031-01) | P0 | ☐ |
+| TC-031-02 | Fresh env: runbook steps → deployable build (AC-031-02) | P0 | ☐ |
 
 ## 4. Traceability summary
 Every PBI-nnn maps 1:N to AC-nnn-xx, each AC maps 1:N to TC-nnn-xx (embedded above — single source of truth). Playwright specs carry `@TC-nnn-xx` tags; CI publishes a traceability report by grepping tags against this document. A PBI is **Done** only when: code merged, its P0/P1 TCs pass, and Status boxes here are ticked by the agent in the same PR.
