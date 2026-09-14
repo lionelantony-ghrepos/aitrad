@@ -13,6 +13,7 @@ export const profileSchema = z.object({
   experience_level: experienceLevelSchema.nullable(),
   suitability_tier: suitabilityTierSchema.nullable(),
   objectives: z.string().nullable(),
+  morning_brief_opt_in: z.boolean().optional(),
   created_at: timestamptzSchema,
   updated_at: timestamptzSchema,
 });
@@ -25,6 +26,7 @@ export const profileInsertSchema = z
     experience_level: experienceLevelSchema.nullable().optional(),
     suitability_tier: suitabilityTierSchema.nullable().optional(),
     objectives: z.string().nullable().optional(),
+    morning_brief_opt_in: z.boolean().optional(),
   })
   .strict();
 

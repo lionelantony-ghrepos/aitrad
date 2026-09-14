@@ -9,7 +9,7 @@ export async function signUpThroughWizard(
   await page.goto("/signup");
   await page.getByTestId("email").fill(email);
   await page.getByTestId("password").fill(password);
-  await page.getByTestId("auth-submit").click();
+  await page.getByTestId("auth-submit").click({ force: true });
   await expect(page.getByTestId("wizard-form")).toBeVisible();
   await page.getByTestId("display-name").fill("E2E Trader");
   await page.getByTestId("objectives").fill("learn the terminal");

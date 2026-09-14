@@ -84,7 +84,8 @@ export type AlertCreateRequest = z.infer<typeof alertCreateRequestSchema>;
 export const alertInstanceSchema = z.object({
   id: uuidSchema,
   user_id: uuidSchema,
-  alert_rule_id: uuidSchema,
+  alert_rule_id: uuidSchema.nullable(),
+  monitor_id: uuidSchema.nullable().optional(),
   instrument_id: uuidSchema.nullable(),
   fired_at: timestamptzSchema,
   message: z.string().min(1),
@@ -98,7 +99,8 @@ export type AlertInstance = z.infer<typeof alertInstanceSchema>;
 export const alertInstanceInsertSchema = z
   .object({
     user_id: uuidSchema,
-    alert_rule_id: uuidSchema,
+    alert_rule_id: uuidSchema.nullable().optional(),
+    monitor_id: uuidSchema.nullable().optional(),
     instrument_id: uuidSchema.nullable().optional(),
     fired_at: timestamptzSchema.optional(),
     message: z.string().min(1),

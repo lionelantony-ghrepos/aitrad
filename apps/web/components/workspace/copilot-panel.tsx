@@ -2,6 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { listCopilotSessionsAction, loadCopilotSessionAction } from "@/app/actions/copilot";
+import { listCopilotActionsAction } from "@/app/actions/copilot-actions";
+import { CopilotApprovalCard } from "@/components/workspace/copilot-approval-card";
+import { CopilotMonitorsTab } from "@/components/workspace/copilot-monitors-tab";
+import { CopilotBriefsTab } from "@/components/workspace/copilot-briefs-tab";
+import { extractActionFromToolResult } from "@meridian/copilot";
 import { focusPanel } from "@/lib/command-palette/focus-panel";
 import { streamCopilotChat } from "@/lib/copilot/stream-chat";
 import { useCopilotDraft } from "@/lib/copilot-draft";
@@ -10,6 +15,7 @@ import { useSymbolContext } from "@/lib/symbol-context";
 import { useWorkspaceRuntime } from "@/lib/workspace-runtime";
 import { matchingSlashSuggestions, splitMarkdownCitations } from "@meridian/copilot";
 import type {
+  CopilotAction,
   CopilotCitation,
   CopilotChatEvent,
   CopilotMessage,
@@ -21,6 +27,7 @@ type ChatRow = {
   role: "user" | "assistant";
   content: string;
   citations: CopilotCitation[];
+  actions: CopilotAction[];
 };
 
 export function CopilotPanel(): React.JSX.Element {
@@ -38,6 +45,8 @@ export function CopilotPanel(): React.JSX.Element {
   const [activity, setActivity] = useState<string | null>(null);
   const [streaming, setStreaming] = useState("");
   const [busy, setBusy] = useState(false);
+  const [actions, setActions] = useState<CopilotAction[]>([]);
+  const [tab, setTab] = useState<"chat" | "monitors" | "briefs">("chat");
 
   const slashes = useMemo(() => matchingSlashSuggestions(query), [query]);
 
@@ -70,6 +79,10 @@ export function CopilotPanel(): React.JSX.Element {
         .filter((row) => row.role === "user" || row.role === "assistant")
         .map((row) => toRow(row)),
     );
+    const listed = await listCopilotActionsAction(id);
+    if (listed.ok) {
+      setActions(listed.data);
+    }
   }
 
   function openCitation(citation: CopilotCitation): void {
@@ -109,7 +122,7 @@ export function CopilotPanel(): React.JSX.Element {
     setActivity(null);
     setRows((current) => [
       ...current,
-      { id: `user-${Date.now()}`, role: "user", content: message, citations: [] },
+      { id: `user-${Date.now()}`, role: "user", content: message, citations: [], actions: [] },
     ]);
     try {
       await streamCopilotChat({
@@ -140,8 +153,12 @@ export function CopilotPanel(): React.JSX.Element {
                 role: "assistant",
                 content: event.content,
                 citations: event.citations,
+                actions: [],
               },
             ]);
+          }
+          if (event.type === "action") {
+            setActions((current) => upsertAction(current, event.action));
           }
           if (event.type === "rate_limited") {
             setError(event.message);
@@ -176,6 +193,7 @@ export function CopilotPanel(): React.JSX.Element {
           onClick={() => {
             setSessionId(null);
             setRows([]);
+            setActions([]);
           }}
         >
           New
@@ -204,106 +222,157 @@ export function CopilotPanel(): React.JSX.Element {
       </aside>
       <div className="flex min-w-0 flex-1 flex-col gap-1 p-1">
         <p className="text-primary">Copilot</p>
-        {status === "loading" ? (
-          <p className="text-muted-foreground" data-testid="copilot-loading">
-            Loading sessions…
-          </p>
-        ) : null}
-        {status === "error" && rows.length === 0 ? (
-          <p className="text-down" data-testid="copilot-error">
-            {error}
-          </p>
-        ) : null}
-        <div className="min-h-0 flex-1 overflow-auto" data-testid="copilot-messages">
-          {rows.length === 0 && !streaming ? (
-            <p className="text-muted-foreground" data-testid="copilot-empty">
-              Ask a question. Prices come from tools only.
-            </p>
-          ) : null}
-          {rows.map((row) => (
-            <article
-              key={row.id}
-              className="mb-2 border-b border-border pb-1"
-              data-testid={`copilot-msg-${row.role}`}
-            >
-              <p className="text-muted-foreground">{row.role}</p>
-              <MessageBody content={row.content} citations={row.citations} onCite={openCitation} />
-            </article>
-          ))}
-          {streaming ? (
-            <p className="whitespace-pre-wrap" data-testid="copilot-stream">
-              {streaming}
-            </p>
-          ) : null}
-        </div>
-        {activity ? (
-          <p className="text-primary" data-testid="copilot-activity">
-            {activity}
-          </p>
-        ) : null}
-        {error && rows.length > 0 ? (
-          <p className="text-down" data-testid="copilot-error">
-            {error}
-          </p>
-        ) : null}
-        {activeSymbol ? (
+        <div className="flex gap-1">
           <button
             type="button"
-            className="w-fit border border-border px-1 text-primary"
-            data-testid="copilot-ask-symbol"
+            className={`border px-1 ${tab === "chat" ? "border-primary text-primary" : "border-border"}`}
+            data-testid="copilot-tab-chat"
             onClick={() => {
-              void send(`summarize ${activeSymbol} news today`);
+              setTab("chat");
             }}
           >
-            Ask about {activeSymbol}
+            Chat
           </button>
-        ) : null}
-        {slashes.length > 0 ? (
-          <ul className="border border-border p-1" data-testid="copilot-slash-list">
-            {slashes.map((row) => (
-              <li key={row.command}>
-                <button
-                  type="button"
-                  className="text-primary"
-                  onClick={() => {
-                    setQuery(`${row.command} `);
-                  }}
-                >
-                  {row.command} — {row.hint}
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : null}
-        <label className="sr-only" htmlFor="copilot-input">
-          Copilot question
-        </label>
-        <form
-          className="flex gap-1"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void send(query);
-          }}
-        >
-          <input
-            id="copilot-input"
-            data-testid="copilot-input"
-            className="min-w-0 flex-1 border border-input bg-background px-2 py-1 font-mono text-sm text-foreground outline-none"
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-            }}
-            placeholder="Ask a question…"
-          />
           <button
-            type="submit"
-            className="border border-primary px-2 text-primary"
-            data-testid="copilot-send"
-            disabled={busy}
+            type="button"
+            className={`border px-1 ${tab === "monitors" ? "border-primary text-primary" : "border-border"}`}
+            data-testid="copilot-tab-monitors"
+            onClick={() => {
+              setTab("monitors");
+            }}
           >
-            Send
+            Monitors
           </button>
-        </form>
+          <button
+            type="button"
+            className={`border px-1 ${tab === "briefs" ? "border-primary text-primary" : "border-border"}`}
+            data-testid="copilot-tab-briefs"
+            onClick={() => {
+              setTab("briefs");
+            }}
+          >
+            Briefs
+          </button>
+        </div>
+        {tab === "monitors" ? <CopilotMonitorsTab /> : null}
+        {tab === "briefs" ? <CopilotBriefsTab /> : null}
+        {tab === "chat" ? (
+          <>
+            {status === "loading" ? (
+              <p className="text-muted-foreground" data-testid="copilot-loading">
+                Loading sessions…
+              </p>
+            ) : null}
+            {status === "error" && rows.length === 0 ? (
+              <p className="text-down" data-testid="copilot-error">
+                {error}
+              </p>
+            ) : null}
+            <div className="min-h-0 flex-1 overflow-auto" data-testid="copilot-messages">
+              {rows.length === 0 && !streaming ? (
+                <p className="text-muted-foreground" data-testid="copilot-empty">
+                  Ask a question. Prices come from tools only.
+                </p>
+              ) : null}
+              {rows.map((row) => (
+                <article
+                  key={row.id}
+                  className="mb-2 border-b border-border pb-1"
+                  data-testid={`copilot-msg-${row.role}`}
+                >
+                  <p className="text-muted-foreground">{row.role}</p>
+                  <MessageBody
+                    content={row.content}
+                    citations={row.citations}
+                    onCite={openCitation}
+                  />
+                </article>
+              ))}
+              {actions.map((action) => (
+                <CopilotApprovalCard
+                  key={action.id}
+                  action={action}
+                  onChange={(next) => {
+                    setActions((current) => upsertAction(current, next));
+                  }}
+                />
+              ))}
+              {streaming ? (
+                <p className="whitespace-pre-wrap" data-testid="copilot-stream">
+                  {streaming}
+                </p>
+              ) : null}
+            </div>
+            {activity ? (
+              <p className="text-primary" data-testid="copilot-activity">
+                {activity}
+              </p>
+            ) : null}
+            {error && rows.length > 0 ? (
+              <p className="text-down" data-testid="copilot-error">
+                {error}
+              </p>
+            ) : null}
+            {activeSymbol ? (
+              <button
+                type="button"
+                className="w-fit border border-border px-1 text-primary"
+                data-testid="copilot-ask-symbol"
+                onClick={() => {
+                  void send(`summarize ${activeSymbol} news today`);
+                }}
+              >
+                Ask about {activeSymbol}
+              </button>
+            ) : null}
+            {slashes.length > 0 ? (
+              <ul className="border border-border p-1" data-testid="copilot-slash-list">
+                {slashes.map((row) => (
+                  <li key={row.command}>
+                    <button
+                      type="button"
+                      className="text-primary"
+                      onClick={() => {
+                        setQuery(`${row.command} `);
+                      }}
+                    >
+                      {row.command} — {row.hint}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            <label className="sr-only" htmlFor="copilot-input">
+              Copilot question
+            </label>
+            <form
+              className="flex gap-1"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void send(query);
+              }}
+            >
+              <input
+                id="copilot-input"
+                data-testid="copilot-input"
+                className="min-w-0 flex-1 border border-input bg-background px-2 py-1 font-mono text-sm text-foreground outline-none"
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                }}
+                placeholder="Ask a question…"
+              />
+              <button
+                type="submit"
+                className="border border-primary px-2 text-primary"
+                data-testid="copilot-send"
+                disabled={busy}
+              >
+                Send
+              </button>
+            </form>
+          </>
+        ) : null}
       </div>
     </div>
   );
@@ -316,12 +385,24 @@ function toRow(row: CopilotMessage): ChatRow {
           part.type === "citation" ? [part.citation] : [],
         )
       : [];
+  const fromTools = row.tool_calls
+    .map((call) => extractActionFromToolResult(call.result))
+    .filter((item): item is CopilotAction => Boolean(item));
   return {
     id: row.id,
     role: row.role === "assistant" ? "assistant" : "user",
     content: row.content,
     citations,
+    actions: fromTools,
   };
+}
+
+function upsertAction(current: CopilotAction[], next: CopilotAction): CopilotAction[] {
+  const idx = current.findIndex((row) => row.id === next.id);
+  if (idx < 0) {
+    return [...current, next];
+  }
+  return current.map((row, index) => (index === idx ? next : row));
 }
 
 function MessageBody(props: {

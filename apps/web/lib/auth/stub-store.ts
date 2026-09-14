@@ -38,6 +38,9 @@ import type {
   CopilotSession,
   CopilotMessage,
   CopilotToolCallRecord,
+  Monitor,
+  CopilotAction,
+  Brief,
 } from "@meridian/schemas";
 
 export type StubUser = {
@@ -58,6 +61,10 @@ type StubState = {
   alerts: AlertInstance[];
   copilotSessions: CopilotSession[];
   copilotMessages: CopilotMessage[];
+  copilotActions: CopilotAction[];
+  copilotAudit: Array<{ user_id: string; action: string; payload: unknown }>;
+  copilotMonitors: Monitor[];
+  briefs: Brief[];
   copilotForceRateLimitUserIds: Set<string>;
   orders: OrderRecord[];
   executions: ExecutionRecord[];
@@ -82,6 +89,10 @@ function createState(): StubState {
     alerts: [],
     copilotSessions: [],
     copilotMessages: [],
+    copilotActions: [],
+    copilotAudit: [],
+    copilotMonitors: [],
+    briefs: [],
     copilotForceRateLimitUserIds: new Set(),
     orders: [],
     executions: [],
@@ -207,6 +218,7 @@ export function stubInsertProfile(userId: string): Profile {
     experience_level: null,
     suitability_tier: null,
     objectives: null,
+    morning_brief_opt_in: false,
     created_at: ts,
     updated_at: ts,
   };
@@ -979,6 +991,111 @@ export function stubCountCopilotUserMessages(userId: string): number {
   ).length;
 }
 
+export function stubAuditCopilot(userId: string, action: string, payload: unknown): void {
+  getStubState().copilotAudit.push({ user_id: userId, action, payload });
+}
+
+export function stubListCopilotAudit(
+  userId: string,
+): Array<{ user_id: string; action: string; payload: unknown }> {
+  return getStubState().copilotAudit.filter((row) => row.user_id === userId);
+}
+
+export function stubCountCopilotActionsToday(userId: string): number {
+  return getStubState().copilotActions.filter((row) => row.user_id === userId).length;
+}
+
+export function stubCountCopilotMonitors(userId: string): number {
+  return getStubState().copilotMonitors.filter((row) => row.user_id === userId).length;
+}
+
+export function stubInsertCopilotAction(row: CopilotAction): CopilotAction {
+  stubRequireOwnedCopilotSession(row.user_id, row.session_id);
+  getStubState().copilotActions.push(row);
+  return row;
+}
+
+export function stubReplaceCopilotAction(row: CopilotAction): CopilotAction {
+  const state = getStubState();
+  const idx = state.copilotActions.findIndex((item) => item.id === row.id);
+  if (idx >= 0) {
+    state.copilotActions[idx] = row;
+  }
+  return row;
+}
+
+export function stubGetCopilotAction(userId: string, id: string): CopilotAction | null {
+  return (
+    getStubState().copilotActions.find((row) => row.id === id && row.user_id === userId) ?? null
+  );
+}
+
+export function stubListCopilotActions(userId: string, sessionId?: string): CopilotAction[] {
+  return getStubState()
+    .copilotActions.filter(
+      (row) => row.user_id === userId && (sessionId ? row.session_id === sessionId : true),
+    )
+    .slice()
+    .sort((a, b) => a.created_at.localeCompare(b.created_at));
+}
+
+export function stubListPendingCopilotActions(userId: string): CopilotAction[] {
+  return stubListCopilotActions(userId).filter((row) => row.status === "proposed");
+}
+
+export function stubInsertCopilotMonitor(row: Monitor): Monitor {
+  getStubState().copilotMonitors.push(row);
+  return row;
+}
+
+export function stubListMonitors(userId: string): Monitor[] {
+  return getStubState()
+    .copilotMonitors.filter((row) => row.user_id === userId)
+    .slice()
+    .sort((a, b) => b.created_at.localeCompare(a.created_at));
+}
+
+export function stubPatchMonitor(
+  userId: string,
+  id: string,
+  patch: Partial<Pick<Monitor, "active" | "name" | "last_run" | "throttle_state">>,
+): Monitor | null {
+  const row = getStubState().copilotMonitors.find(
+    (item) => item.id === id && item.user_id === userId,
+  );
+  if (!row) {
+    return null;
+  }
+  if (patch.active !== undefined) {
+    row.active = patch.active;
+  }
+  if (patch.name !== undefined) {
+    row.name = patch.name;
+  }
+  if (patch.last_run !== undefined) {
+    row.last_run = patch.last_run;
+  }
+  if (patch.throttle_state !== undefined) {
+    row.throttle_state = patch.throttle_state;
+  }
+  row.updated_at = nowIso();
+  return row;
+}
+
+export function stubDeleteMonitor(userId: string, id: string): boolean {
+  const state = getStubState();
+  const before = state.copilotMonitors.length;
+  state.copilotMonitors = state.copilotMonitors.filter(
+    (row) => !(row.id === id && row.user_id === userId),
+  );
+  state.alerts = state.alerts.filter((row) => row.monitor_id !== id || row.user_id !== userId);
+  return state.copilotMonitors.length !== before;
+}
+
+export function stubListMonitorAlerts(userId: string, monitorId: string): AlertInstance[] {
+  return stubListAlerts(userId).filter((row) => row.monitor_id === monitorId);
+}
+
 export function stubListCopilotSessions(userId: string): CopilotSession[] {
   return getStubState()
     .copilotSessions.filter((row) => row.user_id === userId)
@@ -1036,4 +1153,28 @@ export function stubListCopilotMessages(userId: string, sessionId: string): Copi
   return getStubState()
     .copilotMessages.filter((row) => row.user_id === userId && row.session_id === sessionId)
     .sort((a, b) => (a.created_at < b.created_at ? -1 : 1));
+}
+
+export function stubListBriefs(userId: string): Brief[] {
+  return getStubState()
+    .briefs.filter((row) => row.user_id === userId)
+    .sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+}
+
+export function stubInsertBrief(row: Brief): Brief {
+  getStubState().briefs.push(row);
+  return row;
+}
+
+export function stubGetBrief(userId: string, id: string): Brief | null {
+  return getStubState().briefs.find((row) => row.id === id && row.user_id === userId) ?? null;
+}
+
+export function stubPatchBrief(userId: string, id: string, patch: Partial<Brief>): Brief | null {
+  const row = stubGetBrief(userId, id);
+  if (!row) {
+    return null;
+  }
+  Object.assign(row, patch);
+  return row;
 }

@@ -22,6 +22,7 @@ import {
   YAxis,
 } from "recharts";
 import { getPortfolioAction } from "@/app/actions/portfolio";
+import { generateBriefAction } from "@/app/actions/briefs";
 import { applyPaperTicksAction } from "@/app/actions/orders";
 import { focusPanel } from "@/lib/command-palette/focus-panel";
 import { useOrderTicketIntent } from "@/lib/order-ticket/intent";
@@ -277,6 +278,19 @@ export function PortfolioPanel(props: IDockviewPanelProps): React.JSX.Element {
       className="flex h-full flex-col gap-1 overflow-hidden bg-background p-1 text-xs text-foreground"
       data-testid="panel-portfolio"
     >
+      <div className="flex items-center justify-between gap-1">
+        <p className="text-primary">Portfolio</p>
+        <button
+          type="button"
+          className="border border-primary px-1 text-primary"
+          data-testid="portfolio-generate-brief"
+          onClick={() => {
+            void generateBriefAction({ kind: "portfolio" });
+          }}
+        >
+          Generate brief
+        </button>
+      </div>
       {status === "loading" ? (
         <p className="text-muted-foreground" data-testid="portfolio-loading">
           Loading portfolio…
