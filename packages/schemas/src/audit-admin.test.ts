@@ -19,6 +19,18 @@ describe("audit-admin DTOs", () => {
       "setRetention",
     );
     expect(auditAdminRequestSchema.safeParse({ op: "setRetention", days: 0 }).success).toBe(false);
+    expect(
+      auditAdminRequestSchema.parse({
+        op: "append",
+        action: "watchlist:create",
+        entity_type: "watchlists",
+        user_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      }).op,
+    ).toBe("append");
+    expect(
+      auditAdminRequestSchema.safeParse({ op: "append", action: "", entity_type: "watchlists" })
+        .success,
+    ).toBe(false);
   });
 
   it("parses list and chain envelopes", () => {

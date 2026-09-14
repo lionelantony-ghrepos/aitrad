@@ -17,6 +17,7 @@ import {
   stubGetRole,
   stubListAudit,
   stubSetAuditRetention,
+  stubAppendAudit,
   stubRulesMemory,
 } from "@/lib/auth/stub-store";
 
@@ -78,8 +79,17 @@ export async function auditAdminAction(
         async markCronDay() {
           return;
         },
-        async writeAuditLog() {
-          return;
+        async writeAuditLog(row) {
+          if (!row.user_id) {
+            return;
+          }
+          stubAppendAudit({
+            user_id: row.user_id,
+            action: row.action,
+            entity_type: row.entity_type,
+            entity_id: row.entity_id,
+            payload: row.payload,
+          });
         },
       },
     });

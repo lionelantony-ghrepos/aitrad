@@ -34,14 +34,22 @@ function seedRows(): AuditLog[] {
   return [first, second];
 }
 
-function ports(role: keyof typeof IDS, db: AuditLog[]): AuditAdminPorts & { audits: string[] } {
+function ports(
+  role: keyof typeof IDS,
+  db: AuditLog[],
+): AuditAdminPorts & {
+  audits: string[];
+  written: Array<{ user_id: string | null; action: string }>;
+} {
   const audits: string[] = [];
+  const written: Array<{ user_id: string | null; action: string }> = [];
   let retention: number | null = null;
   let cronDay: string | null = null;
   let chain = verifyAuditChain(db);
   const table = baselineTable("DT-ENT-01");
   return {
     audits,
+    written,
     async loadRole() {
       return role;
     },
@@ -96,6 +104,7 @@ function ports(role: keyof typeof IDS, db: AuditLog[]): AuditAdminPorts & { audi
     },
     async writeAuditLog(row) {
       audits.push(row.action);
+      written.push({ user_id: row.user_id, action: row.action });
     },
   };
 }
@@ -143,6 +152,53 @@ describe("TC-029-03 role access on audit admin (AC-029-03)", () => {
         expect(p.audits).toContain("audit:set_retention");
       }
     }
+  });
+});
+
+describe("audit-service append", () => {
+  it("lets a trader append as themselves and ignores a foreign user_id", async () => {
+    const db = seedRows();
+    const p = ports("trader", db);
+    const spoof = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
+    const res = await handleAuditServiceRequest({
+      method: "POST",
+      body: {
+        op: "append",
+        action: "watchlist:create",
+        entity_type: "watchlists",
+        entity_id: "55555555-5555-4555-8555-555555555555",
+        user_id: spoof,
+        payload: { name: "Core" },
+      },
+      userId: IDS.trader,
+      isService: false,
+      ports: p,
+    });
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ ok: true });
+    expect(p.written).toEqual([{ user_id: IDS.trader, action: "watchlist:create" }]);
+    const list = await handleAuditServiceRequest({
+      method: "POST",
+      body: { op: "list" },
+      userId: IDS.trader,
+      isService: false,
+      ports: p,
+    });
+    expect(list.status).toBe(403);
+  });
+
+  it("rejects service-key append", async () => {
+    const db = seedRows();
+    const p = ports("admin", db);
+    const res = await handleAuditServiceRequest({
+      method: "POST",
+      body: { op: "append", action: "watchlist:create", entity_type: "watchlists" },
+      userId: null,
+      isService: true,
+      ports: p,
+    });
+    expect(res.status).toBe(403);
+    expect(p.written).toEqual([]);
   });
 });
 

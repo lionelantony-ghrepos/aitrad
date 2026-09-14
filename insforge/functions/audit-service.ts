@@ -5562,6 +5562,7 @@ var auditAdminOpSchema = external_exports.enum([
   "getConfig",
   "setRetention",
   "cron",
+  "append",
 ]);
 var auditAdminFilterSchema = external_exports.object({
   user_id: uuidSchema.optional(),
@@ -5600,6 +5601,14 @@ var auditAdminCronRequestSchema = external_exports.object({
   op: external_exports.literal("cron"),
   force: external_exports.boolean().optional(),
 });
+var auditAdminAppendRequestSchema = external_exports.object({
+  op: external_exports.literal("append"),
+  action: external_exports.string().min(1),
+  entity_type: external_exports.string().min(1),
+  entity_id: uuidSchema.nullable().optional(),
+  payload: external_exports.record(external_exports.unknown()).optional(),
+  user_id: uuidSchema.nullable().optional(),
+});
 var auditAdminRequestSchema = external_exports.discriminatedUnion("op", [
   auditAdminListRequestSchema,
   auditAdminTimelineRequestSchema,
@@ -5608,6 +5617,7 @@ var auditAdminRequestSchema = external_exports.discriminatedUnion("op", [
   auditAdminGetConfigRequestSchema,
   auditAdminSetRetentionRequestSchema,
   auditAdminCronRequestSchema,
+  auditAdminAppendRequestSchema,
 ]);
 var auditChainVerifyResultSchema = external_exports.object({
   ok: external_exports.boolean(),
@@ -5640,6 +5650,9 @@ var auditAdminCronResponseSchema = external_exports.object({
   purged: external_exports.number().int().nonnegative(),
   alerted: external_exports.number().int().nonnegative(),
   skipped: external_exports.boolean(),
+});
+var auditAdminAppendResponseSchema = external_exports.object({
+  ok: external_exports.literal(true),
 });
 
 // packages/schemas/src/copilot.ts
@@ -6242,6 +6255,16 @@ async function handleAuditServiceRequest(input) {
   }
   if (!input.userId) {
     return { status: 401, body: { error: "UNAUTHENTICATED" } };
+  }
+  if (parsed.data.op === "append") {
+    await input.ports.writeAuditLog({
+      user_id: input.userId,
+      action: parsed.data.action,
+      entity_type: parsed.data.entity_type,
+      entity_id: parsed.data.entity_id,
+      payload: parsed.data.payload ?? {},
+    });
+    return { status: 200, body: { ok: true } };
   }
   const writeGate = await authorize({
     userId: input.userId,

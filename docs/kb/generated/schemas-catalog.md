@@ -34,6 +34,8 @@ Exported `*Schema` bindings discovered by static scan. Full OpenAPI from Zod is 
 - analytics.ts: portfolioAccountViewSchema
 - analytics.ts: portfolioPositionViewSchema
 - analytics.ts: portfolioResponseSchema
+- audit-admin.ts: auditAdminAppendRequestSchema
+- audit-admin.ts: auditAdminAppendResponseSchema
 - audit-admin.ts: auditAdminConfigResponseSchema
 - audit-admin.ts: auditAdminCronRequestSchema
 - audit-admin.ts: auditAdminCronResponseSchema

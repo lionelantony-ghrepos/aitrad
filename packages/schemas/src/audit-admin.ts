@@ -10,6 +10,7 @@ export const auditAdminOpSchema = z.enum([
   "getConfig",
   "setRetention",
   "cron",
+  "append",
 ]);
 
 export const auditAdminFilterSchema = z.object({
@@ -57,6 +58,16 @@ export const auditAdminCronRequestSchema = z.object({
   force: z.boolean().optional(),
 });
 
+/** Authenticated user append. Server forces user_id to the JWT subject; client user_id is ignored. */
+export const auditAdminAppendRequestSchema = z.object({
+  op: z.literal("append"),
+  action: z.string().min(1),
+  entity_type: z.string().min(1),
+  entity_id: uuidSchema.nullable().optional(),
+  payload: z.record(z.unknown()).optional(),
+  user_id: uuidSchema.nullable().optional(),
+});
+
 export const auditAdminRequestSchema = z.discriminatedUnion("op", [
   auditAdminListRequestSchema,
   auditAdminTimelineRequestSchema,
@@ -65,6 +76,7 @@ export const auditAdminRequestSchema = z.discriminatedUnion("op", [
   auditAdminGetConfigRequestSchema,
   auditAdminSetRetentionRequestSchema,
   auditAdminCronRequestSchema,
+  auditAdminAppendRequestSchema,
 ]);
 
 export const auditChainVerifyResultSchema = z.object({
@@ -105,6 +117,10 @@ export const auditAdminCronResponseSchema = z.object({
   skipped: z.boolean(),
 });
 
+export const auditAdminAppendResponseSchema = z.object({
+  ok: z.literal(true),
+});
+
 export type AuditAdminOp = z.infer<typeof auditAdminOpSchema>;
 export type AuditAdminFilter = z.infer<typeof auditAdminFilterSchema>;
 export type AuditAdminRequest = z.infer<typeof auditAdminRequestSchema>;
@@ -114,3 +130,5 @@ export type AuditAdminTimelineResponse = z.infer<typeof auditAdminTimelineRespon
 export type AuditAdminExportResponse = z.infer<typeof auditAdminExportResponseSchema>;
 export type AuditAdminConfigResponse = z.infer<typeof auditAdminConfigResponseSchema>;
 export type AuditAdminCronResponse = z.infer<typeof auditAdminCronResponseSchema>;
+export type AuditAdminAppendRequest = z.infer<typeof auditAdminAppendRequestSchema>;
+export type AuditAdminAppendResponse = z.infer<typeof auditAdminAppendResponseSchema>;

@@ -11,7 +11,7 @@ import {
   type ScreenerCriteria,
   type ScreenerRunResponse,
 } from "@meridian/schemas";
-import { createAuditLogRepository } from "@/lib/api/audit-log";
+import { appendAuditLog } from "@/lib/api/audit-service";
 import { createRecordsClient } from "@/lib/api/client";
 import { invokeScreenerRun } from "@/lib/api/screener";
 import { InsForgeApiError } from "@/lib/api/rest";
@@ -147,13 +147,21 @@ export async function saveScreenAction(input: {
   }
   if (isAuthStub()) {
     try {
-      return { ok: true, data: stubSaveScreen(session.userId, name, criteria.data, input.id) };
+      const row = stubSaveScreen(session.userId, name, criteria.data, input.id);
+      await appendAuditLog({
+        userId: session.userId,
+        accessToken: session.token,
+        action: "screener:save",
+        entity_type: "screens",
+        entity_id: row.id,
+        payload: { name },
+      });
+      return { ok: true, data: row };
     } catch {
       return { ok: false, message: "Could not save screen." };
     }
   }
-  const client = records(session.token);
-  const repo = createScreensRepository(client);
+  const repo = createScreensRepository(records(session.token));
   try {
     if (input.id) {
       const patch = screenPatchSchema.parse({ name, criteria: criteria.data });
@@ -162,8 +170,9 @@ export async function saveScreenAction(input: {
       if (!row) {
         return { ok: false, message: "Screen not found." };
       }
-      await createAuditLogRepository(client).insert({
-        user_id: session.userId,
+      await appendAuditLog({
+        userId: session.userId,
+        accessToken: session.token,
         action: "screener:save",
         entity_type: "screens",
         entity_id: row.id,
@@ -181,8 +190,9 @@ export async function saveScreenAction(input: {
     if (!row) {
       return { ok: false, message: "Could not save screen." };
     }
-    await createAuditLogRepository(client).insert({
-      user_id: session.userId,
+    await appendAuditLog({
+      userId: session.userId,
+      accessToken: session.token,
       action: "screener:save",
       entity_type: "screens",
       entity_id: row.id,
@@ -212,12 +222,15 @@ export async function deleteScreenAction(id: string): Promise<ActionResult<{ id:
   }
   if (isAuthStub()) {
     const ok = stubDeleteScreen(session.userId, id);
-    return ok ? { ok: true, data: { id } } : { ok: false, message: "Screen not found." };
+    if (!ok) {
+      return { ok: false, message: "Screen not found." };
+    }
+  } else {
+    await createScreensRepository(records(session.token)).remove(id);
   }
-  const client = records(session.token);
-  await createScreensRepository(client).remove(id);
-  await createAuditLogRepository(client).insert({
-    user_id: session.userId,
+  await appendAuditLog({
+    userId: session.userId,
+    accessToken: session.token,
     action: "screener:delete",
     entity_type: "screens",
     entity_id: id,
@@ -258,8 +271,16 @@ export async function addScreenerResultsToWatchlistAction(input: {
         skipped += 1;
         continue;
       }
-      stubAddWatchlistItem(session.userId, input.watchlistId, item.instrument_id);
+      const row = stubAddWatchlistItem(session.userId, input.watchlistId, item.instrument_id);
       added += 1;
+      await appendAuditLog({
+        userId: session.userId,
+        accessToken: session.token,
+        action: "watchlist:item:create",
+        entity_type: "watchlist_items",
+        entity_id: row.id,
+        payload: { symbol: item.symbol, watchlist_id: input.watchlistId, source: "screener" },
+      });
     }
     return { ok: true, data: { added, skipped } };
   }
@@ -292,8 +313,9 @@ export async function addScreenerResultsToWatchlistAction(input: {
       existing.push(row);
       sortOrder += 1;
       added += 1;
-      await createAuditLogRepository(client).insert({
-        user_id: session.userId,
+      await appendAuditLog({
+        userId: session.userId,
+        accessToken: session.token,
         action: "watchlist:item:create",
         entity_type: "watchlist_items",
         entity_id: row.id,

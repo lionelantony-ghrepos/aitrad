@@ -112,6 +112,17 @@ export async function handleAuditServiceRequest(input: {
     return { status: 401, body: { error: "UNAUTHENTICATED" } };
   }
 
+  if (parsed.data.op === "append") {
+    await input.ports.writeAuditLog({
+      user_id: input.userId,
+      action: parsed.data.action,
+      entity_type: parsed.data.entity_type,
+      entity_id: parsed.data.entity_id,
+      payload: parsed.data.payload ?? {},
+    });
+    return { status: 200, body: { ok: true } };
+  }
+
   const writeGate = await authorize({
     userId: input.userId,
     action: "audit:write",

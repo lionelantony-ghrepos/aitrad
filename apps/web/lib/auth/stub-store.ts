@@ -262,6 +262,29 @@ export function stubSetAuditRetention(days: number | null): void {
   getStubState().auditRetentionDays = days;
 }
 
+export function stubAppendAudit(row: {
+  user_id: string;
+  action: string;
+  entity_type: string;
+  entity_id?: string | null;
+  payload?: Record<string, unknown>;
+}): AuditLog {
+  stubEnsureAuditFixture();
+  const state = getStubState();
+  const prev = state.auditLogs[state.auditLogs.length - 1] ?? null;
+  const next = appendAuditChainRow(prev, {
+    id: crypto.randomUUID(),
+    user_id: row.user_id,
+    action: row.action,
+    entity_type: row.entity_type,
+    entity_id: row.entity_id ?? null,
+    payload: row.payload ?? {},
+    created_at: nowIso(),
+  });
+  state.auditLogs.push(next);
+  return next;
+}
+
 export function stubLoadProvision(userId: string): {
   profile: Profile | null;
   account: Account | null;
