@@ -139,6 +139,7 @@ Exported `*Schema` bindings discovered by static scan. Full OpenAPI from Zod is 
 - monitors.ts: monitorFactInputSchema
 - monitors.ts: monitorInsertSchema
 - monitors.ts: monitorLlmConditionCellSchema
+- monitors.ts: monitorOwnerPatchSchema
 - monitors.ts: monitorPatchSchema
 - monitors.ts: monitorRunnerRequestSchema
 - monitors.ts: monitorRunnerResponseSchema

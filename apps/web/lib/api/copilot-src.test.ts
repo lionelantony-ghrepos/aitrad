@@ -46,6 +46,7 @@ describe("copilot-orchestrator source contracts", () => {
     expect(src).toContain("count_user_monitors");
     expect(src).toContain("compileMonitorInstruction");
     expect(src).toContain('.from("monitors")');
+    expect(src).toContain('action: "monitors:create"');
     expect(src).toContain('action: "copilot:act"');
     expect(src).toContain('op: "decide"');
   });

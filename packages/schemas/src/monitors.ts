@@ -112,12 +112,20 @@ export const monitorInsertSchema = z
 
 export type MonitorInsert = z.infer<typeof monitorInsertSchema>;
 
-export const monitorPatchSchema = z
+/** JWT owner PATCH: pause/name/throttle reset. `last_run` is service-only. */
+export const monitorOwnerPatchSchema = z
   .object({
     name: z.string().min(1).optional(),
     active: z.boolean().optional(),
-    last_run: timestamptzSchema.nullable().optional(),
     throttle_state: alertThrottleStateSchema.optional(),
+  })
+  .strict();
+
+export type MonitorOwnerPatch = z.infer<typeof monitorOwnerPatchSchema>;
+
+export const monitorPatchSchema = monitorOwnerPatchSchema
+  .extend({
+    last_run: timestamptzSchema.nullable().optional(),
   })
   .strict();
 

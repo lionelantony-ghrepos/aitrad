@@ -16,7 +16,11 @@ import {
   stubListMonitors,
   stubPatchMonitor,
 } from "@/lib/auth/stub-store";
-import { persistCompiledMonitor } from "@/lib/monitors/persist";
+import {
+  persistCompiledMonitor,
+  ownerPausePatch,
+  ownerThrottleResetPatch,
+} from "@/lib/monitors/persist";
 import { readPublicInsforgeEnv } from "@/lib/insforge/env";
 
 export type ActionOk<T> = { ok: true; data: T };
@@ -159,13 +163,29 @@ export async function pauseMonitorAction(
     return { ok: false, message: "Not allowed." };
   }
   if (isAuthStub()) {
-    const row = stubPatchMonitor(session.userId, id, { active });
+    const current = stubListMonitors(session.userId).find((row) => row.id === id);
+    if (!current) {
+      return { ok: false, message: "Monitor not found." };
+    }
+    const row = stubPatchMonitor(
+      session.userId,
+      id,
+      ownerPausePatch(active, current.throttle_state),
+    );
     if (!row) {
       return { ok: false, message: "Monitor not found." };
     }
     return { ok: true, data: row };
   }
-  const updated = await createMonitorsRepository(records(session.token)).update(id, { active });
+  const existing = await createMonitorsRepository(records(session.token)).get(id);
+  const current = existing[0];
+  if (!current) {
+    return { ok: false, message: "Monitor not found." };
+  }
+  const updated = await createMonitorsRepository(records(session.token)).update(
+    id,
+    ownerPausePatch(active, current.throttle_state),
+  );
   const row = updated[0];
   if (!row) {
     return { ok: false, message: "Monitor not found." };
@@ -206,4 +226,42 @@ export async function deleteMonitorAction(id: string): Promise<ActionResult<{ id
     payload: {},
   });
   return { ok: true, data: { id } };
+}
+
+export async function resetMonitorThrottleAction(id: string): Promise<ActionResult<Monitor>> {
+  const session = await requireUser();
+  if (!session.ok) {
+    return session;
+  }
+  const gate = await authorizeUser({
+    userId: session.userId,
+    token: session.token,
+    action: "copilot:act",
+  });
+  if (!gate.allowed) {
+    return { ok: false, message: "Not allowed." };
+  }
+  if (isAuthStub()) {
+    const row = stubPatchMonitor(session.userId, id, ownerThrottleResetPatch());
+    if (!row) {
+      return { ok: false, message: "Monitor not found." };
+    }
+    return { ok: true, data: row };
+  }
+  const updated = await createMonitorsRepository(records(session.token)).update(
+    id,
+    ownerThrottleResetPatch(),
+  );
+  const row = updated[0];
+  if (!row) {
+    return { ok: false, message: "Monitor not found." };
+  }
+  await createAuditLogRepository(records(session.token)).insert({
+    user_id: session.userId,
+    action: "monitors:throttle_reset",
+    entity_type: "monitors",
+    entity_id: id,
+    payload: {},
+  });
+  return { ok: true, data: row };
 }

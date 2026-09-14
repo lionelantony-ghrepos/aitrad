@@ -871,7 +871,19 @@ async function executeManualWriteOnEdge(input: {
       .order("created_at", { ascending: false })
       .limit(1);
     const monitor = asRows<{ id: string }>(createdMon.data)[0];
-    return monitor ? { ref: monitor.id } : { error: "MONITOR_CREATE_FAILED" };
+    if (!monitor) {
+      return { error: "MONITOR_CREATE_FAILED" };
+    }
+    await db.from("audit_log").insert([
+      {
+        user_id: input.userId,
+        action: "monitors:create",
+        entity_type: "monitors",
+        entity_id: monitor.id,
+        payload: { name, tool: "create_monitor" },
+      },
+    ]);
+    return { ref: monitor.id };
   }
   return { error: `UNKNOWN_WRITE_TOOL:${input.tool}` };
 }

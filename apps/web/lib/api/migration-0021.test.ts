@@ -22,12 +22,17 @@ describe("PBI-027 migration 0021 monitors", () => {
     );
   });
 
-  it("creates monitors, count rpc, and nullable alert_rule_id", () => {
+  it("creates owner CRUD monitors and XOR alert source", () => {
     expect(cliTwinSql).toBe(migrationSql);
     expect(migrationSql).toContain("CREATE TABLE IF NOT EXISTS public.monitors");
-    expect(migrationSql).toContain("compiled_condition JSONB NOT NULL");
-    expect(migrationSql).toContain("ALTER COLUMN alert_rule_id DROP NOT NULL");
-    expect(migrationSql).toContain("ADD COLUMN IF NOT EXISTS monitor_id");
-    expect(migrationSql).toContain("CREATE OR REPLACE FUNCTION public.count_user_monitors");
+    expect(migrationSql).toContain("CREATE POLICY monitors_select_own");
+    expect(migrationSql).toContain("CREATE POLICY monitors_insert_own");
+    expect(migrationSql).toContain("CREATE POLICY monitors_update_own");
+    expect(migrationSql).toContain("CREATE POLICY monitors_delete_own");
+    expect(migrationSql).toContain(
+      "GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.monitors TO authenticated",
+    );
+    expect(migrationSql).toContain("count_user_monitors");
+    expect(migrationSql).toContain("alerts_source_chk");
   });
 });

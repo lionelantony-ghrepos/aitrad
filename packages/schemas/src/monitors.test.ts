@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   compiledMonitorConditionSchema,
   monitorCompileResultSchema,
+  monitorOwnerPatchSchema,
   monitorRunnerRequestSchema,
   monitorSchema,
   monitorScopeSchema,
@@ -57,5 +58,7 @@ describe("monitor DTOs", () => {
         compiled_condition: row.compiled_condition,
       }).scope.kind,
     ).toBe("symbols");
+    expect(monitorOwnerPatchSchema.parse({ active: false, throttle_state: {} }).active).toBe(false);
+    expect(() => monitorOwnerPatchSchema.parse({ last_run: row.last_run })).toThrow();
   });
 });

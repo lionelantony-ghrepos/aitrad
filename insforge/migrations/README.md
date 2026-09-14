@@ -181,3 +181,10 @@ PRD named this migration 0013; 0013 is screener.
 | `count_user_monitors` | EXECUTE `project_admin` (DT-AI-01 `monitors_count`)                  |
 
 PRD named this migration 0014; 0014 is already alerts.
+
+## 0022 contents
+
+| Object     | Access                                                                                          |
+| ---------- | ----------------------------------------------------------------------------------------------- |
+| `monitors` | JWT INSERT (owner fields, not `last_run`); JWT UPDATE (`name`, `active`, `throttle_state` only) |
+|            | `last_run` / compiled eval columns: `project_admin` / `monitor-runner` only                     |

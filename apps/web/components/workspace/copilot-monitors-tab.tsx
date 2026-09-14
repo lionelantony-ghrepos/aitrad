@@ -6,6 +6,7 @@ import {
   listMonitorAlertsAction,
   listMonitorsAction,
   pauseMonitorAction,
+  resetMonitorThrottleAction,
 } from "@/app/actions/monitors";
 import { explainCompiledMonitor } from "@meridian/copilot";
 import type { AlertInstance, Monitor } from "@meridian/schemas";
@@ -89,6 +90,16 @@ export function CopilotMonitorsTab(): React.JSX.Element {
               }}
             >
               {row.active ? "Pause" : "Resume"}
+            </button>
+            <button
+              type="button"
+              className="border border-border px-1 text-primary"
+              data-testid={`monitor-reset-throttle-${row.id}`}
+              onClick={() => {
+                void resetMonitorThrottleAction(row.id).then(() => refresh());
+              }}
+            >
+              Reset throttle
             </button>
             <button
               type="button"

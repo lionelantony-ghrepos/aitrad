@@ -5482,12 +5482,16 @@ var monitorInsertSchema = external_exports
     propose_action: external_exports.record(external_exports.unknown()).nullable().optional(),
   })
   .strict();
-var monitorPatchSchema = external_exports
+var monitorOwnerPatchSchema = external_exports
   .object({
     name: external_exports.string().min(1).optional(),
     active: external_exports.boolean().optional(),
-    last_run: timestamptzSchema.nullable().optional(),
     throttle_state: alertThrottleStateSchema.optional(),
+  })
+  .strict();
+var monitorPatchSchema = monitorOwnerPatchSchema
+  .extend({
+    last_run: timestamptzSchema.nullable().optional(),
   })
   .strict();
 var monitorCreateRequestSchema = external_exports
@@ -8652,7 +8656,19 @@ async function executeManualWriteOnEdge(input) {
       .order("created_at", { ascending: false })
       .limit(1);
     const monitor = asRows2(createdMon.data)[0];
-    return monitor ? { ref: monitor.id } : { error: "MONITOR_CREATE_FAILED" };
+    if (!monitor) {
+      return { error: "MONITOR_CREATE_FAILED" };
+    }
+    await db.from("audit_log").insert([
+      {
+        user_id: input.userId,
+        action: "monitors:create",
+        entity_type: "monitors",
+        entity_id: monitor.id,
+        payload: { name, tool: "create_monitor" },
+      },
+    ]);
+    return { ref: monitor.id };
   }
   return { error: `UNKNOWN_WRITE_TOOL:${input.tool}` };
 }

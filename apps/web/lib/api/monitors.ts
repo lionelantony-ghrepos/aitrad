@@ -1,9 +1,9 @@
 import {
-  monitorPatchSchema,
+  monitorOwnerPatchSchema,
   monitorSchema,
   type Monitor,
   type MonitorInsert,
-  type MonitorPatch,
+  type MonitorOwnerPatch,
 } from "@meridian/schemas";
 import type { RecordsClient } from "./client";
 import { eqFilter, recordTables } from "./rest";
@@ -15,15 +15,20 @@ export function createMonitorsRepository(client: RecordsClient) {
         query: { order: "created_at.desc" },
       });
     },
+    get(id: string) {
+      return client.list(recordTables.monitors, monitorSchema, {
+        query: { id: eqFilter(id) },
+      });
+    },
     insert(row: MonitorInsert) {
       return client.insert(recordTables.monitors, monitorSchema, [row]);
     },
-    update(id: string, patch: MonitorPatch) {
+    update(id: string, patch: MonitorOwnerPatch) {
       return client.update(
         recordTables.monitors,
         monitorSchema,
         { id: eqFilter(id) },
-        monitorPatchSchema.parse(patch),
+        monitorOwnerPatchSchema.parse(patch),
       );
     },
     remove(id: string) {

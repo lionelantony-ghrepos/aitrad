@@ -1,5 +1,10 @@
 import { compileMonitorInstruction } from "@meridian/copilot";
-import type { Monitor, MonitorCompileResult } from "@meridian/schemas";
+import type {
+  AlertThrottleState,
+  Monitor,
+  MonitorCompileResult,
+  MonitorOwnerPatch,
+} from "@meridian/schemas";
 
 export function persistCompiledMonitor(input: {
   userId: string;
@@ -30,4 +35,15 @@ export function persistCompiledMonitor(input: {
     created_at: now,
     updated_at: now,
   };
+}
+
+export function ownerPausePatch(active: boolean, current: AlertThrottleState): MonitorOwnerPatch {
+  return {
+    active,
+    throttle_state: { ...current, paused: !active },
+  };
+}
+
+export function ownerThrottleResetPatch(): MonitorOwnerPatch {
+  return { throttle_state: {} };
 }

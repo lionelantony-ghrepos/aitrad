@@ -167,3 +167,23 @@ describe("TC-026-03 auto-approve watchlist + audit hook @TC-026-03", () => {
     expect(result.executed_ref).toBe("watch-item-1");
   });
 });
+
+describe("create_monitor persist uses execute ref (no placeholder UUID)", () => {
+  it("auto-approves and stores the monitor id from execute", async () => {
+    const monitorId = "44444444-4444-4444-8444-444444444444";
+    const { ports, store } = memoryPorts(async () => ({ ref: monitorId }));
+    const result = await handleWriteToolCall({
+      userId: USER,
+      sessionId: SESSION,
+      tool: "create_monitor",
+      args: { nl_instruction: "tell me if any position drops 5% in a day" },
+      actionsToday: 0,
+      monitorsCount: 0,
+      ports,
+    });
+    expect(result.status).toBe("executed");
+    expect(result.executed_ref).toBe(monitorId);
+    expect(store[0]?.executed_ref).toBe(monitorId);
+    expect(store[0]?.executed_ref).not.toBe(store[0]?.id);
+  });
+});
