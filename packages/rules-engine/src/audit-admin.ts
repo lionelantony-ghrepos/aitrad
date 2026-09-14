@@ -105,23 +105,6 @@ export async function handleAuditServiceRequest(input: {
     };
   }
 
-  if (op === "append") {
-    if (input.isService) {
-      return { status: 403, body: { error: "USER_JWT_REQUIRED" } };
-    }
-    if (!input.userId) {
-      return { status: 401, body: { error: "UNAUTHENTICATED" } };
-    }
-    await input.ports.writeAuditLog({
-      user_id: input.userId,
-      action: parsed.data.action,
-      entity_type: parsed.data.entity_type,
-      entity_id: parsed.data.entity_id ?? null,
-      payload: parsed.data.payload ?? {},
-    });
-    return { status: 200, body: { ok: true } };
-  }
-
   if (input.isService) {
     return { status: 403, body: { error: "USER_JWT_REQUIRED" } };
   }
