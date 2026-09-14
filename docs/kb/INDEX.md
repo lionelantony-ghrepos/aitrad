@@ -49,7 +49,8 @@ PBI-023 embeds **news** (and later filings) for the copilot. It must **not** ing
 | 024 | [PBI-024](as-built/PBI-024.md) | user_roles, authorize() DT-ENT-01, DT-AI-01 seed, /admin/users |
 | 025 | [PBI-025](as-built/PBI-025.md) | Copilot chat, read tools, SSE orchestrator; migrations 0017–0018 (session IDOR + INSERT RLS) |
 | 026 | [PBI-026](as-built/PBI-026.md) | Write tools + `copilot_actions` 0019; DT-AI-01 approval cards in chat and notification center |
-| 027–031 | _pending_ | Copy [`_template-as-built.md`](_template-as-built.md) when the PBI ships |
+| 027 | [PBI-027](as-built/PBI-027.md) | Monitors 0021, NL compiler, `monitor-runner`, Copilot Monitors tab; DT-ALRT-01 |
+| 028–031 | _pending_ | Copy [`_template-as-built.md`](_template-as-built.md) when the PBI ships |
 
 ## Architecture decision records
 

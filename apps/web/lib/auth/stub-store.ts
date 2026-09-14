@@ -38,6 +38,7 @@ import type {
   CopilotSession,
   CopilotMessage,
   CopilotToolCallRecord,
+  Monitor,
   CopilotAction,
 } from "@meridian/schemas";
 
@@ -61,7 +62,7 @@ type StubState = {
   copilotMessages: CopilotMessage[];
   copilotActions: CopilotAction[];
   copilotAudit: Array<{ user_id: string; action: string; payload: unknown }>;
-  copilotMonitors: Array<{ id: string; user_id: string; name: string; nl_instruction: string }>;
+  copilotMonitors: Monitor[];
   copilotForceRateLimitUserIds: Set<string>;
   orders: OrderRecord[];
   executions: ExecutionRecord[];
@@ -1038,19 +1039,57 @@ export function stubListPendingCopilotActions(userId: string): CopilotAction[] {
   return stubListCopilotActions(userId).filter((row) => row.status === "proposed");
 }
 
-export function stubInsertCopilotMonitor(input: {
-  userId: string;
-  name: string;
-  nl_instruction: string;
-}): { id: string; user_id: string; name: string; nl_instruction: string } {
-  const row = {
-    id: crypto.randomUUID(),
-    user_id: input.userId,
-    name: input.name,
-    nl_instruction: input.nl_instruction,
-  };
+export function stubInsertCopilotMonitor(row: Monitor): Monitor {
   getStubState().copilotMonitors.push(row);
   return row;
+}
+
+export function stubListMonitors(userId: string): Monitor[] {
+  return getStubState()
+    .copilotMonitors.filter((row) => row.user_id === userId)
+    .slice()
+    .sort((a, b) => b.created_at.localeCompare(a.created_at));
+}
+
+export function stubPatchMonitor(
+  userId: string,
+  id: string,
+  patch: Partial<Pick<Monitor, "active" | "name" | "last_run" | "throttle_state">>,
+): Monitor | null {
+  const row = getStubState().copilotMonitors.find(
+    (item) => item.id === id && item.user_id === userId,
+  );
+  if (!row) {
+    return null;
+  }
+  if (patch.active !== undefined) {
+    row.active = patch.active;
+  }
+  if (patch.name !== undefined) {
+    row.name = patch.name;
+  }
+  if (patch.last_run !== undefined) {
+    row.last_run = patch.last_run;
+  }
+  if (patch.throttle_state !== undefined) {
+    row.throttle_state = patch.throttle_state;
+  }
+  row.updated_at = nowIso();
+  return row;
+}
+
+export function stubDeleteMonitor(userId: string, id: string): boolean {
+  const state = getStubState();
+  const before = state.copilotMonitors.length;
+  state.copilotMonitors = state.copilotMonitors.filter(
+    (row) => !(row.id === id && row.user_id === userId),
+  );
+  state.alerts = state.alerts.filter((row) => row.monitor_id !== id || row.user_id !== userId);
+  return state.copilotMonitors.length !== before;
+}
+
+export function stubListMonitorAlerts(userId: string, monitorId: string): AlertInstance[] {
+  return stubListAlerts(userId).filter((row) => row.monitor_id === monitorId);
 }
 
 export function stubListCopilotSessions(userId: string): CopilotSession[] {

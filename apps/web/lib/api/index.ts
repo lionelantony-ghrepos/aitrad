@@ -37,6 +37,7 @@ export { searchNewsServiceUrl, invokeSearchNews } from "./search-news";
 export { createFundamentalsRepository } from "./fundamentals";
 export { createScreensRepository } from "./screens";
 export { createAlertRulesRepository, createAlertsRepository } from "./alerts";
+export { createMonitorsRepository } from "./monitors";
 export {
   copilotOrchestratorUrl,
   invokeCopilotDecide,

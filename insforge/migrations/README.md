@@ -171,3 +171,13 @@ PRD named this migration 0013; 0013 is screener.
 | Object            | Access                                                                                      |
 | ----------------- | ------------------------------------------------------------------------------------------- |
 | `copilot_actions` | JWT **SELECT-only** (owner RLS). INSERT/UPDATE/DELETE `project_admin` (orchestrator decide) |
+
+## 0021 contents
+
+| Table / object        | Access                                                               |
+| --------------------- | -------------------------------------------------------------------- |
+| `monitors`            | Owner RLS CRUD (`user_id = auth.uid()`); `project_admin` full        |
+| `alerts.monitor_id`   | Optional FK; `alert_rule_id` nullable with XOR check vs `monitor_id` |
+| `count_user_monitors` | EXECUTE `project_admin` (DT-AI-01 `monitors_count`)                  |
+
+PRD named this migration 0014; 0014 is already alerts.

@@ -92,6 +92,14 @@ export {
   type EvaluateAlerting,
 } from "./alert-cycle";
 export {
+  cadenceElapsed,
+  runMonitorCycle,
+  type MonitorFacts,
+  type MonitorFireDraft,
+  type MonitorRuleUpdate,
+  type MonitorSnapshot,
+} from "./monitor-cycle";
+export {
   createRulesAdminMemory,
   memoryAppendAudit,
   memoryGetTable,

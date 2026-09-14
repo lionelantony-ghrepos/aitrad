@@ -270,12 +270,12 @@ Seeded via `scripts/seed-all.ts` (see doc 06): 150 instruments, 5y daily + 5d 1m
 ### PBI-027 Monitors
 | ID | Criterion / Test | Pri | Status |
 |---|---|---|---|
-| AC-027-01 | 10 golden NL instructions compile to expected condition JSON | P0 | ☐ |
-| AC-027-02 | Trigger fires once (throttled) with data-grounded explanation | P0 | ☐ |
-| AC-027-03 | Pause stops evaluation; plain-English rendering matches condition | P1 | ☐ |
-| TC-027-01 | Compiler golden suite (AC-027-01) | P0 | ☐ |
-| TC-027-02 | Portfolio-drop monitor + forced -6% → single alert w/ explanation (AC-027-02) | P0 | ☐ |
-| TC-027-03 | Paused monitor + trigger → silence (AC-027-03) | P1 | ☐ |
+| AC-027-01 | 10 golden NL instructions compile to expected condition JSON | P0 | ☑ |
+| AC-027-02 | Trigger fires once (throttled) with data-grounded explanation | P0 | ☑ |
+| AC-027-03 | Pause stops evaluation; plain-English rendering matches condition | P1 | ☑ |
+| TC-027-01 | Compiler golden suite (AC-027-01) | P0 | ☑ |
+| TC-027-02 | Portfolio-drop monitor + forced -6% → single alert w/ explanation (AC-027-02) | P0 | ☑ |
+| TC-027-03 | Paused monitor + trigger → silence (AC-027-03) | P1 | ☑ |
 
 ### PBI-028 Briefs
 | ID | Criterion / Test | Pri | Status |

@@ -9,14 +9,14 @@ function createAdminClient(config) {
   delete clientConfig.apiKey;
   return createClient({ ...clientConfig, accessToken: apiKey, isServerMode: true });
 }
-// bundled from insforge/functions/copilot-orchestrator-src.ts
+// bundled from insforge/functions/monitor-runner-src.ts
 
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all) __defProp(target, name, { get: all[name], enumerable: true });
 };
 
-// insforge/functions/copilot-orchestrator-src.ts
+// insforge/functions/monitor-runner-src.ts
 // node_modules/.pnpm/zod@3.25.76/node_modules/zod/v3/external.js
 var external_exports = {};
 __export(external_exports, {
@@ -633,9 +633,9 @@ var ParseInputLazyPath = class {
     return this._cachedPath;
   }
 };
-var handleResult = (ctx, result2) => {
-  if (isValid(result2)) {
-    return { success: true, data: result2.value };
+var handleResult = (ctx, result) => {
+  if (isValid(result)) {
+    return { success: true, data: result.value };
   } else {
     if (!ctx.common.issues.length) {
       throw new Error("Validation failed but no issues detected.");
@@ -706,20 +706,20 @@ var ZodType = class {
     };
   }
   _parseSync(input) {
-    const result2 = this._parse(input);
-    if (isAsync(result2)) {
+    const result = this._parse(input);
+    if (isAsync(result)) {
       throw new Error("Synchronous parse encountered promise.");
     }
-    return result2;
+    return result;
   }
   _parseAsync(input) {
-    const result2 = this._parse(input);
-    return Promise.resolve(result2);
+    const result = this._parse(input);
+    return Promise.resolve(result);
   }
   parse(data, params) {
-    const result2 = this.safeParse(data, params);
-    if (result2.success) return result2.data;
-    throw result2.error;
+    const result = this.safeParse(data, params);
+    if (result.success) return result.data;
+    throw result.error;
   }
   safeParse(data, params) {
     const ctx = {
@@ -734,8 +734,8 @@ var ZodType = class {
       data,
       parsedType: getParsedType(data),
     };
-    const result2 = this._parseSync({ data, path: ctx.path, parent: ctx });
-    return handleResult(ctx, result2);
+    const result = this._parseSync({ data, path: ctx.path, parent: ctx });
+    return handleResult(ctx, result);
   }
   "~validate"(data) {
     const ctx = {
@@ -751,10 +751,10 @@ var ZodType = class {
     };
     if (!this["~standard"].async) {
       try {
-        const result2 = this._parseSync({ data, path: [], parent: ctx });
-        return isValid(result2)
+        const result = this._parseSync({ data, path: [], parent: ctx });
+        return isValid(result)
           ? {
-              value: result2.value,
+              value: result.value,
             }
           : {
               issues: ctx.common.issues,
@@ -769,10 +769,10 @@ var ZodType = class {
         };
       }
     }
-    return this._parseAsync({ data, path: [], parent: ctx }).then((result2) =>
-      isValid(result2)
+    return this._parseAsync({ data, path: [], parent: ctx }).then((result) =>
+      isValid(result)
         ? {
-            value: result2.value,
+            value: result.value,
           }
         : {
             issues: ctx.common.issues,
@@ -780,9 +780,9 @@ var ZodType = class {
     );
   }
   async parseAsync(data, params) {
-    const result2 = await this.safeParseAsync(data, params);
-    if (result2.success) return result2.data;
-    throw result2.error;
+    const result = await this.safeParseAsync(data, params);
+    if (result.success) return result.data;
+    throw result.error;
   }
   async safeParseAsync(data, params) {
     const ctx = {
@@ -798,10 +798,10 @@ var ZodType = class {
       parsedType: getParsedType(data),
     };
     const maybeAsyncResult = this._parse({ data, path: ctx.path, parent: ctx });
-    const result2 = await (isAsync(maybeAsyncResult)
+    const result = await (isAsync(maybeAsyncResult)
       ? maybeAsyncResult
       : Promise.resolve(maybeAsyncResult));
-    return handleResult(ctx, result2);
+    return handleResult(ctx, result);
   }
   refine(check, message) {
     const getIssueProperties = (val) => {
@@ -814,14 +814,14 @@ var ZodType = class {
       }
     };
     return this._refinement((val, ctx) => {
-      const result2 = check(val);
+      const result = check(val);
       const setError = () =>
         ctx.addIssue({
           code: ZodIssueCode.custom,
           ...getIssueProperties(val),
         });
-      if (typeof Promise !== "undefined" && result2 instanceof Promise) {
-        return result2.then((data) => {
+      if (typeof Promise !== "undefined" && result instanceof Promise) {
+        return result.then((data) => {
           if (!data) {
             setError();
             return false;
@@ -830,7 +830,7 @@ var ZodType = class {
           }
         });
       }
-      if (!result2) {
+      if (!result) {
         setError();
         return false;
       } else {
@@ -2324,14 +2324,14 @@ var ZodArray = class _ZodArray extends ZodType {
         [...ctx.data].map((item, i) => {
           return def.type._parseAsync(new ParseInputLazyPath(ctx, item, ctx.path, i));
         }),
-      ).then((result3) => {
-        return ParseStatus.mergeArray(status, result3);
+      ).then((result2) => {
+        return ParseStatus.mergeArray(status, result2);
       });
     }
-    const result2 = [...ctx.data].map((item, i) => {
+    const result = [...ctx.data].map((item, i) => {
       return def.type._parseSync(new ParseInputLazyPath(ctx, item, ctx.path, i));
     });
-    return ParseStatus.mergeArray(status, result2);
+    return ParseStatus.mergeArray(status, result);
   }
   get element() {
     return this._def.type;
@@ -2740,18 +2740,18 @@ var ZodUnion = class extends ZodType {
     const { ctx } = this._processInputParams(input);
     const options = this._def.options;
     function handleResults(results) {
-      for (const result2 of results) {
-        if (result2.result.status === "valid") {
-          return result2.result;
+      for (const result of results) {
+        if (result.result.status === "valid") {
+          return result.result;
         }
       }
-      for (const result2 of results) {
-        if (result2.result.status === "dirty") {
-          ctx.common.issues.push(...result2.ctx.common.issues);
-          return result2.result;
+      for (const result of results) {
+        if (result.result.status === "dirty") {
+          ctx.common.issues.push(...result.ctx.common.issues);
+          return result.result;
         }
       }
-      const unionErrors = results.map((result2) => new ZodError(result2.ctx.common.issues));
+      const unionErrors = results.map((result) => new ZodError(result.ctx.common.issues));
       addIssueToContext(ctx, {
         code: ZodIssueCode.invalid_union,
         unionErrors,
@@ -2791,15 +2791,15 @@ var ZodUnion = class extends ZodType {
           },
           parent: null,
         };
-        const result2 = option._parseSync({
+        const result = option._parseSync({
           data: ctx.data,
           path: ctx.path,
           parent: childCtx,
         });
-        if (result2.status === "valid") {
-          return result2;
-        } else if (result2.status === "dirty" && !dirty) {
-          dirty = { result: result2, ctx: childCtx };
+        if (result.status === "valid") {
+          return result;
+        } else if (result.status === "dirty" && !dirty) {
+          dirty = { result, ctx: childCtx };
         }
         if (childCtx.common.issues.length) {
           issues.push(childCtx.common.issues);
@@ -3362,11 +3362,11 @@ var ZodFunction = class _ZodFunction extends ZodType {
           error.addIssue(makeArgsIssue(args, e));
           throw error;
         });
-        const result2 = await Reflect.apply(fn, this, parsedArgs);
+        const result = await Reflect.apply(fn, this, parsedArgs);
         const parsedReturns = await me._def.returns._def.type
-          .parseAsync(result2, params)
+          .parseAsync(result, params)
           .catch((e) => {
-            error.addIssue(makeReturnsIssue(result2, e));
+            error.addIssue(makeReturnsIssue(result, e));
             throw error;
           });
         return parsedReturns;
@@ -3378,10 +3378,10 @@ var ZodFunction = class _ZodFunction extends ZodType {
         if (!parsedArgs.success) {
           throw new ZodError([makeArgsIssue(args, parsedArgs.error)]);
         }
-        const result2 = Reflect.apply(fn, this, parsedArgs.data);
-        const parsedReturns = me._def.returns.safeParse(result2, params);
+        const result = Reflect.apply(fn, this, parsedArgs.data);
+        const parsedReturns = me._def.returns.safeParse(result, params);
         if (!parsedReturns.success) {
-          throw new ZodError([makeReturnsIssue(result2, parsedReturns.error)]);
+          throw new ZodError([makeReturnsIssue(result, parsedReturns.error)]);
         }
         return parsedReturns.data;
       });
@@ -3640,36 +3640,36 @@ var ZodEffects = class extends ZodType {
       if (ctx.common.async) {
         return Promise.resolve(processed).then(async (processed2) => {
           if (status.value === "aborted") return INVALID;
-          const result2 = await this._def.schema._parseAsync({
+          const result = await this._def.schema._parseAsync({
             data: processed2,
             path: ctx.path,
             parent: ctx,
           });
-          if (result2.status === "aborted") return INVALID;
-          if (result2.status === "dirty") return DIRTY(result2.value);
-          if (status.value === "dirty") return DIRTY(result2.value);
-          return result2;
+          if (result.status === "aborted") return INVALID;
+          if (result.status === "dirty") return DIRTY(result.value);
+          if (status.value === "dirty") return DIRTY(result.value);
+          return result;
         });
       } else {
         if (status.value === "aborted") return INVALID;
-        const result2 = this._def.schema._parseSync({
+        const result = this._def.schema._parseSync({
           data: processed,
           path: ctx.path,
           parent: ctx,
         });
-        if (result2.status === "aborted") return INVALID;
-        if (result2.status === "dirty") return DIRTY(result2.value);
-        if (status.value === "dirty") return DIRTY(result2.value);
-        return result2;
+        if (result.status === "aborted") return INVALID;
+        if (result.status === "dirty") return DIRTY(result.value);
+        if (status.value === "dirty") return DIRTY(result.value);
+        return result;
       }
     }
     if (effect.type === "refinement") {
       const executeRefinement = (acc) => {
-        const result2 = effect.refinement(acc, checkCtx);
+        const result = effect.refinement(acc, checkCtx);
         if (ctx.common.async) {
-          return Promise.resolve(result2);
+          return Promise.resolve(result);
         }
-        if (result2 instanceof Promise) {
+        if (result instanceof Promise) {
           throw new Error(
             "Async refinement encountered during synchronous parse operation. Use .parseAsync instead.",
           );
@@ -3706,21 +3706,21 @@ var ZodEffects = class extends ZodType {
           parent: ctx,
         });
         if (!isValid(base)) return INVALID;
-        const result2 = effect.transform(base.value, checkCtx);
-        if (result2 instanceof Promise) {
+        const result = effect.transform(base.value, checkCtx);
+        if (result instanceof Promise) {
           throw new Error(
             `Asynchronous transform encountered during synchronous parse operation. Use .parseAsync instead.`,
           );
         }
-        return { status: status.value, value: result2 };
+        return { status: status.value, value: result };
       } else {
         return this._def.schema
           ._parseAsync({ data: ctx.data, path: ctx.path, parent: ctx })
           .then((base) => {
             if (!isValid(base)) return INVALID;
-            return Promise.resolve(effect.transform(base.value, checkCtx)).then((result2) => ({
+            return Promise.resolve(effect.transform(base.value, checkCtx)).then((result) => ({
               status: status.value,
-              value: result2,
+              value: result,
             }));
           });
       }
@@ -3817,20 +3817,20 @@ var ZodCatch = class extends ZodType {
         issues: [],
       },
     };
-    const result2 = this._def.innerType._parse({
+    const result = this._def.innerType._parse({
       data: newCtx.data,
       path: newCtx.path,
       parent: {
         ...newCtx,
       },
     });
-    if (isAsync(result2)) {
-      return result2.then((result3) => {
+    if (isAsync(result)) {
+      return result.then((result2) => {
         return {
           status: "valid",
           value:
-            result3.status === "valid"
-              ? result3.value
+            result2.status === "valid"
+              ? result2.value
               : this._def.catchValue({
                   get error() {
                     return new ZodError(newCtx.common.issues);
@@ -3843,8 +3843,8 @@ var ZodCatch = class extends ZodType {
       return {
         status: "valid",
         value:
-          result2.status === "valid"
-            ? result2.value
+          result.status === "valid"
+            ? result.value
             : this._def.catchValue({
                 get error() {
                   return new ZodError(newCtx.common.issues);
@@ -3957,14 +3957,14 @@ var ZodPipeline = class _ZodPipeline extends ZodType {
 };
 var ZodReadonly = class extends ZodType {
   _parse(input) {
-    const result2 = this._def.innerType._parse(input);
+    const result = this._def.innerType._parse(input);
     const freeze = (data) => {
       if (isValid(data)) {
         data.value = Object.freeze(data.value);
       }
       return data;
     };
-    return isAsync(result2) ? result2.then((data) => freeze(data)) : freeze(result2);
+    return isAsync(result) ? result.then((data) => freeze(data)) : freeze(result);
   }
   unwrap() {
     return this._def.innerType;
@@ -4922,6 +4922,7 @@ var newsRealtimeBatchSchema = external_exports.object({
 
 // packages/schemas/src/news-search.ts
 var NEWS_SEARCH_LIMIT = 50;
+var NEWS_EMBEDDING_DIM = 1536;
 var newsSearchRequestSchema = external_exports.object({
   query: external_exports.string().trim().min(1).max(500),
   symbols: external_exports.array(external_exports.string().min(1)).max(32).optional(),
@@ -5546,16 +5547,6 @@ var adminUsersAssignResponseSchema = external_exports.object({
 });
 
 // packages/schemas/src/copilot.ts
-var COPILOT_MAX_TOOL_CALLS = 8;
-var COPILOT_SYSTEM_PROMPT = `You are Meridian Copilot, a market analyst inside a trading terminal. Rules:
-- Never state a price, P&L, or metric you did not just retrieve via a tool. No memory prices.
-- Cite sources: attach news ids / data refs for every factual claim.
-- You may propose actions via tools; orders always require user approval \u2014 say so.
-- You are not a licensed financial advisor: frame outputs as information/analysis, not advice;
-  note material risks when discussing positions.
-- Be terse and terminal-like: dense, factual, no filler.
-- If a rule (e.g. risk limit) blocked something, explain it using explain_rule_decision, never
-  speculate about why.`;
 var copilotReadToolNameSchema = external_exports.enum([
   "get_quote",
   "get_bars",
@@ -5654,7 +5645,6 @@ var getBarsToolInputSchema = external_exports.object({
   symbol: external_exports.string().trim().min(1).max(16),
   range: chartRangeSchema.default("1M"),
 });
-var searchNewsToolInputSchema = newsSearchRequestSchema;
 var getFundamentalsToolInputSchema = external_exports.object({
   symbol: external_exports.string().trim().min(1).max(16),
 });
@@ -5921,684 +5911,54 @@ function interpolateMessage(message, context) {
   });
 }
 
-// packages/rules-engine/src/authorize.ts
-function decisionFromOutcome(outcome) {
-  if (!outcome || typeof outcome !== "object" || !("decision" in outcome)) {
-    return "deny";
+// packages/rules-engine/src/alert-cycle.ts
+function utcDay(clock) {
+  return clock.toISOString().slice(0, 10);
+}
+function minutesSince(iso, clock) {
+  if (!iso) {
+    return void 0;
   }
-  const decision = outcome.decision;
-  if (decision === "allow" || decision === "deny" || decision === "require_approval") {
+  const then = Date.parse(iso);
+  if (!Number.isFinite(then)) {
+    return void 0;
+  }
+  return (clock.getTime() - then) / 6e4;
+}
+function buildAlertThrottleFacts(input) {
+  const elapsed = minutesSince(input.lastFiredAt, input.clock);
+  const facts = {
+    rule_fires_today: input.ruleFiresToday,
+    user_alerts_today: input.userAlertsToday,
+  };
+  if (elapsed !== void 0) {
+    facts.same_rule_fired_within_min = elapsed;
+  }
+  return facts;
+}
+function alertingDecisionFromOutcome(outcome) {
+  const row = Array.isArray(outcome) ? outcome[0] : outcome;
+  const decision = row && typeof row === "object" ? row.decision : void 0;
+  if (decision === "suppress" || decision === "suppress_and_pause_rule" || decision === "deliver") {
     return decision;
   }
-  return "deny";
+  return "suppress";
 }
-function authorizeResultFromOutcome(outcome) {
-  const decision = decisionFromOutcome(outcome);
-  return {
-    allowed: decision === "allow",
-    decision,
-    reason: decision === "allow" ? void 0 : "FORBIDDEN",
-  };
-}
-function authorizeFromTable(input) {
-  if (!input.userId) {
-    return { allowed: false, decision: "deny", reason: "UNAUTHENTICATED" };
-  }
-  if (input.action.length === 0) {
-    return { allowed: false, decision: "deny", reason: "ACTION_REQUIRED" };
-  }
-  const role = input.role && input.role.length > 0 ? input.role : "unknown";
-  const result2 = evaluate(
-    input.table,
-    { role, action: input.action },
-    input.clock ?? /* @__PURE__ */ new Date(),
+function alertConditionMatched(condition, context, clock) {
+  const result = evaluate(
+    {
+      id: "alert-rule",
+      hit_policy: "FIRST",
+      default_outputs: { decision: "idle" },
+      rows: [condition],
+    },
+    context,
+    clock,
   );
-  return authorizeResultFromOutcome(result2.outcome);
-}
-async function authorize(input) {
-  if (!input.userId) {
-    return { allowed: false, decision: "deny", reason: "UNAUTHENTICATED" };
-  }
-  if (input.action.length === 0) {
-    return { allowed: false, decision: "deny", reason: "ACTION_REQUIRED" };
-  }
-  if (input.ports) {
-    const role = (await input.ports.loadRole(input.userId)) ?? "unknown";
-    const evaluated = await input.ports.evaluateEntitlements({ role, action: input.action });
-    return authorizeResultFromOutcome(evaluated.outcome);
-  }
-  if (input.table) {
-    return authorizeFromTable({
-      userId: input.userId,
-      action: input.action,
-      role: input.role,
-      table: input.table,
-      clock: input.clock,
-    });
-  }
-  return { allowed: false, decision: "deny", reason: "FORBIDDEN" };
-}
-
-// packages/rules-engine/src/doc05-fixtures.ts
-var dtRisk01 = {
-  id: "DT-RISK-01",
-  hit_policy: "FIRST",
-  default_outputs: { decision: "allow" },
-  rows: [
-    {
-      id: "1",
-      priority: 1,
-      conditions: [{ input: "exceeds_buying_power", op: "eq", value: true }],
-      outputs: { decision: "reject", reason_code: "RISK_BUYING_POWER" },
-    },
-    {
-      id: "2",
-      priority: 2,
-      conditions: [{ input: "order_notional", op: "gt", value: 5e4 }],
-      outputs: { decision: "reject", reason_code: "RISK_MAX_NOTIONAL" },
-    },
-    {
-      id: "3",
-      priority: 3,
-      conditions: [
-        { input: "position_pct_post", op: "gt", value: 25 },
-        { input: "experience_level", op: "eq", value: "novice" },
-      ],
-      outputs: { decision: "reject", reason_code: "RISK_CONCENTRATION_NOVICE" },
-    },
-    {
-      id: "4",
-      priority: 4,
-      conditions: [{ input: "position_pct_post", op: "gt", value: 40 }],
-      outputs: { decision: "reject", reason_code: "RISK_CONCENTRATION" },
-    },
-    {
-      id: "5",
-      priority: 5,
-      conditions: [{ input: "orders_today", op: "gte", value: 100 }],
-      outputs: { decision: "reject", reason_code: "RISK_DAILY_ORDER_CAP" },
-    },
-    {
-      id: "6",
-      priority: 6,
-      conditions: [
-        { input: "instrument_beta_class", op: "eq", value: "high" },
-        { input: "experience_level", op: "eq", value: "novice" },
-        { input: "order_notional", op: "gt", value: 5e3 },
-      ],
-      outputs: { decision: "require_ack", reason_code: "RISK_HIGH_BETA_ACK" },
-    },
-    {
-      id: "7",
-      priority: 7,
-      conditions: [
-        { input: "side", op: "eq", value: "sell" },
-        { input: "exceeds_position_qty", op: "eq", value: true },
-      ],
-      outputs: { decision: "reject", reason_code: "RISK_NO_SHORTING" },
-    },
-  ],
-};
-var dtVal01 = {
-  id: "DT-VAL-01",
-  hit_policy: "COLLECT",
-  default_outputs: { decision: "valid" },
-  rows: [
-    {
-      id: "1",
-      priority: 1,
-      conditions: [{ input: "qty", op: "lte", value: 0 }],
-      outputs: {
-        decision: "reject",
-        reason_code: "VAL_QTY_POSITIVE",
-        message: "Quantity must be positive.",
-      },
-    },
-    {
-      id: "2",
-      priority: 2,
-      conditions: [{ input: "qty", op: "gt", value: 1e4 }],
-      outputs: { decision: "reject", reason_code: "VAL_QTY_MAX" },
-    },
-    {
-      id: "3",
-      priority: 3,
-      conditions: [
-        { input: "order_type", op: "in", value: ["limit", "stop_limit"] },
-        { input: "limit_price", op: "is_null" },
-      ],
-      outputs: { decision: "reject", reason_code: "VAL_LIMIT_REQUIRED" },
-    },
-    {
-      id: "4",
-      priority: 4,
-      conditions: [
-        { input: "order_type", op: "in", value: ["stop", "stop_limit"] },
-        { input: "stop_price", op: "is_null" },
-      ],
-      outputs: { decision: "reject", reason_code: "VAL_STOP_REQUIRED" },
-    },
-    {
-      id: "5",
-      priority: 5,
-      conditions: [
-        { input: "order_type", op: "eq", value: "limit" },
-        { input: "side", op: "eq", value: "buy" },
-        { input: "limit_far_above_last", op: "eq", value: true },
-      ],
-      outputs: { decision: "warn", reason_code: "VAL_LIMIT_FAR" },
-    },
-    {
-      id: "6",
-      priority: 6,
-      conditions: [{ input: "instrument_status", op: "neq", value: "active" }],
-      outputs: { decision: "reject", reason_code: "VAL_HALTED" },
-    },
-    {
-      id: "7",
-      priority: 7,
-      conditions: [
-        { input: "tif", op: "eq", value: "IOC" },
-        { input: "order_type", op: "neq", value: "limit" },
-      ],
-      outputs: { decision: "reject", reason_code: "VAL_IOC_LIMIT_ONLY" },
-    },
-    {
-      id: "8",
-      priority: 8,
-      conditions: [{ input: "price_not_on_tick", op: "eq", value: true }],
-      outputs: { decision: "reject", reason_code: "VAL_TICK_SIZE" },
-    },
-  ],
-};
-var dtFee01 = {
-  id: "DT-FEE-01",
-  hit_policy: "ALL",
-  default_outputs: { commission_usd: 0 },
-  rows: [
-    {
-      id: "1",
-      priority: 1,
-      conditions: [{ input: "side", op: "any" }],
-      outputs: { commission_usd: 0 },
-    },
-    {
-      id: "2",
-      priority: 2,
-      conditions: [{ input: "side", op: "eq", value: "sell" }],
-      outputs: {
-        sec_fee: "notional_x_sec_rate",
-        taf: "qty_x_taf_capped",
-        sec_rate: 278e-7,
-        taf_per_share: 166e-6,
-        taf_cap: 8.3,
-      },
-    },
-    {
-      id: "3",
-      priority: 3,
-      conditions: [{ input: "account_tier", op: "eq", value: "pro" }],
-      outputs: { data_fee_monthly: 0 },
-    },
-  ],
-};
-
-// packages/rules-engine/src/baseline-tables.ts
-var dtVal02 = {
-  id: "DT-VAL-02",
-  hit_policy: "COLLECT",
-  default_outputs: { decision: "valid" },
-  rows: [
-    {
-      id: "1",
-      priority: 1,
-      conditions: [
-        { input: "group_type", op: "eq", value: "bracket" },
-        { input: "side", op: "eq", value: "buy" },
-        { input: "tp_not_above_entry", op: "eq", value: true },
-      ],
-      outputs: { decision: "reject", reason_code: "VAL_TP_ABOVE_ENTRY" },
-    },
-    {
-      id: "2",
-      priority: 2,
-      conditions: [
-        { input: "group_type", op: "eq", value: "bracket" },
-        { input: "side", op: "eq", value: "buy" },
-        { input: "sl_not_below_entry", op: "eq", value: true },
-      ],
-      outputs: { decision: "reject", reason_code: "VAL_SL_BELOW_ENTRY" },
-    },
-    {
-      id: "3",
-      priority: 3,
-      conditions: [
-        { input: "group_type", op: "eq", value: "bracket" },
-        { input: "legs_count", op: "neq", value: 3 },
-      ],
-      outputs: { decision: "reject", reason_code: "VAL_BRACKET_LEGS" },
-    },
-    {
-      id: "4",
-      priority: 4,
-      conditions: [
-        { input: "trail_type", op: "eq", value: "percent" },
-        { input: "trail_value", op: "between", value: [0.1, 50], negate: true },
-      ],
-      outputs: { decision: "reject", reason_code: "VAL_TRAIL_RANGE" },
-    },
-    {
-      id: "5",
-      priority: 5,
-      conditions: [
-        { input: "group_type", op: "eq", value: "oco" },
-        { input: "legs_count", op: "neq", value: 2 },
-      ],
-      outputs: { decision: "reject", reason_code: "VAL_OCO_LEGS" },
-    },
-  ],
-};
-var dtHrs01 = {
-  id: "DT-HRS-01",
-  hit_policy: "FIRST",
-  default_outputs: { decision: "allow" },
-  rows: [
-    {
-      id: "1",
-      priority: 1,
-      conditions: [
-        { input: "session", op: "eq", value: "closed" },
-        { input: "order_type", op: "eq", value: "market" },
-      ],
-      outputs: { decision: "reject", reason_code: "HRS_MARKET_CLOSED" },
-    },
-    {
-      id: "2",
-      priority: 2,
-      conditions: [
-        { input: "session", op: "eq", value: "closed" },
-        { input: "order_type", op: "in", value: ["limit", "stop", "stop_limit"] },
-      ],
-      outputs: { decision: "queue_for_open" },
-    },
-    {
-      id: "3",
-      priority: 3,
-      conditions: [{ input: "session", op: "eq", value: "open" }],
-      outputs: { decision: "allow" },
-    },
-  ],
-};
-var dtExec01 = {
-  id: "DT-EXEC-01",
-  hit_policy: "FIRST",
-  default_outputs: { slippage_bps: 5, liquidity_cap_pct_adv: 5 },
-  rows: [
-    {
-      id: "4a",
-      priority: 1,
-      conditions: [
-        { input: "avg_volume_band", op: "eq", value: "high" },
-        { input: "large_notional", op: "eq", value: true },
-      ],
-      outputs: { slippage_bps: 7, liquidity_cap_pct_adv: 10 },
-    },
-    {
-      id: "4b",
-      priority: 2,
-      conditions: [
-        { input: "avg_volume_band", op: "eq", value: "medium" },
-        { input: "large_notional", op: "eq", value: true },
-      ],
-      outputs: { slippage_bps: 10, liquidity_cap_pct_adv: 5 },
-    },
-    {
-      id: "4c",
-      priority: 3,
-      conditions: [
-        { input: "avg_volume_band", op: "eq", value: "low" },
-        { input: "large_notional", op: "eq", value: true },
-      ],
-      outputs: { slippage_bps: 20, liquidity_cap_pct_adv: 2 },
-    },
-    {
-      id: "1",
-      priority: 4,
-      conditions: [{ input: "avg_volume_band", op: "eq", value: "high" }],
-      outputs: { slippage_bps: 2, liquidity_cap_pct_adv: 10 },
-    },
-    {
-      id: "2",
-      priority: 5,
-      conditions: [{ input: "avg_volume_band", op: "eq", value: "medium" }],
-      outputs: { slippage_bps: 5, liquidity_cap_pct_adv: 5 },
-    },
-    {
-      id: "3",
-      priority: 6,
-      conditions: [{ input: "avg_volume_band", op: "eq", value: "low" }],
-      outputs: { slippage_bps: 15, liquidity_cap_pct_adv: 2 },
-    },
-  ],
-};
-var dtAi01 = {
-  id: "DT-AI-01",
-  hit_policy: "FIRST",
-  default_outputs: { decision: "require_approval" },
-  rows: [
-    {
-      id: "4",
-      priority: 1,
-      conditions: [
-        { input: "tool", op: "eq", value: "propose_order" },
-        { input: "order_notional", op: "gt", value: 5e4 },
-      ],
-      outputs: { decision: "block" },
-    },
-    {
-      id: "5",
-      priority: 2,
-      conditions: [{ input: "messages_today", op: "gt", value: 200 }],
-      outputs: { decision: "rate_limit", message: "Daily copilot quota reached." },
-    },
-    {
-      id: "1",
-      priority: 3,
-      conditions: [{ input: "tool", op: "eq", value: "propose_order" }],
-      outputs: { decision: "require_approval" },
-    },
-    {
-      id: "2",
-      priority: 4,
-      conditions: [
-        { input: "tool", op: "in", value: ["create_watchlist_item", "create_alert"] },
-        { input: "actions_today", op: "lt", value: 50 },
-      ],
-      outputs: { decision: "auto_approve" },
-    },
-    {
-      id: "3",
-      priority: 5,
-      conditions: [
-        { input: "tool", op: "eq", value: "create_monitor" },
-        { input: "monitors_count", op: "lt", value: 20 },
-      ],
-      outputs: { decision: "auto_approve" },
-    },
-  ],
-};
-var dtEnt01 = {
-  id: "DT-ENT-01",
-  hit_policy: "FIRST",
-  default_outputs: { decision: "deny" },
-  rows: [
-    {
-      id: "2",
-      priority: 1,
-      conditions: [{ input: "role", op: "eq", value: "admin" }],
-      outputs: { decision: "allow" },
-    },
-    {
-      id: "1",
-      priority: 2,
-      conditions: [
-        { input: "role", op: "eq", value: "trader" },
-        {
-          input: "action",
-          op: "regex",
-          value: "^(trade|watchlist|alerts|copilot|screener):|^portfolio:read$",
-        },
-      ],
-      outputs: { decision: "allow" },
-    },
-    {
-      id: "3",
-      priority: 3,
-      conditions: [
-        { input: "role", op: "eq", value: "compliance" },
-        { input: "action", op: "in", value: ["audit:read", "rules:read"] },
-      ],
-      outputs: { decision: "allow" },
-    },
-    {
-      id: "4",
-      priority: 4,
-      conditions: [
-        { input: "role", op: "eq", value: "compliance" },
-        { input: "action", op: "regex", value: "^trade:" },
-      ],
-      outputs: { decision: "deny" },
-    },
-    {
-      id: "5",
-      priority: 5,
-      conditions: [
-        { input: "role", op: "eq", value: "trader" },
-        {
-          input: "action",
-          op: "in",
-          value: [
-            "rules:evaluate",
-            "provision-account",
-            "profile-wizard",
-            "news:search",
-            "chart:bars",
-          ],
-        },
-      ],
-      outputs: { decision: "allow" },
-    },
-  ],
-};
-var dtAlrt01 = {
-  id: "DT-ALRT-01",
-  hit_policy: "FIRST",
-  default_outputs: { decision: "deliver" },
-  rows: [
-    {
-      id: "1",
-      priority: 1,
-      conditions: [{ input: "same_rule_fired_within_min", op: "lt", value: 15 }],
-      outputs: { decision: "suppress" },
-    },
-    {
-      id: "2",
-      priority: 2,
-      conditions: [{ input: "rule_fires_today", op: "gte", value: 20 }],
-      outputs: { decision: "suppress_and_pause_rule" },
-    },
-    {
-      id: "3",
-      priority: 3,
-      conditions: [{ input: "user_alerts_today", op: "gte", value: 100 }],
-      outputs: { decision: "suppress" },
-    },
-  ],
-};
-var dtRisk02 = {
-  id: "DT-RISK-02",
-  hit_policy: "COLLECT",
-  default_outputs: { flags: [] },
-  rows: [
-    {
-      id: "1",
-      priority: 1,
-      conditions: [{ input: "max_position_pct", op: "gt", value: 25 }],
-      outputs: { flag: "CONCENTRATION_POSITION" },
-    },
-    {
-      id: "2",
-      priority: 2,
-      conditions: [{ input: "max_sector_pct", op: "gt", value: 40 }],
-      outputs: { flag: "CONCENTRATION_SECTOR" },
-    },
-    {
-      id: "3",
-      priority: 3,
-      conditions: [{ input: "portfolio_beta", op: "gt", value: 1.4 }],
-      outputs: { flag: "HIGH_BETA_TILT" },
-    },
-    {
-      id: "4",
-      priority: 4,
-      conditions: [{ input: "cash_pct", op: "gt", value: 30 }],
-      outputs: { flag: "CASH_DRAG" },
-    },
-    {
-      id: "5",
-      priority: 5,
-      conditions: [
-        { input: "positions_count", op: "lt", value: 3 },
-        { input: "equity", op: "gt", value: 1e4 },
-      ],
-      outputs: { flag: "LOW_DIVERSIFICATION" },
-    },
-  ],
-};
-var dtSuit01 = {
-  id: "DT-SUIT-01",
-  hit_policy: "FIRST",
-  default_outputs: { suitability_tier: "standard" },
-  rows: [
-    {
-      id: "1",
-      priority: 1,
-      conditions: [{ input: "experience_level", op: "eq", value: "novice" }],
-      outputs: { suitability_tier: "conservative" },
-    },
-    {
-      id: "2",
-      priority: 2,
-      conditions: [{ input: "experience_level", op: "eq", value: "intermediate" }],
-      outputs: { suitability_tier: "standard" },
-    },
-    {
-      id: "3",
-      priority: 3,
-      conditions: [{ input: "experience_level", op: "eq", value: "advanced" }],
-      outputs: { suitability_tier: "full" },
-    },
-  ],
-};
-var dtSim01 = {
-  id: "DT-SIM-01",
-  hit_policy: "ALL",
-  default_outputs: { regime: "normal" },
-  rows: [
-    {
-      id: "1",
-      priority: 1,
-      conditions: [{ input: "beta_class", op: "any" }],
-      outputs: { gap_event_prob_per_day: 0.02, gap_range_pct: [1, 6] },
-    },
-    {
-      id: "2",
-      priority: 2,
-      conditions: [{ input: "beta_class", op: "eq", value: "high" }],
-      outputs: { vol_multiplier: 1.8 },
-    },
-    {
-      id: "3",
-      priority: 3,
-      conditions: [{ input: "beta_class", op: "eq", value: "low" }],
-      outputs: { vol_multiplier: 0.6 },
-    },
-    {
-      id: "4",
-      priority: 4,
-      conditions: [{ input: "news_sentiment_shock", op: "eq", value: true }],
-      outputs: { drift_nudge_bps_per_sentiment: 30 },
-    },
-  ],
-};
-var TABLES = {
-  "DT-VAL-01": dtVal01,
-  "DT-VAL-02": dtVal02,
-  "DT-RISK-01": dtRisk01,
-  "DT-HRS-01": dtHrs01,
-  "DT-EXEC-01": dtExec01,
-  "DT-FEE-01": dtFee01,
-  "DT-AI-01": dtAi01,
-  "DT-ENT-01": dtEnt01,
-  "DT-ALRT-01": dtAlrt01,
-  "DT-RISK-02": dtRisk02,
-  "DT-SUIT-01": dtSuit01,
-  "DT-SIM-01": dtSim01,
-};
-function baselineTable(key) {
-  const table = TABLES[key];
-  if (!table) {
-    throw new Error(`UNKNOWN_BASELINE_TABLE:${key}`);
-  }
-  return table;
-}
-
-// packages/rules-engine/src/evaluate-domain.ts
-function assembleDecisionTable(input) {
-  return {
-    id: input.tableKey,
-    hit_policy: input.hit_policy,
-    default_outputs: input.default_outputs,
-    rows: input.rows.map((row) => ({
-      id: row.row_key,
-      priority: row.priority,
-      conditions: row.conditions,
-      outputs: row.outputs,
-      effective_from: row.effective_from ?? null,
-      effective_to: row.effective_to ?? null,
-    })),
-  };
-}
-function resolveRulesServiceApiKey(env) {
-  const key = env.API_KEY ?? env.INSFORGE_API_KEY;
-  if (typeof key !== "string" || key.length === 0) {
-    return null;
-  }
-  return key;
-}
-
-// packages/rules-engine/src/alert-templates.ts
-function compileAlertTemplate(params) {
-  const kind = alertKindSchema.parse(params.kind);
-  const conditions = conditionsForKind(kind, params.threshold);
-  return {
-    id: "alert",
-    priority: 1,
-    conditions,
-    outputs: { decision: "fire" },
-  };
-}
-function conditionsForKind(kind, threshold) {
-  switch (kind) {
-    case "price_cross_above": {
-      const x = requireThreshold(threshold);
-      return [
-        { input: "last", op: "gt", value: x },
-        { input: "prev_last", op: "lte", value: x },
-      ];
-    }
-    case "price_cross_below": {
-      const x = requireThreshold(threshold);
-      return [
-        { input: "last", op: "lt", value: x },
-        { input: "prev_last", op: "gte", value: x },
-      ];
-    }
-    case "pct_chg":
-      return [{ input: "pct_chg", op: "gt", value: requireThreshold(threshold) }];
-    case "volume":
-      return [{ input: "volume", op: "gt", value: requireThreshold(threshold) }];
-    case "rsi":
-      return [{ input: "rsi_14", op: "lt", value: requireThreshold(threshold) }];
-    case "news_sentiment":
-      return [{ input: "news_sentiment", op: "lt", value: 0 }];
-  }
-}
-function requireThreshold(threshold) {
-  if (threshold === void 0 || !Number.isFinite(threshold)) {
-    throw new Error("ALERT_THRESHOLD_REQUIRED");
-  }
-  return threshold;
+  const outcome = result.outcome;
+  const decision =
+    outcome && typeof outcome === "object" && !Array.isArray(outcome) ? outcome.decision : void 0;
+  return result.matchedRows.length > 0 && decision === "fire";
 }
 
 // packages/rules-engine/src/monitor-cycle.ts
@@ -6608,2053 +5968,606 @@ var CADENCE_MS = {
   "1h": 60 * 6e4,
   "1d": 24 * 60 * 6e4,
 };
-
-// packages/copilot/src/prompt.ts
-function buildContextPreamble(input) {
-  const lines = ["Session context (retrieved by the host \u2014 treat as tool data, not memory):"];
-  if (input.activeSymbol) {
-    lines.push(`activeSymbol=${input.activeSymbol}`);
+function cadenceElapsed(cadence, lastRun, clock) {
+  if (!lastRun) {
+    return true;
   }
-  if (input.portfolioSummary) {
-    lines.push(input.portfolioSummary);
+  const then = Date.parse(lastRun);
+  if (!Number.isFinite(then)) {
+    return true;
   }
-  if (lines.length === 1) {
-    lines.push("No linked symbol. Call tools before stating any figure.");
+  const windowMs = CADENCE_MS[cadence] ?? CADENCE_MS["5m"];
+  return clock.getTime() - then >= (windowMs ?? 0);
+}
+function firesTodayFor(state, clock) {
+  const day = utcDay(clock);
+  if (state.fires_on_date !== day) {
+    return 0;
   }
-  return lines.join("\n");
+  return state.fires_today ?? 0;
 }
-
-// packages/copilot/src/tools.ts
-var READ_TOOL_LABELS = {
-  get_quote: "Looking up quote\u2026",
-  get_bars: "Loading bars\u2026",
-  search_news: "Searching news\u2026",
-  get_fundamentals: "Loading fundamentals\u2026",
-  screen_instruments: "Screening instruments\u2026",
-  get_portfolio: "Loading portfolio\u2026",
-  explain_rule_decision: "Explaining rule decision\u2026",
-};
-var WRITE_TOOL_LABELS = {
-  create_watchlist_item: "Adding to watchlist\u2026",
-  create_alert: "Creating alert\u2026",
-  propose_order: "Proposing order\u2026",
-  create_monitor: "Creating monitor\u2026",
-};
-var READ_TOOLS = [
-  {
-    name: "get_quote",
-    description: "Latest bid/ask/last/volume for a US equity or ETF symbol.",
-    label: READ_TOOL_LABELS.get_quote,
-    inputSchema: getQuoteToolInputSchema,
-    jsonSchema: {
-      type: "object",
-      properties: { symbol: { type: "string" } },
-      required: ["symbol"],
-      additionalProperties: false,
-    },
-  },
-  {
-    name: "get_bars",
-    description: "OHLCV bars for a symbol (1D minute, otherwise daily).",
-    label: READ_TOOL_LABELS.get_bars,
-    inputSchema: getBarsToolInputSchema,
-    jsonSchema: {
-      type: "object",
-      properties: {
-        symbol: { type: "string" },
-        range: { type: "string", enum: ["1D", "1W", "1M", "1Y", "5Y"] },
-      },
-      required: ["symbol"],
-      additionalProperties: false,
-    },
-  },
-  {
-    name: "search_news",
-    description: "Semantic news search. Returns items with ids to cite as [news:<id>].",
-    label: READ_TOOL_LABELS.search_news,
-    inputSchema: searchNewsToolInputSchema,
-    jsonSchema: {
-      type: "object",
-      properties: {
-        query: { type: "string" },
-        symbols: { type: "array", items: { type: "string" } },
-        since: { type: "string" },
-        limit: { type: "integer" },
-      },
-      required: ["query"],
-      additionalProperties: false,
-    },
-  },
-  {
-    name: "get_fundamentals",
-    description: "DES fundamentals: valuation, income, margins, analyst mix.",
-    label: READ_TOOL_LABELS.get_fundamentals,
-    inputSchema: getFundamentalsToolInputSchema,
-    jsonSchema: {
-      type: "object",
-      properties: { symbol: { type: "string" } },
-      required: ["symbol"],
-      additionalProperties: false,
-    },
-  },
-  {
-    name: "screen_instruments",
-    description: "Run the instrument screener. Prefer sector plus optional full criteria.",
-    label: READ_TOOL_LABELS.screen_instruments,
-    inputSchema: screenInstrumentsToolInputSchema,
-    jsonSchema: {
-      type: "object",
-      properties: {
-        sector: { type: "string" },
-        criteria: { type: "object" },
-        sort: { type: "object" },
-      },
-      additionalProperties: false,
-    },
-  },
-  {
-    name: "get_portfolio",
-    description: "Paper portfolio: cash, equity, positions, P&L. Never invent these figures.",
-    label: READ_TOOL_LABELS.get_portfolio,
-    inputSchema: getPortfolioToolInputSchema,
-    jsonSchema: {
-      type: "object",
-      properties: { range: { type: "string", enum: ["1M", "3M", "1Y"] } },
-      additionalProperties: false,
-    },
-  },
-  {
-    name: "explain_rule_decision",
-    description: "Explain a rule_audit row (matched decision-table rows and outcome).",
-    label: READ_TOOL_LABELS.explain_rule_decision,
-    inputSchema: explainRuleDecisionToolInputSchema,
-    jsonSchema: {
-      type: "object",
-      properties: { audit_id: { type: "string" } },
-      required: ["audit_id"],
-      additionalProperties: false,
-    },
-  },
-];
-var WRITE_TOOLS = [
-  {
-    name: "create_watchlist_item",
-    description: "Add a symbol to the user's watchlist. May auto-execute per AI action policy.",
-    label: WRITE_TOOL_LABELS.create_watchlist_item,
-    inputSchema: createWatchlistItemToolInputSchema,
-    jsonSchema: {
-      type: "object",
-      properties: {
-        symbol: { type: "string" },
-        watchlist_id: { type: "string" },
-      },
-      required: ["symbol"],
-      additionalProperties: false,
-    },
-  },
-  {
-    name: "create_alert",
-    description: "Create a price or news alert. May auto-execute per AI action policy.",
-    label: WRITE_TOOL_LABELS.create_alert,
-    inputSchema: createAlertToolInputSchema,
-    jsonSchema: {
-      type: "object",
-      properties: {
-        symbol: { type: "string" },
-        kind: {
-          type: "string",
-          enum: [
-            "price_cross_above",
-            "price_cross_below",
-            "pct_chg",
-            "volume",
-            "rsi",
-            "news_sentiment",
-          ],
-        },
-        threshold: { type: "number" },
-        name: { type: "string" },
-      },
-      required: ["symbol", "kind"],
-      additionalProperties: false,
-    },
-  },
-  {
-    name: "propose_order",
-    description:
-      "Propose a paper order. Orders always require explicit user approval before order-service.",
-    label: WRITE_TOOL_LABELS.propose_order,
-    inputSchema: proposeOrderToolInputSchema,
-    jsonSchema: {
-      type: "object",
-      properties: {
-        symbol: { type: "string" },
-        side: { type: "string", enum: ["buy", "sell"] },
-        qty: { type: "number" },
-        order_type: { type: "string", enum: ["market", "limit", "stop", "stop_limit"] },
-        limit_price: { type: "number" },
-        stop_price: { type: "number" },
-        tif: { type: "string", enum: ["DAY", "GTC", "IOC"] },
-        last_price: { type: "number" },
-      },
-      required: ["symbol", "side", "qty"],
-      additionalProperties: false,
-    },
-  },
-  {
-    name: "create_monitor",
-    description:
-      "Create a standing monitor from a natural-language instruction. Compiles to a rules-engine condition.",
-    label: WRITE_TOOL_LABELS.create_monitor,
-    inputSchema: createMonitorToolInputSchema,
-    jsonSchema: {
-      type: "object",
-      properties: {
-        name: { type: "string" },
-        nl_instruction: { type: "string" },
-        symbols: { type: "array", items: { type: "string" } },
-      },
-      required: ["nl_instruction"],
-      additionalProperties: false,
-    },
-  },
-];
-function isWriteTool(name) {
-  return WRITE_TOOLS.some((tool) => tool.name === name);
-}
-function toolByName(name) {
-  return (
-    READ_TOOLS.find((tool) => tool.name === name) ?? WRITE_TOOLS.find((tool) => tool.name === name)
-  );
-}
-function openaiToolSpecs() {
-  return [...READ_TOOLS, ...WRITE_TOOLS].map((tool) => ({
-    type: "function",
-    function: {
-      name: tool.name,
-      description: tool.description,
-      parameters: tool.jsonSchema,
-    },
-  }));
-}
-
-// packages/copilot/src/citations.ts
-var NEWS_RE = /\[news:([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\]/gi;
-var DES_RE = /\[des:([A-Z][A-Z0-9.]{0,9})\]/g;
-function extractCitations(text, newsMeta) {
-  const out = [];
-  const seen = /* @__PURE__ */ new Set();
-  for (const match of text.matchAll(NEWS_RE)) {
-    const id = match[1];
-    if (!id || seen.has(`news:${id}`)) {
+async function runMonitorCycle(input) {
+  const fires = [];
+  const updates = [];
+  let suppressed = 0;
+  const todayCounts = new Map(input.userAlertsToday);
+  for (const monitor of input.monitors) {
+    if (!monitor.active || monitor.throttle_state.paused === true) {
       continue;
     }
-    seen.add(`news:${id}`);
-    const meta = newsMeta.get(id);
-    out.push(
-      copilotCitationSchema.parse({
-        kind: "news",
-        id,
-        label: "news",
-        headline: meta?.headline,
-        symbol: meta?.symbol,
-      }),
-    );
-  }
-  for (const match of text.matchAll(DES_RE)) {
-    const symbol = match[1];
-    if (!symbol || seen.has(`des:${symbol}`)) {
+    if (!input.ignoreCadence && !cadenceElapsed(monitor.cadence, monitor.last_run, input.clock)) {
       continue;
     }
-    seen.add(`des:${symbol}`);
-    out.push(
-      copilotCitationSchema.parse({
-        kind: "des",
-        id: symbol,
-        label: symbol,
-        symbol,
-      }),
-    );
-  }
-  return out;
-}
-function newsMetaFromToolResults(results) {
-  const map = /* @__PURE__ */ new Map();
-  for (const result2 of results) {
-    const items = collectNewsItems(result2);
-    for (const item of items) {
-      map.set(item.id, { headline: item.headline, symbol: item.symbols?.[0] });
-    }
-  }
-  return map;
-}
-function collectNewsItems(value) {
-  if (!value || typeof value !== "object") {
-    return [];
-  }
-  const record = value;
-  const bag = Array.isArray(record.items) ? record.items : Array.isArray(value) ? value : [];
-  const out = [];
-  for (const row of bag) {
-    if (!row || typeof row !== "object") {
+    const facts = input.factsFor(monitor);
+    const lastRun = input.clock.toISOString();
+    if (!facts) {
+      updates.push({
+        id: monitor.id,
+        active: monitor.active,
+        last_run: lastRun,
+        throttle_state: monitor.throttle_state,
+      });
       continue;
     }
-    const item = row;
-    if (typeof item.id === "string") {
-      out.push({
-        id: item.id,
-        headline: typeof item.headline === "string" ? item.headline : void 0,
-        symbols: Array.isArray(item.symbols)
-          ? item.symbols.filter((s) => typeof s === "string")
-          : void 0,
+    const condition = monitor.compiled_condition;
+    const matched = alertConditionMatched(condition, facts, input.clock);
+    let nextState = { ...monitor.throttle_state };
+    let nextActive = monitor.active;
+    if (!matched) {
+      updates.push({
+        id: monitor.id,
+        active: nextActive,
+        last_run: lastRun,
+        throttle_state: nextState,
       });
+      continue;
     }
-  }
-  return out;
-}
-
-// packages/copilot/src/loop.ts
-function emit(onEvent, event) {
-  onEvent?.(copilotChatEventSchema.parse(event));
-}
-async function runOrchestratorLoop(input) {
-  const max = input.maxToolCalls ?? COPILOT_MAX_TOOL_CALLS;
-  const history = [...input.messages];
-  const recorded = [];
-  const results = [];
-  let toolCallCount = 0;
-  while (true) {
-    const turn = await input.llm.complete(history);
-    const calls = turn.tool_calls ?? [];
-    if (calls.length === 0) {
-      const content = turn.content ?? "";
-      for (const chunk of chunkTokens(content)) {
-        emit(input.onEvent, { type: "token", text: chunk });
-      }
-      const citations = extractCitations(content, newsMetaFromToolResults(results));
-      emit(input.onEvent, {
-        type: "message",
-        role: "assistant",
-        content,
-        citations,
-      });
-      return {
-        assistantContent: content,
-        toolCalls: recorded,
-        citations,
-        toolCallCount,
-      };
-    }
-    history.push({
-      role: "assistant",
-      content: turn.content ?? "",
-      tool_calls: calls,
+    const throttleFacts = buildAlertThrottleFacts({
+      lastFiredAt: nextState.last_fired_at,
+      ruleFiresToday: firesTodayFor(nextState, input.clock),
+      userAlertsToday: todayCounts.get(monitor.user_id) ?? 0,
+      clock: input.clock,
     });
-    for (const call of calls) {
-      if (toolCallCount >= max) {
-        const content =
-          "Stopped after the tool-call budget. Partial tool results are above \u2014 I will not invent missing figures.";
-        emit(input.onEvent, { type: "token", text: content });
-        emit(input.onEvent, {
-          type: "message",
-          role: "assistant",
-          content,
-          citations: extractCitations(content, newsMetaFromToolResults(results)),
-        });
-        return {
-          assistantContent: content,
-          toolCalls: recorded,
-          citations: [],
-          toolCallCount,
-        };
-      }
-      toolCallCount += 1;
-      const spec = toolByName(call.name);
-      const label = spec?.label ?? `${call.name}\u2026`;
-      emit(input.onEvent, {
-        type: "tool_start",
-        name: call.name,
-        label,
-        call_id: call.id,
+    const alerting = await input.evaluateAlerting(throttleFacts, input.clock, {
+      userId: monitor.user_id,
+      ruleId: monitor.id,
+    });
+    const decision = alertingDecisionFromOutcome(alerting.outcome);
+    if (decision === "suppress") {
+      suppressed += 1;
+      updates.push({
+        id: monitor.id,
+        active: nextActive,
+        last_run: lastRun,
+        throttle_state: nextState,
       });
-      let parsedArgs = call.arguments;
-      let result2;
-      let error;
-      try {
-        if (spec) {
-          parsedArgs = spec.inputSchema.parse(call.arguments);
-        }
-        result2 = await input.executeTool(call.name, parsedArgs);
-      } catch (caught) {
-        error = caught instanceof Error ? caught.message : "TOOL_ERROR";
-        result2 = { error };
-      }
-      recorded.push({
-        id: call.id,
-        name: call.name,
-        arguments: parsedArgs,
-        result: result2,
-        error,
-      });
-      results.push(result2);
-      emit(input.onEvent, {
-        type: "tool_end",
-        name: call.name,
-        call_id: call.id,
-        ok: error === void 0,
-      });
-      const pending = extractActionFromToolResult(result2);
-      if (pending) {
-        emit(input.onEvent, { type: "action", action: pending });
-      }
-      history.push({
-        role: "tool",
-        name: call.name,
-        tool_call_id: call.id,
-        content: JSON.stringify(result2),
-      });
+      continue;
     }
-  }
-}
-function extractActionFromToolResult(result2) {
-  if (!result2 || typeof result2 !== "object" || !("action" in result2)) {
-    return void 0;
-  }
-  const parsed = copilotActionSchema.safeParse(result2.action);
-  return parsed.success ? parsed.data : void 0;
-}
-function chunkTokens(text, size = 24) {
-  if (text.length === 0) {
-    return [];
-  }
-  const out = [];
-  for (let i = 0; i < text.length; i += size) {
-    out.push(text.slice(i, i + size));
-  }
-  return out;
-}
-
-// packages/copilot/src/fake-llm.ts
-function newsSummaryLlm() {
-  return {
-    async complete(messages) {
-      const lastTool = [...messages].reverse().find((row) => row.role === "tool");
-      if (!lastTool) {
-        return {
-          tool_calls: [
-            {
-              id: "call_search_news",
-              name: "search_news",
-              arguments: { query: "AAPL news today", symbols: ["AAPL"], limit: 5 },
-            },
-          ],
-        };
-      }
-      const parsed = JSON.parse(lastTool.content);
-      const items = newsItems(parsed);
-      const cites = items
-        .slice(0, 2)
-        .map((item) => `[news:${item.id}]`)
-        .join(" ");
-      const headlines = items
-        .slice(0, 2)
-        .map((item) => item.headline)
-        .filter((row) => Boolean(row))
-        .join("; ");
-      return {
-        content: `AAPL news today (tool-cited): ${headlines || "see items"} ${cites}`.trim(),
-      };
-    },
-  };
-}
-function newsItems(value) {
-  if (!value || typeof value !== "object") {
-    return [];
-  }
-  const items = value.items;
-  if (!Array.isArray(items)) {
-    return [];
-  }
-  return items.filter((row) => {
-    return Boolean(row && typeof row === "object" && typeof row.id === "string");
-  });
-}
-
-// packages/copilot/src/write-actions.ts
-function parseWriteToolArgs(name, args) {
-  const spec = toolByName(name);
-  if (!spec || !isWriteTool(name)) {
-    throw new Error(`UNKNOWN_WRITE_TOOL:${name}`);
-  }
-  switch (name) {
-    case "create_watchlist_item":
-      return createWatchlistItemToolInputSchema.parse(args);
-    case "create_alert":
-      return createAlertToolInputSchema.parse(args);
-    case "propose_order":
-      return proposeOrderToolInputSchema.parse(args);
-    case "create_monitor":
-      return createMonitorToolInputSchema.parse(args);
-    default:
-      throw new Error(`UNKNOWN_WRITE_TOOL:${name}`);
-  }
-}
-function orderNotionalFromPayload(payload) {
-  const qty = payload.qty;
-  const last = payload.last_price;
-  if (
-    typeof qty !== "number" ||
-    typeof last !== "number" ||
-    !Number.isFinite(qty) ||
-    !Number.isFinite(last)
-  ) {
-    return void 0;
-  }
-  return qty * last;
-}
-function writePolicyContext(input) {
-  const context = {
-    tool: input.tool,
-    actions_today: input.actions_today,
-    monitors_count: input.monitors_count,
-  };
-  if (input.messages_today !== void 0) {
-    context.messages_today = input.messages_today;
-  }
-  const notional = orderNotionalFromPayload(input.payload);
-  if (notional !== void 0) {
-    context.order_notional = notional;
-  }
-  return context;
-}
-function writeDecisionFromOutcome(outcome) {
-  if (!outcome || typeof outcome !== "object" || !("decision" in outcome)) {
-    return "require_approval";
-  }
-  const decision = outcome.decision;
-  if (
-    decision === "auto_approve" ||
-    decision === "require_approval" ||
-    decision === "block" ||
-    decision === "rate_limit"
-  ) {
-    return decision;
-  }
-  return "require_approval";
-}
-function evaluateWritePolicyBaseline(context, clock = /* @__PURE__ */ new Date()) {
-  return evaluate(baselineTable("DT-AI-01"), context, clock).outcome;
-}
-function iso(date) {
-  return date.toISOString();
-}
-function newAction(input) {
-  const ts = iso(input.now);
-  return copilotActionSchema.parse({
-    id: input.id,
-    user_id: input.userId,
-    session_id: input.sessionId,
-    tool: input.tool,
-    payload: input.payload,
-    policy_outcome: input.policyOutcome,
-    status: input.status,
-    executed_ref: null,
-    reject_reason: null,
-    created_at: ts,
-    updated_at: ts,
-  });
-}
-async function applyExecution(action, ports) {
-  const executed = await ports.execute(action.tool, action.payload);
-  const now = ports.now?.() ?? /* @__PURE__ */ new Date();
-  if (executed.error && !executed.ref) {
-    return ports.updateAction({
-      ...action,
-      status: "failed",
-      reject_reason: executed.error,
-      updated_at: iso(now),
+    if (decision === "suppress_and_pause_rule") {
+      suppressed += 1;
+      nextActive = false;
+      nextState = { ...nextState, paused: true };
+      updates.push({
+        id: monitor.id,
+        active: nextActive,
+        last_run: lastRun,
+        throttle_state: nextState,
+      });
+      continue;
+    }
+    const day = utcDay(input.clock);
+    const prior = firesTodayFor(nextState, input.clock);
+    nextState = {
+      ...nextState,
+      last_fired_at: lastRun,
+      fires_today: prior + 1,
+      fires_on_date: day,
+      paused: false,
+    };
+    todayCounts.set(monitor.user_id, (todayCounts.get(monitor.user_id) ?? 0) + 1);
+    const propose =
+      monitor.propose_action && typeof monitor.propose_action === "object"
+        ? monitor.propose_action
+        : null;
+    fires.push({
+      user_id: monitor.user_id,
+      monitor_id: monitor.id,
+      instrument_id: null,
+      message: monitor.name,
+      payload: {
+        ...facts,
+        nl_instruction: monitor.nl_instruction,
+      },
+      facts,
+      propose_action: propose,
+    });
+    updates.push({
+      id: monitor.id,
+      active: nextActive,
+      last_run: lastRun,
+      throttle_state: nextState,
     });
   }
-  return ports.updateAction({
-    ...action,
-    status: "executed",
-    executed_ref: executed.ref ?? action.id,
-    reject_reason: executed.reject_reason ?? null,
-    updated_at: iso(now),
-  });
+  return { fires, updates, suppressed };
 }
-async function handleWriteToolCall(input) {
-  const tool = copilotWriteToolNameSchema.parse(input.tool);
-  const payload = parseWriteToolArgs(tool, input.args);
-  const context = writePolicyContext({
-    tool,
-    actions_today: input.actionsToday,
-    monitors_count: input.monitorsCount,
-    messages_today: input.messagesToday,
-    payload,
-  });
-  const policyOutcome = await input.ports.evaluatePolicy(context);
-  const decision = writeDecisionFromOutcome(policyOutcome);
-  const now = input.ports.now?.() ?? /* @__PURE__ */ new Date();
-  const id = input.ports.newId?.() ?? crypto.randomUUID();
-  if (decision === "rate_limit") {
-    const message =
-      typeof policyOutcome === "object" &&
-      policyOutcome &&
-      "message" in policyOutcome &&
-      typeof policyOutcome.message === "string"
-        ? policyOutcome.message
-        : "Daily copilot quota reached.";
-    return writeToolResultSchema.parse({ status: "rate_limited", message });
-  }
-  if (decision === "block") {
-    const action = await input.ports.persistAction(
-      newAction({
-        userId: input.userId,
-        sessionId: input.sessionId,
-        tool,
-        payload,
-        policyOutcome,
-        status: "failed",
-        now,
-        id,
-      }),
+
+// packages/copilot/src/monitor-explain.ts
+function groundedMonitorExplanation(input) {
+  const worst = input.facts.position_day_pct;
+  const portfolio = input.facts.portfolio_day_pct;
+  const pct = input.facts.pct_chg;
+  const last = input.facts.last;
+  const sentiment = input.facts.news_sentiment;
+  const symbol = typeof input.facts.symbol === "string" ? input.facts.symbol : null;
+  const bits = [];
+  if (typeof worst === "number") {
+    bits.push(`Worst position day change is ${worst}%.`);
+  } else if (typeof portfolio === "number") {
+    bits.push(`Portfolio day change is ${portfolio}%.`);
+  } else if (symbol && typeof pct === "number") {
+    bits.push(
+      `${symbol} day change is ${pct}%${typeof last === "number" ? ` at last ${last}` : ""}.`,
     );
-    return writeToolResultSchema.parse({
-      status: "blocked",
-      message: `Blocked by AI action policy. ${tool} was not proposed.`,
-      action,
-    });
+  } else if (typeof sentiment === "number") {
+    bits.push(`News sentiment is ${sentiment}.`);
+  } else {
+    bits.push("Monitor facts matched the compiled condition.");
   }
-  if (decision === "require_approval") {
-    const action = await input.ports.persistAction(
-      newAction({
-        userId: input.userId,
-        sessionId: input.sessionId,
-        tool,
-        payload,
-        policyOutcome,
-        status: "proposed",
-        now,
-        id,
-      }),
-    );
-    return writeToolResultSchema.parse({
-      status: "awaiting_approval",
-      message: `Awaiting user approval for ${tool}. Do not claim it already executed.`,
-      action,
-    });
-  }
-  const seeded = await input.ports.persistAction(
-    newAction({
-      userId: input.userId,
-      sessionId: input.sessionId,
-      tool,
-      payload,
-      policyOutcome,
-      status: "auto_approved",
-      now,
-      id,
-    }),
-  );
-  const finished = await applyExecution(seeded, input.ports);
-  return writeToolResultSchema.parse({
-    status: finished.status === "failed" ? "failed" : "executed",
-    message:
-      finished.status === "failed"
-        ? `Auto-approved ${tool} failed: ${finished.reject_reason ?? "FAILED"}`
-        : `${tool} executed.`,
-    action: finished,
-    executed_ref: finished.executed_ref ?? void 0,
-    reject_reason: finished.reject_reason ?? void 0,
-  });
-}
-async function decidePersistedAction(input) {
-  if (input.action.status !== "proposed") {
-    throw new Error("ACTION_NOT_PROPOSED");
-  }
-  const now = input.ports.now?.() ?? /* @__PURE__ */ new Date();
-  if (input.decision === "reject") {
-    return input.ports.updateAction({
-      ...input.action,
-      status: "rejected",
-      reject_reason: input.feedback?.trim() || "Rejected by user",
-      updated_at: iso(now),
-    });
-  }
-  const approved = await input.ports.updateAction({
-    ...input.action,
-    status: "approved",
-    updated_at: iso(now),
-  });
-  return applyExecution(approved, input.ports);
+  const cite = input.cited.length > 0 ? ` Cited ${input.cited.join(", ")}.` : "";
+  bits.push(`This matches \u201C${input.nl_instruction}\u201D (${input.name}).${cite}`.trim());
+  return bits.slice(0, 2).join(" ");
 }
 
-// packages/copilot/src/monitor-compiler.ts
-var SECTOR_ALIASES = {
-  semis: "semiconductors",
-  semiconductor: "semiconductors",
-  semiconductors: "semiconductors",
-  energy: "energy",
-  tech: "technology",
-  technology: "technology",
-  healthcare: "healthcare",
-  financials: "financials",
-};
-function fireRow(input, op, value) {
-  return compiledMonitorConditionSchema.parse({
-    id: "monitor",
-    priority: 1,
-    conditions: [{ input, op, value }],
-    outputs: { decision: "fire" },
-  });
-}
-function result(input) {
-  return monitorCompileResultSchema.parse({
-    name: input.name,
-    cadence: input.cadence ?? "5m",
-    scope: monitorScopeSchema.parse(input.scope),
-    compiled_condition: input.compiled_condition,
-    propose_action: null,
-  });
-}
-function normalizeMonitorInstruction(nl) {
-  return nl
-    .trim()
-    .replace(/^(please\s+)?(create\s+a\s+)?monitor[:\s-]+/i, "")
-    .trim();
-}
-function compileMonitorInstruction(nlInstruction) {
-  const nl = normalizeMonitorInstruction(nlInstruction);
-  if (nl.length === 0) {
-    return null;
-  }
-  const positionDrop = nl.match(/any position drops?\s+(\d+(?:\.\d+)?)%/i);
-  if (positionDrop?.[1]) {
-    const pct = Number(positionDrop[1]);
-    return result({
-      name: `Position day drop ${pct}%`,
-      scope: { kind: "portfolio" },
-      compiled_condition: fireRow("position_day_pct", "lte", -pct),
-    });
-  }
-  const myPositionsNews = /watch my positions for negative news/i.test(nl);
-  if (myPositionsNews) {
-    return result({
-      name: "Positions negative news",
-      scope: { kind: "portfolio" },
-      compiled_condition: fireRow("news_sentiment", "lt", 0),
-    });
-  }
-  const sectorNews = nl.match(/watch\s+(\w+)(?:\s+sector)?\s+for negative news/i);
-  if (sectorNews?.[1]) {
-    const alias = sectorNews[1].toLowerCase();
-    const sector = SECTOR_ALIASES[alias];
-    if (sector) {
-      return result({
-        name: `${sector} negative news`,
-        scope: { kind: "sector", sector },
-        compiled_condition: fireRow("news_sentiment", "lt", 0),
-      });
-    }
-  }
-  const portfolioDown = nl.match(/portfolio is down\s+(\d+(?:\.\d+)?)%/i);
-  if (portfolioDown?.[1]) {
-    const pct = Number(portfolioDown[1]);
-    return result({
-      name: `Portfolio day drop ${pct}%`,
-      scope: { kind: "portfolio" },
-      compiled_condition: fireRow("portfolio_day_pct", "lte", -pct),
-    });
-  }
-  const sectorDrop = nl.match(/watch\s+(\w+)\s+sector for drops? of\s+(\d+(?:\.\d+)?)%/i);
-  if (sectorDrop?.[1] && sectorDrop[2]) {
-    const alias = sectorDrop[1].toLowerCase();
-    const sector = SECTOR_ALIASES[alias] ?? alias;
-    const pct = Number(sectorDrop[2]);
-    return result({
-      name: `${sector} drop ${pct}%`,
-      scope: { kind: "sector", sector },
-      compiled_condition: fireRow("pct_chg", "lte", -pct),
-    });
-  }
-  const lastAbove = nl.match(/watch\s+([A-Za-z]{1,5})\s+if last rises above\s+(\d+(?:\.\d+)?)/i);
-  if (lastAbove?.[1] && lastAbove[2]) {
-    const symbol = lastAbove[1].toUpperCase();
-    const px = Number(lastAbove[2]);
-    return result({
-      name: `${symbol} last above ${px}`,
-      scope: { kind: "symbols", symbols: [symbol] },
-      compiled_condition: fireRow("last", "gte", px),
-    });
-  }
-  const volumeAbove = nl.match(/watch\s+([A-Za-z]{1,5})\s+volume above\s+(\d+)/i);
-  if (volumeAbove?.[1] && volumeAbove[2]) {
-    const symbol = volumeAbove[1].toUpperCase();
-    const volume = Number(volumeAbove[2]);
-    return result({
-      name: `${symbol} volume`,
-      scope: { kind: "symbols", symbols: [symbol] },
-      compiled_condition: fireRow("volume", "gt", volume),
-    });
-  }
-  const rsiBelow = nl.match(/\b([A-Za-z]{1,5})\b RSI goes below\s+(\d+(?:\.\d+)?)/i);
-  if (rsiBelow?.[1] && rsiBelow[2]) {
-    const symbol = rsiBelow[1].toUpperCase();
-    const rsi = Number(rsiBelow[2]);
-    return result({
-      name: `${symbol} RSI`,
-      scope: { kind: "symbols", symbols: [symbol] },
-      compiled_condition: fireRow("rsi_14", "lt", rsi),
-    });
-  }
-  const isUp = nl.match(/when\s+([A-Za-z]{1,5})\s+is up\s+(\d+(?:\.\d+)?)%/i);
-  if (isUp?.[1] && isUp[2]) {
-    const symbol = isUp[1].toUpperCase();
-    const pct = Number(isUp[2]);
-    return result({
-      name: `${symbol} up ${pct}%`,
-      scope: { kind: "symbols", symbols: [symbol] },
-      compiled_condition: fireRow("pct_chg", "gte", pct),
-    });
-  }
-  const symbolDrop = nl.match(/\b([A-Za-z]{1,5})\b drops?\s+(\d+(?:\.\d+)?)%/i);
-  if (symbolDrop?.[1] && symbolDrop[2]) {
-    const symbol = symbolDrop[1].toUpperCase();
-    const pct = Number(symbolDrop[2]);
-    return result({
-      name: `${symbol} drop ${pct}%`,
-      scope: { kind: "symbols", symbols: [symbol] },
-      compiled_condition: fireRow("pct_chg", "lte", -pct),
-    });
-  }
-  return null;
-}
-function extractJsonObject(text) {
-  const trimmed = text.trim();
-  const start = trimmed.indexOf("{");
-  const end = trimmed.lastIndexOf("}");
-  if (start < 0 || end <= start) {
-    throw new Error("MONITOR_COMPILE_NOT_JSON");
-  }
-  return JSON.parse(trimmed.slice(start, end + 1));
-}
-async function compileMonitorInstructionWithLlm(input) {
-  const canned = compileMonitorInstruction(input.nl_instruction);
-  if (canned) {
-    return canned;
-  }
-  const basePrompt = [
-    "Compile this Meridian monitor instruction into JSON only.",
-    "Schema: { name?, cadence?: 5m|15m|1h|1d, scope: { kind: symbols|sector|portfolio, symbols?: string[], sector?: string }, compiled_condition: { id, priority, conditions: [{ input, op, value }], outputs: { decision: 'fire' } }, propose_action?: object|null }.",
-    `Allowed condition inputs: position_day_pct, portfolio_day_pct, pct_chg, last, volume, rsi_14, news_sentiment.`,
-    `Instruction: ${input.nl_instruction}`,
-  ].join("\n");
-  let raw = await input.completeJson(basePrompt);
-  let parsed = tryParseCompile(raw);
-  if (!parsed.ok) {
-    raw = await input.completeJson(
-      `${basePrompt}
-Previous JSON failed validation: ${parsed.error}
-Return corrected JSON only.`,
-    );
-    parsed = tryParseCompile(raw);
-  }
-  if (!parsed.ok) {
-    throw new Error(`MONITOR_COMPILE_INVALID:${parsed.error}`);
-  }
-  return parsed.value;
-}
-function tryParseCompile(raw) {
-  try {
-    const json2 = extractJsonObject(raw);
-    return { ok: true, value: monitorCompileResultSchema.parse(json2) };
-  } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : "PARSE" };
-  }
-}
-
-// packages/copilot/src/monitor-golden.ts
-function fire(input, op, value) {
-  return {
-    id: "monitor",
-    priority: 1,
-    conditions: [{ input, op, value }],
-    outputs: { decision: "fire" },
-  };
-}
-var MONITOR_GOLDEN_EXPECTED = [
-  {
-    nl: "tell me if any position drops 5% in a day",
-    expected: {
-      name: "Position day drop 5%",
-      cadence: "5m",
-      scope: { kind: "portfolio" },
-      compiled_condition: fire("position_day_pct", "lte", -5),
-      propose_action: null,
-    },
-  },
-  {
-    nl: "watch semis for negative news",
-    expected: {
-      name: "semiconductors negative news",
-      cadence: "5m",
-      scope: { kind: "sector", sector: "semiconductors" },
-      compiled_condition: fire("news_sentiment", "lt", 0),
-      propose_action: null,
-    },
-  },
-  {
-    nl: "alert if AAPL drops 3% today",
-    expected: {
-      name: "AAPL drop 3%",
-      cadence: "5m",
-      scope: { kind: "symbols", symbols: ["AAPL"] },
-      compiled_condition: fire("pct_chg", "lte", -3),
-      propose_action: null,
-    },
-  },
-  {
-    nl: "watch NVDA if last rises above 150",
-    expected: {
-      name: "NVDA last above 150",
-      cadence: "5m",
-      scope: { kind: "symbols", symbols: ["NVDA"] },
-      compiled_condition: fire("last", "gte", 150),
-      propose_action: null,
-    },
-  },
-  {
-    nl: "tell me if my portfolio is down 2% on the day",
-    expected: {
-      name: "Portfolio day drop 2%",
-      cadence: "5m",
-      scope: { kind: "portfolio" },
-      compiled_condition: fire("portfolio_day_pct", "lte", -2),
-      propose_action: null,
-    },
-  },
-  {
-    nl: "watch MSFT volume above 1000000",
-    expected: {
-      name: "MSFT volume",
-      cadence: "5m",
-      scope: { kind: "symbols", symbols: ["MSFT"] },
-      compiled_condition: fire("volume", "gt", 1e6),
-      propose_action: null,
-    },
-  },
-  {
-    nl: "if TSLA RSI goes below 30",
-    expected: {
-      name: "TSLA RSI",
-      cadence: "5m",
-      scope: { kind: "symbols", symbols: ["TSLA"] },
-      compiled_condition: fire("rsi_14", "lt", 30),
-      propose_action: null,
-    },
-  },
-  {
-    nl: "watch energy sector for drops of 4%",
-    expected: {
-      name: "energy drop 4%",
-      cadence: "5m",
-      scope: { kind: "sector", sector: "energy" },
-      compiled_condition: fire("pct_chg", "lte", -4),
-      propose_action: null,
-    },
-  },
-  {
-    nl: "notify me when SPY is up 1% today",
-    expected: {
-      name: "SPY up 1%",
-      cadence: "5m",
-      scope: { kind: "symbols", symbols: ["SPY"] },
-      compiled_condition: fire("pct_chg", "gte", 1),
-      propose_action: null,
-    },
-  },
-  {
-    nl: "watch my positions for negative news",
-    expected: {
-      name: "Positions negative news",
-      cadence: "5m",
-      scope: { kind: "portfolio" },
-      compiled_condition: fire("news_sentiment", "lt", 0),
-      propose_action: null,
-    },
-  },
-];
-
-// packages/copilot/src/rate-limit.ts
-function rateLimitFromAiPolicy(outcome) {
-  if (!outcome || typeof outcome !== "object" || !("decision" in outcome)) {
-    return { limited: false };
-  }
-  const decision = outcome.decision;
-  if (decision !== "rate_limit") {
-    return { limited: false };
-  }
-  const message = outcome.message;
-  return {
-    limited: true,
-    message:
-      typeof message === "string" && message.length > 0 ? message : "Daily copilot quota reached.",
-  };
-}
-
-// packages/copilot/src/slash.ts
-function expandSlashPrompt(input, activeSymbol) {
-  const trimmed = input.trim();
-  const symbol = activeSymbol ?? "the linked symbol";
-  const [cmd, ...rest] = trimmed.split(/\s+/);
-  const arg = rest.join(" ");
-  switch (cmd) {
-    case "/quote":
-      return `What is the latest quote for ${arg || symbol}? Use get_quote.`;
-    case "/news":
-      return `Summarize recent news for ${arg || symbol}. Use search_news and cite [news:id].`;
-    case "/bars":
-      return `Describe recent bars for ${arg || symbol}. Use get_bars.`;
-    case "/des":
-      return `Summarize fundamentals for ${arg || symbol}. Use get_fundamentals and cite [des:SYMBOL].`;
-    case "/screen":
-      return `Screen instruments${arg ? ` in ${arg}` : ""}. Use screen_instruments.`;
-    case "/portfolio":
-      return "Summarize my paper portfolio. Use get_portfolio. Do not invent P&L.";
-    case "/explain":
-      return arg
-        ? `Explain rule decision ${arg} using explain_rule_decision.`
-        : "Ask for a rule_audit id to explain.";
-    default:
-      return trimmed;
-  }
-}
-
-// packages/copilot/src/gateway.ts
-var DEFAULT_OPENROUTER_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions";
-var DEFAULT_OPENROUTER_CHAT_MODEL = "openai/gpt-4.1-mini";
-var completionSchema = external_exports.object({
-  choices: external_exports
+// packages/rag/src/gateway.ts
+var embeddingsResponseSchema = external_exports.object({
+  data: external_exports
     .array(
       external_exports.object({
-        message: external_exports
-          .object({
-            content: external_exports.string().nullable().optional(),
-            tool_calls: external_exports
-              .array(
-                external_exports.object({
-                  id: external_exports.string(),
-                  function: external_exports.object({
-                    name: external_exports.string(),
-                    arguments: external_exports.string(),
-                  }),
-                }),
-              )
-              .optional(),
-          })
-          .optional(),
+        embedding: external_exports.array(external_exports.number()).min(1),
       }),
     )
     .min(1),
 });
-function toOpenAiMessages(messages) {
-  return messages.map((row) => {
-    if (row.role === "tool") {
-      return {
-        role: "tool",
-        content: row.content,
-        tool_call_id: row.tool_call_id,
-        name: row.name,
-      };
-    }
-    if (row.role === "assistant" && row.tool_calls && row.tool_calls.length > 0) {
-      return {
-        role: "assistant",
-        content: row.content || null,
-        tool_calls: row.tool_calls.map((call) => ({
-          id: call.id,
-          type: "function",
-          function: {
-            name: call.name,
-            arguments: JSON.stringify(call.arguments ?? {}),
-          },
-        })),
-      };
-    }
-    return { role: row.role, content: row.content };
-  });
+
+// packages/rag/src/vector.ts
+var STOP = /* @__PURE__ */ new Set([
+  "a",
+  "an",
+  "the",
+  "and",
+  "or",
+  "of",
+  "in",
+  "on",
+  "to",
+  "for",
+  "as",
+  "at",
+  "is",
+  "are",
+]);
+function tokenize(text) {
+  return text
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((token) => token.length > 1 && !STOP.has(token));
 }
-function openRouterLlm(input) {
-  const fetchImpl = input.fetchImpl ?? fetch;
-  return {
-    async complete(messages) {
-      const response = await fetchImpl(input.url ?? DEFAULT_OPENROUTER_CHAT_URL, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${input.apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: input.model ?? DEFAULT_OPENROUTER_CHAT_MODEL,
-          messages: toOpenAiMessages(messages),
-          tools: openaiToolSpecs(),
-        }),
-      });
-      const raw = await response.json().catch(() => null);
-      if (!response.ok) {
-        throw new Error(`GATEWAY_${response.status}`);
-      }
-      const parsed = completionSchema.parse(raw);
-      const message = parsed.choices[0]?.message;
-      const toolCalls = (message?.tool_calls ?? []).map((call) => {
-        let args = {};
-        try {
-          args = JSON.parse(call.function.arguments);
-        } catch {
-          args = {};
-        }
-        return { id: call.id, name: call.function.name, arguments: args };
-      });
-      return {
-        content: message?.content ?? "",
-        tool_calls: toolCalls.length > 0 ? toolCalls : void 0,
-      };
-    },
-  };
+function tokenIndex(token, dim) {
+  let h = 2166136261;
+  for (let i = 0; i < token.length; i += 1) {
+    h ^= token.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return Math.abs(h) % dim;
+}
+function hashEmbed(text, dim = NEWS_EMBEDDING_DIM) {
+  const vec = new Array(dim).fill(0);
+  const tokens = tokenize(text);
+  if (tokens.length === 0) {
+    vec[0] = 1;
+    return vec;
+  }
+  for (const token of tokens) {
+    const idx = tokenIndex(token, dim);
+    vec[idx] = (vec[idx] ?? 0) + 1;
+  }
+  let norm = 0;
+  for (const n of vec) {
+    norm += n * n;
+  }
+  const mag = Math.sqrt(norm);
+  if (mag === 0) {
+    vec[0] = 1;
+    return vec;
+  }
+  return vec.map((n) => n / mag);
+}
+function formatVectorLiteral(values) {
+  return `[${values.join(",")}]`;
 }
 
-// packages/copilot/src/run-request.ts
-async function runCopilotRequest(input) {
-  const request = copilotChatRequestSchema.parse(input.request);
-  const limited = rateLimitFromAiPolicy(input.policyOutcome);
-  if (limited.limited) {
-    input.onEvent?.({ type: "rate_limited", message: limited.message });
-    return { sessionId: request.session_id ?? "", assistantContent: limited.message };
-  }
-  const title = request.message.slice(0, 72) || "New session";
-  let sessionId = request.session_id;
-  if (!sessionId) {
-    const created = await input.persist.createSession(title);
-    sessionId = created.id;
-  }
-  input.onEvent?.({ type: "session", session_id: sessionId });
-  const prior = request.session_id ? await input.persist.loadHistory(sessionId) : [];
-  const userText = expandSlashPrompt(request.message, request.active_symbol);
-  await input.persist.appendMessage({
-    sessionId,
-    role: "user",
-    content: userText,
-    tool_calls: [],
-  });
-  const history = [
-    { role: "system", content: COPILOT_SYSTEM_PROMPT },
-    {
-      role: "system",
-      content: buildContextPreamble({
-        activeSymbol: request.active_symbol,
-        portfolioSummary: input.portfolioSummary,
-      }),
-    },
-    ...prior
-      .filter((row) => row.role === "user" || row.role === "assistant")
-      .slice(-20)
-      .map((row) => ({ role: row.role, content: row.content })),
-    { role: "user", content: userText },
-  ];
-  const execute = async (name, args) => {
-    await input.persist.auditTool(name, args);
-    return input.executeTool(name, args);
-  };
-  const result2 = await runOrchestratorLoop({
-    messages: history,
-    llm: input.llm,
-    executeTool: execute,
-    onEvent: input.onEvent,
-  });
-  await input.persist.appendMessage({
-    sessionId,
-    role: "assistant",
-    content: result2.assistantContent,
-    tool_calls: result2.toolCalls,
-  });
-  return { sessionId, assistantContent: result2.assistantContent };
-}
-
-// packages/copilot/src/session-access.ts
-var COPILOT_SESSION_NOT_FOUND = "SESSION_NOT_FOUND";
-async function persistOwnedCopilotAction(input) {
-  if (input.row.user_id !== input.userId) {
-    throw new Error(COPILOT_SESSION_NOT_FOUND);
-  }
-  await input.requireOwnedSession(input.row.session_id);
-  return input.insert(input.row);
-}
-
-// packages/copilot/src/watchlist-access.ts
-var COPILOT_WATCHLIST_NOT_FOUND = "WATCHLIST_NOT_FOUND";
-function assertOwnedWatchlist(input) {
-  if (!input.watchlist || input.watchlist.user_id !== input.userId) {
-    throw new Error(COPILOT_WATCHLIST_NOT_FOUND);
-  }
-}
-async function insertOwnedWatchlistItemAsAdmin(input) {
-  let watchlist = null;
-  if (input.watchlistId) {
-    watchlist = await input.ports.findWatchlist({
-      id: input.watchlistId,
-      userId: input.userId,
-    });
-  } else {
-    watchlist = await input.ports.findWatchlist({ userId: input.userId });
-    if (!watchlist) {
-      watchlist = await input.ports.createDefaultWatchlist(input.userId);
-    }
-  }
-  if (!watchlist) {
-    return { error: COPILOT_WATCHLIST_NOT_FOUND };
-  }
-  try {
-    assertOwnedWatchlist({ watchlist, userId: input.userId });
-  } catch {
-    return { error: COPILOT_WATCHLIST_NOT_FOUND };
-  }
-  const sortOrder = await input.ports.countItems(watchlist.id);
-  const created = await input.ports.insertItem({
-    watchlist_id: watchlist.id,
-    instrument_id: input.instrumentId,
-    sort_order: sortOrder,
-  });
-  return created?.id ? { ref: created.id } : { error: "WATCHLIST_ITEM_FAILED" };
-}
-
-// insforge/functions/_shared/entitlements.ts
-function asRows(data) {
-  return Array.isArray(data) ? data : [];
-}
-async function loadUserRole(db, userId) {
-  const { data, error } = await db.from("user_roles").select("role").eq("user_id", userId);
-  if (error) {
-    throw new Error(error.message);
-  }
-  const row = asRows(data)[0];
-  return row?.role ?? null;
-}
-async function loadPublishedEntitlementsTable(db) {
-  const { data: bindings, error: bindErr } = await db
-    .from("rule_bindings")
-    .select("domain,table_id")
-    .eq("domain", "entitlements");
-  if (bindErr) {
-    throw new Error(bindErr.message);
-  }
-  const tableIds = asRows(bindings).map((row) => row.table_id);
-  if (tableIds.length === 0) {
-    return null;
-  }
-  const wanted = new Set(tableIds);
-  const { data: tables, error: tableErr } = await db
-    .from("decision_tables")
-    .select("id,table_key,version,hit_policy,default_outputs,status")
-    .eq("status", "published");
-  if (tableErr) {
-    throw new Error(tableErr.message);
-  }
-  const published = asRows(tables).find((row) => wanted.has(row.id));
-  if (!published) {
-    return null;
-  }
-  const { data: rows, error: rowErr } = await db
-    .from("decision_rows")
-    .select("*")
-    .eq("table_id", published.id);
-  if (rowErr) {
-    throw new Error(rowErr.message);
-  }
-  return assembleDecisionTable({
-    tableKey: published.table_key,
-    hit_policy: published.hit_policy,
-    default_outputs: published.default_outputs,
-    rows: asRows(rows).map((row) => ({
-      row_key: row.row_key,
-      priority: row.priority,
-      conditions: decisionConditionSchema.array().parse(row.conditions),
-      outputs: decisionOutputsSchema.parse(row.outputs),
-      effective_from: row.effective_from,
-      effective_to: row.effective_to,
-    })),
-  });
-}
-async function authorizeEdgeUser(input) {
-  return authorize({
-    userId: input.userId,
-    action: input.action,
-    ports: {
-      loadRole: (id) => loadUserRole(input.db, id),
-      evaluateEntitlements: async (ctx) => {
-        const table =
-          (await loadPublishedEntitlementsTable(input.db)) ?? baselineTable("DT-ENT-01");
-        return evaluate(table, ctx, /* @__PURE__ */ new Date());
-      },
-    },
-  });
-}
-
-// insforge/functions/copilot-orchestrator-src.ts
-var corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-};
+// insforge/functions/monitor-runner-src.ts
 function json(status, body) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json" },
   });
 }
-function asRows2(data) {
+function asRows(data) {
   return Array.isArray(data) ? data : [];
 }
-async function invokeSibling(input) {
-  const origin = input.baseUrl.replace(/\/+$/, "");
-  const response = await fetch(`${origin}/functions/${input.slug}`, {
+function num(value, fallback = 0) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+async function evaluateAlertingDomain(input) {
+  const response = await fetch(`${input.baseUrl.replace(/\/+$/, "")}/functions/rules-service`, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${input.token}`,
+      Authorization: `Bearer ${input.apiKey}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(input.body),
+    body: JSON.stringify({
+      domain: "alerting",
+      context: input.context,
+      userId: input.userId,
+    }),
   });
-  const raw = await response.json().catch(() => ({ error: "SIBLING_UNAVAILABLE" }));
+  const body = await response.json();
   if (!response.ok) {
-    throw new Error(
-      typeof raw === "object" && raw && "error" in raw
-        ? String(raw.error)
-        : `SIBLING_${response.status}`,
-    );
+    throw new Error(`RULES_SERVICE_${response.status}`);
   }
-  return raw;
+  return evaluateDomainResponseSchema.parse(body);
 }
-function encodeSse(event) {
-  return new TextEncoder().encode(`data: ${JSON.stringify(event)}
-
-`);
-}
-async function requireOwnedCopilotSession(admin, userId, sessionId) {
-  const { data, error } = await admin.database
-    .from("copilot_sessions")
-    .select("id,user_id")
-    .eq("id", sessionId)
-    .eq("user_id", userId)
-    .limit(1);
-  if (error) {
-    throw new Error(error.message);
-  }
-  if (!asRows2(data)[0]) {
-    throw new Error(COPILOT_SESSION_NOT_FOUND);
-  }
-}
-async function copilot_orchestrator_src_default(req) {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
-  }
+async function monitor_runner_src_default(req) {
   if (req.method !== "POST") {
     return json(405, { error: "METHOD_NOT_ALLOWED" });
   }
+  const expected = Deno.env.get("API_KEY") ?? Deno.env.get("INSFORGE_API_KEY");
   const authHeader = req.headers.get("Authorization");
   const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
-  if (!token) {
+  if (!expected || token !== expected) {
     return json(401, { error: "UNAUTHENTICATED" });
   }
-  const baseUrl = Deno.env.get("INSFORGE_INTERNAL_URL") ?? Deno.env.get("INSFORGE_BASE_URL");
-  if (!baseUrl) {
-    return json(500, { error: "INSFORGE_URL_MISSING" });
-  }
+  const baseUrl = Deno.env.get("INSFORGE_INTERNAL_URL") ?? Deno.env.get("INSFORGE_BASE_URL") ?? "";
+  const admin = createAdminClient({
+    baseUrl,
+    apiKey: expected,
+  });
   let body = {};
   try {
     body = await req.json();
   } catch {
     body = {};
   }
-  const userClient = createClient({ baseUrl, accessToken: token });
-  const { data: userData } = await userClient.auth.getCurrentUser();
-  const userId = userData?.user?.id;
-  const apiKey = resolveRulesServiceApiKey({
-    API_KEY: Deno.env.get("API_KEY"),
-    INSFORGE_API_KEY: Deno.env.get("INSFORGE_API_KEY"),
-  });
-  if (!apiKey) {
-    return json(500, { error: "API_KEY_MISSING" });
-  }
-  const admin = createAdminClient({ baseUrl, apiKey });
-  const decideFromPath = new URL(req.url).pathname.replace(/\/+$/, "").endsWith("/decide");
-  const opRaw = body && typeof body === "object" && "op" in body ? body.op : void 0;
-  if (opRaw === "decide" || decideFromPath) {
-    const gate2 = await authorizeEdgeUser({ db: admin.database, userId, action: "copilot:act" });
-    if (!gate2.allowed || !userId) {
-      return json(gate2.reason === "UNAUTHENTICATED" || !userId ? 401 : 403, {
-        error: gate2.reason ?? "UNAUTHENTICATED",
-      });
-    }
-    return decideCopilotActionOnEdge({
-      admin,
-      baseUrl,
-      token,
-      userId,
-      body,
-    });
-  }
-  const parsed = copilotChatRequestSchema.safeParse(body);
+  const parsed = monitorRunnerRequestSchema.safeParse(body);
   if (!parsed.success) {
     return json(400, { error: "INVALID_BODY" });
   }
-  const gate = await authorizeEdgeUser({ db: admin.database, userId, action: "copilot:chat" });
-  if (!gate.allowed || !userId) {
-    return json(gate.reason === "UNAUTHENTICATED" || !userId ? 401 : 403, {
-      error: gate.reason ?? "UNAUTHENTICATED",
+  const clock = parsed.data.clock ? new Date(parsed.data.clock) : /* @__PURE__ */ new Date();
+  let query = admin.database.from("monitors").select("*").eq("active", true);
+  if (parsed.data.user_id) {
+    query = query.eq("user_id", parsed.data.user_id);
+  }
+  const monitorsRes = await query;
+  if (monitorsRes.error) {
+    return json(500, { error: monitorsRes.error.message });
+  }
+  const monitors = asRows(monitorsRes.data).map((row) => monitorSchema.parse(row));
+  if (monitors.length === 0) {
+    return json(200, monitorRunnerResponseSchema.parse({ evaluated: 0, fired: 0, suppressed: 0 }));
+  }
+  const instRes = await admin.database.from("instruments").select("id,symbol,sector");
+  if (instRes.error) {
+    return json(500, { error: instRes.error.message });
+  }
+  const instruments = asRows(instRes.data);
+  const byId = new Map(instruments.map((row) => [row.id, row]));
+  const bySymbol = new Map(instruments.map((row) => [row.symbol.toUpperCase(), row]));
+  const quoteRes = await admin.database.from("quotes_latest").select("*");
+  if (quoteRes.error) {
+    return json(500, { error: quoteRes.error.message });
+  }
+  const quotes = /* @__PURE__ */ new Map();
+  for (const row of asRows(quoteRes.data)) {
+    quotes.set(String(row.instrument_id), {
+      last: num(row.last),
+      prev_close: num(row.prev_close),
+      volume: num(row.volume),
     });
   }
-  const countRpc = await admin.database.rpc("count_copilot_user_messages_today", {
-    p_user_id: userId,
-  });
-  const messagesToday = Number(countRpc.data ?? 0);
-  let policyOutcome = evaluate(
-    baselineTable("DT-AI-01"),
-    {
-      tool: "chat",
-      messages_today: messagesToday,
-    },
-    /* @__PURE__ */ new Date(),
-  ).outcome;
-  try {
-    const evaluated = await invokeSibling({
-      baseUrl,
-      slug: "rules-service",
-      token,
-      body: {
-        op: "evaluateDomain",
-        domain: "ai_action_policy",
-        context: { tool: "chat", messages_today: messagesToday },
-      },
-    });
-    if (evaluated && typeof evaluated === "object" && "outcome" in evaluated) {
-      policyOutcome = evaluated.outcome;
-    }
-  } catch {}
-  const mode = (Deno.env.get("MERIDIAN_COPILOT_LLM") ?? "").trim().toLowerCase();
-  const openRouterKey = Deno.env.get("OPENROUTER_API_KEY");
-  const llm =
-    mode === "fake" || !openRouterKey
-      ? newsSummaryLlm()
-      : openRouterLlm({
-          apiKey: openRouterKey,
-          model: Deno.env.get("OPENROUTER_CHAT_MODEL") ?? DEFAULT_OPENROUTER_CHAT_MODEL,
-          url: Deno.env.get("OPENROUTER_CHAT_URL") ?? DEFAULT_OPENROUTER_CHAT_URL,
-        });
-  let sessionId = parsed.data.session_id ?? "";
-  const stream = new ReadableStream({
-    async start(controller) {
-      const emit2 = (event) => {
-        controller.enqueue(encodeSse(event));
-      };
-      try {
-        await runCopilotRequest({
-          request: parsed.data,
-          policyOutcome,
-          llm,
-          portfolioSummary: void 0,
-          executeTool: (name, args) => {
-            if (isWriteTool(name)) {
-              return executeWriteTool({
-                name,
-                args,
-                admin,
-                baseUrl,
-                token,
-                userId,
-                sessionId,
-              });
-            }
-            return executeReadTool({
-              name,
-              args,
-              admin,
-              baseUrl,
-              token,
-              userId,
-            });
-          },
-          persist: {
-            async createSession(title) {
-              await admin.database
-                .from("copilot_sessions")
-                .insert([{ user_id: userId, title: title.slice(0, 72) || "New session" }]);
-              const { data, error } = await admin.database
-                .from("copilot_sessions")
-                .select("*")
-                .eq("user_id", userId)
-                .order("created_at", { ascending: false })
-                .limit(1);
-              if (error) {
-                throw new Error(error.message);
-              }
-              const created = copilotSessionSchema.parse(asRows2(data)[0]);
-              sessionId = created.id;
-              return created;
-            },
-            async appendMessage(row) {
-              await requireOwnedCopilotSession(admin, userId, row.sessionId);
-              await admin.database.from("copilot_messages").insert([
-                {
-                  session_id: row.sessionId,
-                  user_id: userId,
-                  role: row.role,
-                  content: row.content,
-                  tool_calls: row.tool_calls,
-                },
-              ]);
-              await admin.database
-                .from("copilot_sessions")
-                .update({ updated_at: /* @__PURE__ */ new Date().toISOString() })
-                .eq("id", row.sessionId)
-                .eq("user_id", userId);
-              return copilotMessageSchema.parse({
-                id: crypto.randomUUID(),
-                session_id: row.sessionId,
-                user_id: userId,
-                role: row.role,
-                content: row.content,
-                tool_calls: row.tool_calls,
-                created_at: /* @__PURE__ */ new Date().toISOString(),
-              });
-            },
-            async loadHistory(sessionId2) {
-              await requireOwnedCopilotSession(admin, userId, sessionId2);
-              const { data, error } = await admin.database
-                .from("copilot_messages")
-                .select("*")
-                .eq("session_id", sessionId2)
-                .eq("user_id", userId)
-                .order("created_at", { ascending: true });
-              if (error) {
-                throw new Error(error.message);
-              }
-              return asRows2(data).map((row) => copilotMessageSchema.parse(row));
-            },
-            async auditTool(name, args) {
-              await admin.database.from("audit_log").insert([
-                {
-                  user_id: userId,
-                  action: `copilot:tool:${name}`,
-                  entity_type: "copilot_messages",
-                  payload: { tool: name, arguments: args },
-                },
-              ]);
-            },
-          },
-          onEvent: emit2,
-        });
-      } catch (error) {
-        emit2({
-          type: "error",
-          message: error instanceof Error ? error.message : "COPILOT_FAILED",
-        });
-      } finally {
-        controller.close();
-      }
-    },
-  });
-  return new Response(stream, {
-    status: 200,
-    headers: {
-      ...corsHeaders,
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-    },
-  });
-}
-async function executeReadTool(input) {
-  const db = input.admin.database;
-  switch (input.name) {
-    case "get_quote": {
-      const { symbol } = getQuoteToolInputSchema.parse(input.args);
-      const inst = await db.from("instruments").select("*").eq("symbol", symbol.toUpperCase());
-      const instrument = asRows2(inst.data)[0];
-      if (!instrument) {
-        throw new Error("SYMBOL_NOT_FOUND");
-      }
-      const quotes = await db
-        .from("quotes_latest")
-        .select("*")
-        .eq("instrument_id", String(instrument.id));
-      return { instrument, quote: asRows2(quotes.data)[0] ?? null };
-    }
-    case "get_bars": {
-      const { symbol, range } = getBarsToolInputSchema.parse(input.args);
-      const inst = await db
-        .from("instruments")
-        .select("id,symbol")
-        .eq("symbol", symbol.toUpperCase());
-      const instrument = asRows2(inst.data)[0];
-      if (!instrument) {
-        throw new Error("SYMBOL_NOT_FOUND");
-      }
-      const timeframe = range === "1D" ? "1m" : "1d";
-      const bars = await db
-        .from("market_bars")
-        .select("*")
-        .eq("instrument_id", String(instrument.id))
-        .eq("timeframe", timeframe)
-        .order("ts", { ascending: false })
-        .limit(80);
-      return { symbol: instrument.symbol, range, timeframe, bars: asRows2(bars.data).reverse() };
-    }
-    case "search_news": {
-      const request = searchNewsToolInputSchema.parse(input.args);
-      return invokeSibling({
-        baseUrl: input.baseUrl,
-        slug: "search-news",
-        token: input.token,
-        body: request,
-      });
-    }
-    case "get_fundamentals": {
-      const { symbol } = getFundamentalsToolInputSchema.parse(input.args);
-      const inst = await db.from("instruments").select("*").eq("symbol", symbol.toUpperCase());
-      const instrument = asRows2(inst.data)[0];
-      if (!instrument) {
-        throw new Error("SYMBOL_NOT_FOUND");
-      }
-      const fund = await db
-        .from("fundamentals")
-        .select("*")
-        .eq("instrument_id", String(instrument.id));
-      return { symbol: instrument.symbol, instrument, fundamentals: asRows2(fund.data)[0] ?? null };
-    }
-    case "screen_instruments": {
-      const request = screenInstrumentsToolInputSchema.parse(input.args);
-      const criteria = request.criteria ?? {
-        combinator: "and",
-        groups: [
-          {
-            combinator: "and",
-            conditions: request.sector
-              ? [{ field: "sector", op: "eq", value: request.sector }]
-              : [{ field: "sector", op: "any", value: null }],
-          },
-        ],
-      };
-      return invokeSibling({
-        baseUrl: input.baseUrl,
-        slug: "screener",
-        token: input.token,
-        body: { op: "run", criteria, sort: request.sort },
-      });
-    }
-    case "get_portfolio": {
-      const request = getPortfolioToolInputSchema.parse(input.args);
-      return invokeSibling({
-        baseUrl: input.baseUrl,
-        slug: "analytics-service/portfolio",
-        token: input.token,
-        body: { op: "portfolio", range: request.range ?? "1Y" },
-      });
-    }
-    case "explain_rule_decision": {
-      const { audit_id } = explainRuleDecisionToolInputSchema.parse(input.args);
-      const { data, error } = await db.from("rule_audit").select("*").eq("id", audit_id);
-      if (error) {
-        throw new Error(error.message);
-      }
-      const row = asRows2(data)[0];
-      if (!row) {
-        throw new Error("AUDIT_NOT_FOUND");
-      }
-      return row;
-    }
-    default:
-      throw new Error(`UNKNOWN_TOOL:${input.name}`);
+  const rsiRes = await admin.database.from("instrument_daily_rsi").select("instrument_id,rsi_14");
+  if (rsiRes.error) {
+    return json(500, { error: rsiRes.error.message });
   }
-}
-async function executeWriteTool(input) {
-  const db = input.admin.database;
-  const countRpc = await db.rpc("count_copilot_user_actions_today", {
-    p_user_id: input.userId,
-  });
-  const actionsToday = Number(countRpc.data ?? 0);
-  const monitorsRpc = await db.rpc("count_user_monitors", { p_user_id: input.userId });
-  const monitorsCount = Number(monitorsRpc.data ?? 0);
-  let args = input.args;
-  if (input.name === "propose_order" && args && typeof args === "object") {
-    const row = args;
-    if (typeof row.last_price !== "number" && typeof row.symbol === "string") {
-      const inst = await db.from("instruments").select("id").eq("symbol", row.symbol.toUpperCase());
-      const instrument = asRows2(inst.data)[0];
-      if (instrument) {
-        const quotes = await db
-          .from("quotes_latest")
-          .select("last")
-          .eq("instrument_id", instrument.id);
-        const last = asRows2(quotes.data)[0]?.last;
-        if (typeof last === "number") {
-          args = { ...row, last_price: last };
-        }
-      }
-    }
+  const rsiById = /* @__PURE__ */ new Map();
+  for (const row of asRows(rsiRes.data)) {
+    rsiById.set(String(row.instrument_id), row.rsi_14 == null ? null : num(row.rsi_14));
   }
-  const ports = {
-    evaluatePolicy: async (context) => {
-      try {
-        const evaluated = await invokeSibling({
-          baseUrl: input.baseUrl,
-          slug: "rules-service",
-          token: input.token,
-          body: { op: "evaluateDomain", domain: "ai_action_policy", context },
-        });
-        if (evaluated && typeof evaluated === "object" && "outcome" in evaluated) {
-          return evaluated.outcome;
-        }
-      } catch {}
-      return evaluateWritePolicyBaseline(context);
-    },
-    persistAction: async (row) =>
-      persistOwnedCopilotAction({
-        userId: input.userId,
-        row,
-        requireOwnedSession: (sessionId) =>
-          requireOwnedCopilotSession(input.admin, input.userId, sessionId),
-        insert: async (owned) => {
-          await db.from("copilot_actions").insert([toActionInsert(owned)]);
-          return owned;
-        },
-      }),
-    updateAction: async (row) => {
-      await db
-        .from("copilot_actions")
-        .update({
-          status: row.status,
-          executed_ref: row.executed_ref,
-          reject_reason: row.reject_reason,
-          policy_outcome: row.policy_outcome,
-          updated_at: row.updated_at,
-        })
-        .eq("id", row.id)
-        .eq("user_id", input.userId);
-      return row;
-    },
-    execute: async (tool, payload) =>
-      executeManualWriteOnEdge({
-        tool,
-        payload,
-        admin: input.admin,
-        baseUrl: input.baseUrl,
-        token: input.token,
-        userId: input.userId,
-        sessionId: input.sessionId,
-      }),
-  };
-  return handleWriteToolCall({
-    userId: input.userId,
-    sessionId: input.sessionId,
-    tool: input.name,
-    args,
-    actionsToday,
-    monitorsCount,
-    ports,
-  });
-}
-async function decideCopilotActionOnEdge(input) {
-  const parsed = copilotOrchestratorDecideRequestSchema.safeParse(
-    input.body && typeof input.body === "object" ? { op: "decide", ...input.body } : input.body,
-  );
-  if (!parsed.success) {
-    return json(400, { error: "INVALID_BODY" });
+  const posRes = await admin.database.from("positions").select("*");
+  if (posRes.error) {
+    return json(500, { error: posRes.error.message });
   }
-  const db = input.admin.database;
-  const loaded = await db
-    .from("copilot_actions")
-    .select("*")
-    .eq("id", parsed.data.action_id)
-    .eq("user_id", input.userId)
-    .limit(1);
-  const existingRow = asRows2(loaded.data)[0];
-  if (!existingRow) {
-    return json(404, { error: "ACTION_NOT_FOUND" });
+  const positions = asRows(posRes.data);
+  const newsRes = await admin.database
+    .from("news_items")
+    .select("id,ts,symbols,sentiment,sector,headline")
+    .order("ts", { ascending: false })
+    .limit(200);
+  if (newsRes.error) {
+    return json(500, { error: newsRes.error.message });
   }
-  const existing = copilotActionSchema.parse(existingRow);
-  try {
-    await requireOwnedCopilotSession(input.admin, input.userId, existing.session_id);
-    const row = await decidePersistedAction({
-      action: existing,
-      decision: parsed.data.decision,
-      feedback: parsed.data.feedback,
-      ports: {
-        evaluatePolicy: async () => ({ decision: "require_approval" }),
-        persistAction: async (next) =>
-          persistOwnedCopilotAction({
-            userId: input.userId,
-            row: next,
-            requireOwnedSession: (sessionId) =>
-              requireOwnedCopilotSession(input.admin, input.userId, sessionId),
-            insert: async (owned) => {
-              await db.from("copilot_actions").insert([toActionInsert(owned)]);
-              return owned;
-            },
-          }),
-        updateAction: async (next) => {
-          await db
-            .from("copilot_actions")
-            .update({
-              status: next.status,
-              executed_ref: next.executed_ref,
-              reject_reason: next.reject_reason,
-              policy_outcome: next.policy_outcome,
-              updated_at: next.updated_at,
-            })
-            .eq("id", next.id)
-            .eq("user_id", input.userId);
-          return next;
-        },
-        execute: async (tool, payload) =>
-          executeManualWriteOnEdge({
-            tool,
-            payload,
-            admin: input.admin,
-            baseUrl: input.baseUrl,
-            token: input.token,
-            userId: input.userId,
-            sessionId: existing.session_id,
-          }),
-      },
-    });
-    await db.from("audit_log").insert([
-      {
-        user_id: input.userId,
-        action: `copilot:action:${parsed.data.decision}`,
-        entity_type: "copilot_actions",
-        entity_id: row.id,
-        payload: { tool: row.tool, status: row.status },
-      },
-    ]);
-    return json(200, { action: row });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "ACTION_DECIDE_FAILED";
-    const status = message === COPILOT_SESSION_NOT_FOUND ? 404 : 400;
-    return json(status, { error: message });
+  const news = asRows(newsRes.data);
+  const dayStart = `${utcDay(clock)}T00:00:00.000Z`;
+  const todayRes = await admin.database.from("alerts").select("user_id").gte("fired_at", dayStart);
+  if (todayRes.error) {
+    return json(500, { error: todayRes.error.message });
   }
-}
-function toActionInsert(row) {
-  return {
+  const userAlertsToday = /* @__PURE__ */ new Map();
+  for (const row of asRows(todayRes.data)) {
+    userAlertsToday.set(row.user_id, (userAlertsToday.get(row.user_id) ?? 0) + 1);
+  }
+  const snapshots = monitors.map((row) => ({
     id: row.id,
     user_id: row.user_id,
-    session_id: row.session_id,
-    tool: row.tool,
-    payload: row.payload,
-    policy_outcome: row.policy_outcome,
-    status: row.status,
-    executed_ref: row.executed_ref,
-    reject_reason: row.reject_reason,
-  };
-}
-async function executeManualWriteOnEdge(input) {
-  const db = input.admin.database;
-  const actionName =
-    input.tool === "propose_order"
-      ? "trade:create"
-      : input.tool === "create_alert"
-        ? "alerts:create"
-        : input.tool === "create_watchlist_item"
-          ? "watchlist:item:create"
-          : "copilot:act";
-  const gate = await authorizeEdgeUser({ db, userId: input.userId, action: actionName });
-  if (!gate.allowed) {
-    return { error: gate.reason ?? "NOT_ALLOWED" };
-  }
-  if (input.tool === "propose_order") {
-    const created = await invokeSibling({
-      baseUrl: input.baseUrl,
-      slug: "order-service/orders",
-      token: input.token,
-      body: {
-        op: "create",
-        last_price: input.payload.last_price,
-        draft: {
-          symbol: input.payload.symbol,
-          side: input.payload.side,
-          qty: input.payload.qty,
-          order_type: input.payload.order_type ?? "market",
-          limit_price: input.payload.limit_price ?? null,
-          stop_price: input.payload.stop_price ?? null,
-          tif: input.payload.tif ?? "DAY",
-        },
-      },
-    });
-    const order =
-      created && typeof created === "object" && "order" in created ? created.order : void 0;
-    if (!order?.id) {
-      return { error: "ORDER_CREATE_FAILED" };
+    name: row.name,
+    nl_instruction: row.nl_instruction,
+    compiled_condition: row.compiled_condition,
+    scope: row.scope,
+    cadence: row.cadence,
+    last_run: row.last_run,
+    active: row.active,
+    throttle_state: row.throttle_state,
+    propose_action: row.propose_action ?? null,
+  }));
+  const hybridHits = /* @__PURE__ */ new Map();
+  for (const monitor of monitors) {
+    const usesNews = monitor.compiled_condition.conditions.some(
+      (cell) => cell.input === "news_sentiment",
+    );
+    if (!usesNews) {
+      continue;
     }
-    return { ref: order.id, reject_reason: order.reject_reason ?? void 0 };
-  }
-  if (input.tool === "create_watchlist_item") {
-    const symbol = String(input.payload.symbol ?? "").toUpperCase();
-    const inst = await db.from("instruments").select("id,symbol").eq("symbol", symbol);
-    const instrument = asRows2(inst.data)[0];
-    if (!instrument) {
-      return { error: "SYMBOL_NOT_FOUND" };
-    }
-    const requestedWatchlistId =
-      typeof input.payload.watchlist_id === "string" ? input.payload.watchlist_id : void 0;
-    return insertOwnedWatchlistItemAsAdmin({
-      userId: input.userId,
-      watchlistId: requestedWatchlistId,
-      instrumentId: instrument.id,
-      ports: {
-        findWatchlist: async ({ id, userId }) => {
-          let query = db.from("watchlists").select("id,user_id").eq("user_id", userId);
-          if (id) {
-            query = query.eq("id", id);
-          }
-          const lists = await query.limit(1);
-          return asRows2(lists.data)[0] ?? null;
-        },
-        createDefaultWatchlist: async (userId) => {
-          await db.from("watchlists").insert([{ user_id: userId, name: "Default" }]);
-          const again = await db
-            .from("watchlists")
-            .select("id,user_id")
-            .eq("user_id", userId)
-            .limit(1);
-          const created = asRows2(again.data)[0];
-          if (!created) {
-            throw new Error("WATCHLIST_MISSING");
-          }
-          return created;
-        },
-        countItems: async (watchlistId) => {
-          const items = await db
-            .from("watchlist_items")
-            .select("id")
-            .eq("watchlist_id", watchlistId);
-          return asRows2(items.data).length;
-        },
-        insertItem: async (row) => {
-          await db.from("watchlist_items").insert([row]);
-          const created = await db
-            .from("watchlist_items")
-            .select("id")
-            .eq("watchlist_id", row.watchlist_id)
-            .eq("instrument_id", row.instrument_id);
-          return asRows2(created.data)[0] ?? null;
-        },
-      },
-    });
-  }
-  if (input.tool === "create_alert") {
-    const parsed = createAlertToolInputSchema.parse(input.payload);
-    const inst = await db
-      .from("instruments")
-      .select("id,symbol")
-      .eq("symbol", parsed.symbol.toUpperCase());
-    const instrument = asRows2(inst.data)[0];
-    if (!instrument) {
-      return { error: "SYMBOL_NOT_FOUND" };
-    }
-    const condition = compileAlertTemplate({
-      kind: parsed.kind,
-      threshold: parsed.threshold,
-    });
-    await db.from("alert_rules").insert([
-      {
-        user_id: input.userId,
-        instrument_id: instrument.id,
-        name: parsed.name ?? `${parsed.kind} ${instrument.symbol}`,
-        kind: parsed.kind,
-        condition,
-        active: true,
-      },
-    ]);
-    const created = await db
-      .from("alert_rules")
-      .select("id")
-      .eq("user_id", input.userId)
-      .order("created_at", { ascending: false })
-      .limit(1);
-    const row = asRows2(created.data)[0];
-    return row ? { ref: row.id } : { error: "ALERT_CREATE_FAILED" };
-  }
-  if (input.tool === "create_monitor") {
-    const instruction =
-      typeof input.payload.nl_instruction === "string" ? input.payload.nl_instruction : "";
-    let compiled = compileMonitorInstruction(instruction);
-    if (!compiled) {
-      const llmMode = (Deno.env.get("MERIDIAN_COPILOT_LLM") ?? "").trim().toLowerCase();
-      if (llmMode === "fake") {
-        return { error: "MONITOR_COMPILE_FAILED" };
+    const symbols =
+      monitor.scope.kind === "symbols"
+        ? (monitor.scope.symbols ?? []).map((s) => s.toUpperCase())
+        : positions.filter((p) => p.user_id === monitor.user_id).map((p) => p.symbol.toUpperCase());
+    try {
+      const rpc = await admin.database.rpc("search_news_hybrid", {
+        query_embedding: formatVectorLiteral(hashEmbed(monitor.nl_instruction)),
+        p_symbols: symbols.length > 0 ? symbols : null,
+        p_since: null,
+        p_limit: 5,
+      });
+      if (!rpc.error) {
+        hybridHits.set(
+          monitor.id,
+          asRows(rpc.data).map((hit) => ({
+            id: hit.id,
+            sentiment: num(hit.sentiment),
+            headline: hit.headline ?? hit.id,
+          })),
+        );
       }
-      const apiKey = Deno.env.get("OPENROUTER_API_KEY");
-      if (!apiKey) {
-        return { error: "MONITOR_COMPILE_FAILED" };
+    } catch {}
+  }
+  function factsFor(monitor) {
+    const userPositions = positions.filter((row) => row.user_id === monitor.user_id);
+    const scopeSymbols = /* @__PURE__ */ new Set();
+    if (monitor.scope.kind === "symbols") {
+      for (const symbol of monitor.scope.symbols ?? []) {
+        scopeSymbols.add(symbol.toUpperCase());
       }
-      try {
-        compiled = await compileMonitorInstructionWithLlm({
-          nl_instruction: instruction,
-          completeJson: async (prompt) => {
-            const response = await fetch(
-              Deno.env.get("OPENROUTER_CHAT_URL") ?? DEFAULT_OPENROUTER_CHAT_URL,
-              {
-                method: "POST",
-                headers: {
-                  Authorization: `Bearer ${apiKey}`,
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                  model: Deno.env.get("OPENROUTER_CHAT_MODEL") ?? DEFAULT_OPENROUTER_CHAT_MODEL,
-                  messages: [{ role: "user", content: prompt }],
-                }),
-              },
-            );
-            const body = await response.json();
-            const content =
-              body && typeof body === "object" && "choices" in body && Array.isArray(body.choices)
-                ? (body.choices[0]?.message?.content ?? "")
-                : "";
-            return content;
-          },
-        });
-      } catch (error) {
-        return {
-          error: error instanceof Error ? error.message : "MONITOR_COMPILE_FAILED",
+    } else if (monitor.scope.kind === "sector") {
+      const sector = (monitor.scope.sector ?? "").toLowerCase();
+      for (const inst of instruments) {
+        if ((inst.sector ?? "").toLowerCase() === sector) {
+          scopeSymbols.add(inst.symbol.toUpperCase());
+        }
+      }
+    } else {
+      for (const pos of userPositions) {
+        scopeSymbols.add(pos.symbol.toUpperCase());
+      }
+    }
+    let worst = 0;
+    let portfolioDay = 0;
+    let portfolioPrev = 0;
+    let sample = null;
+    for (const symbol of scopeSymbols) {
+      const inst = bySymbol.get(symbol);
+      if (!inst) {
+        continue;
+      }
+      const quote = quotes.get(inst.id);
+      if (!quote || quote.prev_close === 0) {
+        continue;
+      }
+      const pct = ((quote.last - quote.prev_close) / quote.prev_close) * 100;
+      if (!sample || pct < sample.pct) {
+        sample = {
+          symbol,
+          last: quote.last,
+          pct,
+          volume: quote.volume,
+          rsi: rsiById.get(inst.id) ?? null,
         };
       }
+      const pos = userPositions.find((row) => row.instrument_id === inst.id);
+      if (pos) {
+        if (pct < worst) {
+          worst = pct;
+        }
+        portfolioDay += pos.qty * (quote.last - quote.prev_close);
+        portfolioPrev += pos.qty * quote.prev_close;
+      }
     }
-    const name =
-      (typeof input.payload.name === "string" && input.payload.name) ||
-      compiled.name ||
-      instruction.slice(0, 72);
-    await db.from("monitors").insert([
+    const portfolioPct = portfolioPrev === 0 ? 0 : (portfolioDay / portfolioPrev) * 100;
+    const positionDayPct =
+      parsed.data.force_position_day_pct !== void 0 ? parsed.data.force_position_day_pct : worst;
+    let newsSentiment = null;
+    const cited = [];
+    const hits = hybridHits.get(monitor.id) ?? [];
+    if (hits.length > 0) {
+      newsSentiment = hits[0]?.sentiment ?? null;
+      for (const hit of hits.slice(0, 3)) {
+        cited.push(`news:${hit.id}`);
+      }
+    } else {
+      for (const item of news) {
+        const matchSymbol = (item.symbols ?? []).some((s) => scopeSymbols.has(s.toUpperCase()));
+        const matchSector =
+          monitor.scope.kind === "sector" &&
+          (item.sector ?? "").toLowerCase() === (monitor.scope.sector ?? "").toLowerCase();
+        if (matchSymbol || matchSector) {
+          newsSentiment = num(item.sentiment);
+          cited.push(`news:${item.id}`);
+          break;
+        }
+      }
+    }
+    if (
+      parsed.data.force_position_day_pct === void 0 &&
+      scopeSymbols.size === 0 &&
+      hits.length === 0
+    ) {
+      return {
+        position_day_pct: positionDayPct,
+        portfolio_day_pct: portfolioPct,
+        news_sentiment: newsSentiment,
+        cited,
+      };
+    }
+    return {
+      position_day_pct: positionDayPct,
+      portfolio_day_pct: portfolioPct,
+      pct_chg: sample?.pct ?? positionDayPct,
+      last: sample?.last ?? 0,
+      volume: sample?.volume ?? 0,
+      rsi_14: sample?.rsi ?? null,
+      news_sentiment: newsSentiment,
+      symbol: sample?.symbol,
+      cited,
+    };
+  }
+  let cycle;
+  try {
+    cycle = await runMonitorCycle({
+      monitors: snapshots,
+      factsFor,
+      clock,
+      userAlertsToday,
+      ignoreCadence: parsed.data.force === true || parsed.data.force_position_day_pct !== void 0,
+      evaluateAlerting: async (context, _clock, meta) => {
+        const result = await evaluateAlertingDomain({
+          baseUrl,
+          apiKey: expected,
+          userId: meta.userId,
+          context,
+        });
+        return { outcome: result.outcome };
+      },
+    });
+  } catch (error) {
+    return json(500, { error: error instanceof Error ? error.message : "MONITOR_CYCLE_FAILED" });
+  }
+  for (const update of cycle.updates) {
+    const { error } = await admin.database
+      .from("monitors")
+      .update({
+        active: update.active,
+        last_run: update.last_run,
+        throttle_state: update.throttle_state,
+      })
+      .eq("id", update.id);
+    if (error) {
+      return json(500, { error: error.message });
+    }
+  }
+  let fired = 0;
+  for (const draft of cycle.fires) {
+    const id = crypto.randomUUID();
+    const firedAt = clock.toISOString();
+    const explanation = groundedMonitorExplanation({
+      name: draft.message,
+      nl_instruction: String(draft.payload.nl_instruction ?? draft.message),
+      facts: draft.facts,
+      cited: Array.isArray(draft.facts.cited) ? draft.facts.cited.map((row) => String(row)) : [],
+    });
+    const { error: insertError } = await admin.database.from("alerts").insert([
       {
-        user_id: input.userId,
-        session_id: input.sessionId ?? null,
-        name,
-        nl_instruction: instruction,
-        compiled_condition: compiled.compiled_condition,
-        scope: compiled.scope,
-        cadence: compiled.cadence ?? "5m",
-        active: true,
-        propose_action: compiled.propose_action ?? null,
+        id,
+        user_id: draft.user_id,
+        alert_rule_id: null,
+        monitor_id: draft.monitor_id,
+        instrument_id: draft.instrument_id,
+        fired_at: firedAt,
+        message: explanation,
+        payload: { ...draft.payload, explanation },
+        read: false,
       },
     ]);
-    const createdMon = await db
-      .from("monitors")
-      .select("id")
-      .eq("user_id", input.userId)
-      .order("created_at", { ascending: false })
-      .limit(1);
-    const monitor = asRows2(createdMon.data)[0];
-    return monitor ? { ref: monitor.id } : { error: "MONITOR_CREATE_FAILED" };
+    if (insertError) {
+      return json(500, { error: insertError.message });
+    }
+    const alert = alertInstanceSchema.parse({
+      id,
+      user_id: draft.user_id,
+      alert_rule_id: null,
+      monitor_id: draft.monitor_id,
+      instrument_id: draft.instrument_id,
+      fired_at: firedAt,
+      message: explanation,
+      payload: { ...draft.payload, explanation },
+      read: false,
+      created_at: firedAt,
+    });
+    await admin.database.from("audit_log").insert([
+      {
+        user_id: draft.user_id,
+        action: "monitor:fire",
+        entity_type: "monitors",
+        entity_id: draft.monitor_id,
+        payload: { alert_id: id },
+      },
+    ]);
+    const published = await admin.database.rpc("publish_alert_event", {
+      p_user_id: draft.user_id,
+      payload: { kind: "alert", alert },
+    });
+    if (published.error) {
+      return json(500, { error: published.error.message });
+    }
+    if (draft.propose_action && draft.propose_action.tool === "propose_order") {
+      const sessionRes = await admin.database
+        .from("monitors")
+        .select("session_id")
+        .eq("id", draft.monitor_id)
+        .limit(1);
+      const sessionId = asRows(sessionRes.data)[0]?.session_id;
+      if (sessionId) {
+        await admin.database.from("copilot_actions").insert([
+          {
+            user_id: draft.user_id,
+            session_id: sessionId,
+            tool: "propose_order",
+            payload: draft.propose_action,
+            policy_outcome: { decision: "require_approval", table: "DT-AI-01" },
+            status: "proposed",
+          },
+        ]);
+      }
+    }
+    fired += 1;
   }
-  return { error: `UNKNOWN_WRITE_TOOL:${input.tool}` };
+  return json(
+    200,
+    monitorRunnerResponseSchema.parse({
+      evaluated: snapshots.length,
+      fired,
+      suppressed: cycle.suppressed,
+    }),
+  );
 }
 
-module.exports = copilot_orchestrator_src_default;
+module.exports = monitor_runner_src_default;
