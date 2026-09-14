@@ -288,12 +288,12 @@ Seeded via `scripts/seed-all.ts` (see doc 06): 150 instruments, 5y daily + 5d 1m
 ### PBI-029 Audit completion
 | ID | Criterion / Test | Pri | Status |
 |---|---|---|---|
-| AC-029-01 | Hash chain verifies; tampering detected | P0 | ☑ |
-| AC-029-02 | Every mutating endpoint writes an audit row | P0 | ☑ |
-| AC-029-03 | Compliance role: read-only audit access; trader: none | P0 | ☑ |
-| TC-029-01 | Tamper row in test DB → verify fails (AC-029-01) | P0 | ☑ |
-| TC-029-02 | Mutation sweep test (AC-029-02) | P0 | ☑ |
-| TC-029-03 | Role access checks on /admin/audit (AC-029-03) | P0 | ☑ |
+| AC-029-01 | Hash chain verifies; tampering detected | P0 | ☐ |
+| AC-029-02 | Every mutating endpoint writes an audit row | P0 | ☐ |
+| AC-029-03 | Compliance role: read-only audit access; trader: none | P0 | ☐ |
+| TC-029-01 | Tamper row in test DB → verify fails (AC-029-01) | P0 | ☐ |
+| TC-029-02 | Mutation sweep test (AC-029-02) | P0 | ☐ |
+| TC-029-03 | Role access checks on /admin/audit (AC-029-03) | P0 | ☐ |
 
 ### PBI-030 Observability & performance
 | ID | Criterion / Test | Pri | Status |
