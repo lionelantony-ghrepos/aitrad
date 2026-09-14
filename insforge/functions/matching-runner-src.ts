@@ -30,6 +30,7 @@ import {
 } from "../../packages/paper-engine/src/index.ts";
 import type { OrderLegRole, OrderGroupType, TrailType } from "../../packages/schemas/src/index.ts";
 import { writeAuditLog } from "./_shared/audit.ts";
+import { withFunctionLog } from "./_shared/logger.ts";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
 
@@ -203,7 +204,7 @@ async function publishPosition(
   }
 }
 
-export default async function (req: Request): Promise<Response> {
+export default withFunctionLog("matching-runner", async function (req: Request): Promise<Response> {
   if (req.method !== "POST") {
     return json(405, { error: "METHOD_NOT_ALLOWED" });
   }
@@ -623,4 +624,4 @@ export default async function (req: Request): Promise<Response> {
       triggered,
     }),
   );
-}
+});

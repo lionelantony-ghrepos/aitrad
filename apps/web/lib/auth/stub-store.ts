@@ -43,6 +43,7 @@ import type {
   CopilotAction,
   Brief,
   AuditLog,
+  TelemetryRecord,
 } from "@meridian/schemas";
 
 export type StubUser = {
@@ -68,6 +69,8 @@ type StubState = {
   copilotMonitors: Monitor[];
   briefs: Brief[];
   auditLogs: AuditLog[];
+  telemetry: TelemetryRecord[];
+  feedHeartbeat: { ts: string | null; session: string | null; ticks_applied: number | null };
   auditRetentionDays: number | null;
   copilotForceRateLimitUserIds: Set<string>;
   orders: OrderRecord[];
@@ -98,6 +101,8 @@ function createState(): StubState {
     copilotMonitors: [],
     briefs: [],
     auditLogs: [],
+    telemetry: [],
+    feedHeartbeat: { ts: null, session: null, ticks_applied: null },
     auditRetentionDays: null,
     copilotForceRateLimitUserIds: new Set(),
     orders: [],
@@ -125,6 +130,38 @@ export function getStubState(): StubState {
 
 export function resetStubState(): void {
   globalForStub.__meridianAuthStub = createState();
+}
+
+export function stubInsertTelemetry(
+  row: Omit<TelemetryRecord, "id" | "created_at">,
+): TelemetryRecord {
+  const record: TelemetryRecord = {
+    id: crypto.randomUUID(),
+    created_at: nowIso(),
+    ...row,
+  };
+  getStubState().telemetry.push(record);
+  return record;
+}
+
+export function stubListTelemetry(): TelemetryRecord[] {
+  return [...getStubState().telemetry];
+}
+
+export function stubGetFeedHeartbeat(): {
+  ts: string | null;
+  session: string | null;
+  ticks_applied: number | null;
+} {
+  return getStubState().feedHeartbeat;
+}
+
+export function stubSetFeedHeartbeat(row: {
+  ts: string | null;
+  session: string | null;
+  ticks_applied: number | null;
+}): void {
+  getStubState().feedHeartbeat = row;
 }
 
 export function stubArmForceOrderReject(userId: string): void {

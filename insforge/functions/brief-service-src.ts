@@ -39,6 +39,7 @@ import {
 } from "../../packages/copilot/src/index.ts";
 import { authorizeEdgeUser } from "./_shared/entitlements.ts";
 import { writeAuditLog } from "./_shared/audit.ts";
+import { withFunctionLog } from "./_shared/logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -468,7 +469,7 @@ async function generateForUser(input: {
   return { brief, citations };
 }
 
-export default async function (req: Request): Promise<Response> {
+export default withFunctionLog("brief-service", async function (req: Request): Promise<Response> {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
@@ -686,4 +687,4 @@ export default async function (req: Request): Promise<Response> {
   } catch (error) {
     return json(500, { error: error instanceof Error ? error.message : "BRIEF_FAILED" });
   }
-}
+});

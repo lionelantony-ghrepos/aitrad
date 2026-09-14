@@ -13,6 +13,9 @@ node_modules
 apps/web/playwright-report
 apps/web/test-results
 
+# lighthouse CI
+.lighthouseci
+
 # next.js
 .next/
 /out/

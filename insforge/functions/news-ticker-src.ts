@@ -11,6 +11,7 @@ import {
 } from "../../packages/mock-data/src/news.ts";
 import templatesJson from "../../mock_data/news-templates.json" with { type: "json" };
 import { writeAuditLog } from "./_shared/audit.ts";
+import { withFunctionLog } from "./_shared/logger.ts";
 
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -44,7 +45,7 @@ function readElapsed(value: unknown): number {
   return 0;
 }
 
-export default async function (req: Request): Promise<Response> {
+export default withFunctionLog("news-ticker", async function (req: Request): Promise<Response> {
   if (req.method !== "POST") {
     return json(405, { error: "METHOD_NOT_ALLOWED" });
   }
@@ -252,4 +253,4 @@ export default async function (req: Request): Promise<Response> {
     nextSimElapsedSec: plan.nextSimElapsedSec,
     alerting,
   });
-}
+});

@@ -5686,6 +5686,7 @@ var auditAdminOpSchema = external_exports.enum([
   "getConfig",
   "setRetention",
   "cron",
+  "append",
 ]);
 var auditAdminFilterSchema = external_exports.object({
   user_id: uuidSchema.optional(),
@@ -5724,6 +5725,14 @@ var auditAdminCronRequestSchema = external_exports.object({
   op: external_exports.literal("cron"),
   force: external_exports.boolean().optional(),
 });
+var auditAdminAppendRequestSchema = external_exports.object({
+  op: external_exports.literal("append"),
+  action: external_exports.string().min(1),
+  entity_type: external_exports.string().min(1),
+  entity_id: uuidSchema.nullable().optional(),
+  payload: external_exports.record(external_exports.unknown()).optional(),
+  user_id: uuidSchema.nullable().optional(),
+});
 var auditAdminRequestSchema = external_exports.discriminatedUnion("op", [
   auditAdminListRequestSchema,
   auditAdminTimelineRequestSchema,
@@ -5732,6 +5741,7 @@ var auditAdminRequestSchema = external_exports.discriminatedUnion("op", [
   auditAdminGetConfigRequestSchema,
   auditAdminSetRetentionRequestSchema,
   auditAdminCronRequestSchema,
+  auditAdminAppendRequestSchema,
 ]);
 var auditChainVerifyResultSchema = external_exports.object({
   ok: external_exports.boolean(),
@@ -5764,6 +5774,9 @@ var auditAdminCronResponseSchema = external_exports.object({
   purged: external_exports.number().int().nonnegative(),
   alerted: external_exports.number().int().nonnegative(),
   skipped: external_exports.boolean(),
+});
+var auditAdminAppendResponseSchema = external_exports.object({
+  ok: external_exports.literal(true),
 });
 
 // packages/schemas/src/copilot.ts
@@ -6028,6 +6041,98 @@ var portfolioAnalysisFactsSchema = external_exports.object({
   equity: external_exports.number().finite(),
 });
 
+// packages/schemas/src/observability.ts
+var functionLogOutcomeSchema = external_exports.enum(["ok", "error", "throw"]);
+var functionLogSchema = external_exports.object({
+  request_id: external_exports.string().min(1),
+  user_id: external_exports.string().nullable(),
+  fn: external_exports.string().min(1),
+  latency_ms: external_exports.number().nonnegative(),
+  outcome: functionLogOutcomeSchema,
+  status: external_exports.number().int().optional(),
+});
+var realtimeConnectionStateSchema = external_exports.enum([
+  "connecting",
+  "live",
+  "reconnecting",
+  "offline",
+]);
+
+// packages/schemas/src/telemetry.ts
+var telemetryKindSchema = external_exports.enum(["fn_latency", "client_error", "realtime"]);
+var telemetryRecordSchema = external_exports.object({
+  id: uuidSchema,
+  kind: telemetryKindSchema,
+  fn: external_exports.string().nullable(),
+  panel_id: external_exports.string().nullable(),
+  request_id: external_exports.string().nullable(),
+  user_id: uuidSchema.nullable(),
+  latency_ms: numericSchema.nullable(),
+  outcome: external_exports.string().nullable(),
+  payload: external_exports.record(external_exports.unknown()),
+  created_at: timestamptzSchema,
+});
+var telemetryClientErrorRequestSchema = external_exports.object({
+  op: external_exports.literal("client_error"),
+  panel_id: external_exports.string().min(1),
+  message: external_exports.string().min(1).max(2e3),
+  stack: external_exports.string().max(8e3).optional(),
+  request_id: external_exports.string().min(1).optional(),
+});
+var telemetryRealtimeRequestSchema = external_exports.object({
+  op: external_exports.literal("realtime"),
+  state: realtimeConnectionStateSchema,
+  attempt: external_exports.number().int().nonnegative().optional(),
+  request_id: external_exports.string().min(1).optional(),
+});
+var telemetryFnLatencyRequestSchema = external_exports.object({
+  op: external_exports.literal("fn_latency"),
+  fn: external_exports.string().min(1),
+  request_id: external_exports.string().min(1),
+  user_id: uuidSchema.nullable().optional(),
+  latency_ms: external_exports.number().nonnegative(),
+  outcome: functionLogOutcomeSchema,
+  status: external_exports.number().int().optional(),
+});
+var telemetryRequestSchema = external_exports.discriminatedUnion("op", [
+  telemetryClientErrorRequestSchema,
+  telemetryRealtimeRequestSchema,
+  telemetryFnLatencyRequestSchema,
+]);
+var telemetryIngestResponseSchema = external_exports.object({
+  stored: external_exports.boolean(),
+  sampled: external_exports.boolean(),
+});
+var latencyPercentilesSchema = external_exports.object({
+  fn: external_exports.string(),
+  count: external_exports.number().int().nonnegative(),
+  p50_ms: external_exports.number().nullable(),
+  p95_ms: external_exports.number().nullable(),
+  p99_ms: external_exports.number().nullable(),
+});
+var feedHeartbeatSchema = external_exports.object({
+  ts: timestamptzSchema.nullable(),
+  session: external_exports.string().nullable(),
+  ticks_applied: external_exports.number().nullable(),
+  age_ms: external_exports.number().nullable(),
+});
+var realtimeChannelStatsSchema = external_exports.object({
+  live: external_exports.number().int().nonnegative(),
+  reconnecting: external_exports.number().int().nonnegative(),
+  offline: external_exports.number().int().nonnegative(),
+  connecting: external_exports.number().int().nonnegative(),
+  last_ts: timestamptzSchema.nullable(),
+});
+var healthSnapshotSchema = external_exports.object({
+  generated_at: timestamptzSchema,
+  functions: external_exports.array(latencyPercentilesSchema),
+  feed: feedHeartbeatSchema,
+  realtime: realtimeChannelStatsSchema,
+});
+var healthServiceRequestSchema = external_exports.object({
+  op: external_exports.literal("snapshot"),
+});
+
 // packages/schemas/src/index.ts
 var publicInsforgeEnvSchema = external_exports.object({
   NEXT_PUBLIC_INSFORGE_URL: external_exports.string().url(),
@@ -6255,6 +6360,65 @@ async function authorize(input) {
     });
   }
   return { allowed: false, decision: "deny", reason: "FORBIDDEN" };
+}
+
+// packages/rules-engine/src/observability.ts
+function requestIdFromHeaders(headers) {
+  return headers.get("x-request-id") ?? headers.get("x-correlation-id") ?? crypto.randomUUID();
+}
+function userIdFromAuthorization(header) {
+  if (!header?.startsWith("Bearer ")) {
+    return null;
+  }
+  const token = header.slice(7);
+  const parts = token.split(".");
+  if (parts.length < 2) {
+    return null;
+  }
+  try {
+    const json2 = decodeJwtSegment(parts[1] ?? "");
+    const payload = JSON.parse(json2);
+    return typeof payload.sub === "string" ? payload.sub : null;
+  } catch {
+    return null;
+  }
+}
+function decodeJwtSegment(segment) {
+  const b64 = segment.replace(/-/g, "+").replace(/_/g, "/");
+  const pad = b64.length % 4 === 0 ? "" : "=".repeat(4 - (b64.length % 4));
+  if (typeof atob === "function") {
+    return atob(b64 + pad);
+  }
+  return Buffer.from(b64 + pad, "base64").toString("utf8");
+}
+function buildFunctionLog(input) {
+  return functionLogSchema.parse(input);
+}
+function formatFunctionLog(input) {
+  return JSON.stringify(buildFunctionLog(input));
+}
+function shouldSampleTelemetry(requestId, rate) {
+  if (rate >= 1) {
+    return true;
+  }
+  if (rate <= 0) {
+    return false;
+  }
+  let hash = 0;
+  for (let i = 0; i < requestId.length; i += 1) {
+    hash = (hash * 31 + requestId.charCodeAt(i)) >>> 0;
+  }
+  return hash / 4294967295 < rate;
+}
+function parseTelemetrySampleRate(raw, fallback = 1) {
+  if (raw === void 0 || raw.length === 0) {
+    return fallback;
+  }
+  const n = Number(raw);
+  if (!Number.isFinite(n)) {
+    return fallback;
+  }
+  return Math.min(1, Math.max(0, n));
 }
 
 // packages/rules-engine/src/doc05-fixtures.ts
@@ -6661,6 +6825,7 @@ var dtEnt01 = {
             "profile-wizard",
             "news:search",
             "chart:bars",
+            "telemetry:write",
           ],
         },
       ],
@@ -6938,6 +7103,94 @@ async function writeAuditLog(db, row) {
   }
 }
 
+// insforge/functions/_shared/telemetry-persist.ts
+async function persistFunctionLatencySample(input) {
+  try {
+    const apiKey = resolveRulesServiceApiKey({
+      API_KEY: Deno.env.get("API_KEY"),
+      INSFORGE_API_KEY: Deno.env.get("INSFORGE_API_KEY"),
+    });
+    const baseUrl = Deno.env.get("INSFORGE_INTERNAL_URL") ?? Deno.env.get("INSFORGE_BASE_URL");
+    if (!apiKey || !baseUrl) {
+      return;
+    }
+    const admin = createAdminClient({ baseUrl, apiKey });
+    await admin.database.from("telemetry").insert([
+      {
+        kind: "fn_latency",
+        fn: input.fn,
+        request_id: input.request_id,
+        user_id: input.user_id,
+        latency_ms: input.latency_ms,
+        outcome: input.outcome,
+        payload: { status: input.status ?? null },
+      },
+    ]);
+  } catch {}
+}
+
+// insforge/functions/_shared/logger.ts
+function logLine(entry) {
+  console.log(formatFunctionLog(entry));
+}
+function withRequestId(response, requestId) {
+  const headers = new Headers(response.headers);
+  headers.set("x-request-id", requestId);
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+function outcomeFromStatus(status) {
+  if (status >= 400) {
+    return "error";
+  }
+  return "ok";
+}
+function withFunctionLog(fn, handler) {
+  return async (req) => {
+    if (req.method === "OPTIONS") {
+      return handler(req);
+    }
+    const request_id = requestIdFromHeaders(req.headers);
+    const user_id = userIdFromAuthorization(req.headers.get("Authorization"));
+    const started = Date.now();
+    try {
+      const response = await handler(req);
+      const latency_ms = Date.now() - started;
+      const outcome = outcomeFromStatus(response.status);
+      logLine({ request_id, user_id, fn, latency_ms, outcome, status: response.status });
+      const rate = parseTelemetrySampleRate(
+        typeof Deno !== "undefined" ? Deno.env.get("TELEMETRY_SAMPLE_RATE") : void 0,
+        1,
+      );
+      if (shouldSampleTelemetry(request_id, rate)) {
+        void persistFunctionLatencySample({
+          fn,
+          request_id,
+          user_id,
+          latency_ms,
+          outcome,
+          status: response.status,
+        });
+      }
+      return withRequestId(response, request_id);
+    } catch (error) {
+      const latency_ms = Date.now() - started;
+      logLine({ request_id, user_id, fn, latency_ms, outcome: "throw" });
+      void persistFunctionLatencySample({
+        fn,
+        request_id,
+        user_id,
+        latency_ms,
+        outcome: "throw",
+      });
+      throw error;
+    }
+  };
+}
+
 // insforge/functions/screener-src.ts
 var corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -6953,7 +7206,7 @@ function json(status, body) {
 function asRows2(data) {
   return Array.isArray(data) ? data : [];
 }
-async function screener_src_default(req) {
+var screener_src_default = withFunctionLog("screener", async function (req) {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
@@ -6992,7 +7245,7 @@ async function screener_src_default(req) {
   if (!apiKey) {
     return json(500, { error: "API_KEY_MISSING" });
   }
-  const admin = createAdminClient({ baseUrl, apiKey });
+  const admin = createAdminClient2({ baseUrl, apiKey });
   const gate = await authorizeEdgeUser({
     db: admin.database,
     userId,
@@ -7066,6 +7319,6 @@ async function screener_src_default(req) {
       truncated: matchCount > SCREENER_RESULT_LIMIT,
     }),
   );
-}
+});
 
 module.exports = screener_src_default;

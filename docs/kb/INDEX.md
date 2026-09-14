@@ -52,7 +52,8 @@ PBI-023 embeds **news** (and later filings) for the copilot. It must **not** ing
 | 027 | [PBI-027](as-built/PBI-027.md) | Monitors 0021+0022 JWT owner PATCH, NL compiler, service-only `monitor-runner`, Copilot Monitors tab; DT-ALRT-01 |
 | 028 | [PBI-028](as-built/PBI-028.md) | Briefs 0023+0024 JWT SELECT-only, `brief-service`, Copilot Briefs tab, DES/PORT generate, DT-RISK-02 Portfolio Health |
 | 029 | [PBI-029](as-built/PBI-029.md) | Hash-chained `audit_log` 0025+0026 JWT no DML, `audit-service` (`append`), `/admin/audit`, mutation sweep, retention |
-| 030–031 | _pending_ | Copy [`_template-as-built.md`](_template-as-built.md) when the PBI ships |
+| 030 | [PBI-030](as-built/PBI-030.md) | Structured logs, `/telemetry`, panel ErrorBoundary, STALE + realtime backoff, `/admin/health`, Lighthouse CI + k6 preview |
+| 031 | _pending_ | Copy [`_template-as-built.md`](_template-as-built.md) when the PBI ships |
 
 ## Architecture decision records
 

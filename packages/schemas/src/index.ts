@@ -39,3 +39,5 @@ export * from "./admin-users";
 export * from "./audit-admin";
 export * from "./copilot";
 export * from "./briefs";
+export * from "./observability";
+export * from "./telemetry";
