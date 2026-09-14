@@ -52,6 +52,8 @@ Exported `*Schema` bindings discovered by static scan. Full OpenAPI from Zod is 
 - copilot.ts: copilotCitationSchema
 - copilot.ts: copilotMessageRoleSchema
 - copilot.ts: copilotMessageSchema
+- copilot.ts: copilotOrchestratorDecideRequestSchema
+- copilot.ts: copilotOrchestratorDecideResponseSchema
 - copilot.ts: copilotReadToolNameSchema
 - copilot.ts: copilotSessionDetailSchema
 - copilot.ts: copilotSessionSchema

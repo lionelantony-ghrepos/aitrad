@@ -39,7 +39,7 @@ export { createScreensRepository } from "./screens";
 export { createAlertRulesRepository, createAlertsRepository } from "./alerts";
 export {
   copilotOrchestratorUrl,
-  invokeCopilotActionDecide,
+  invokeCopilotDecide,
   invokeCopilotOrchestrator,
   parseSseBlock,
 } from "./copilot";

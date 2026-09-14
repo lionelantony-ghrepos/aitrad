@@ -43,27 +43,14 @@ CREATE POLICY copilot_actions_select_own ON public.copilot_actions
   FOR SELECT TO authenticated
   USING (user_id = (SELECT auth.uid()));
 
+-- Writes are copilot-orchestrator only (createAdminClient / API_KEY → project_admin).
+-- Authenticated JWT is SELECT-only so approve/reject cannot be patched via PostgREST.
 DROP POLICY IF EXISTS copilot_actions_insert_own ON public.copilot_actions;
-CREATE POLICY copilot_actions_insert_own ON public.copilot_actions
-  FOR INSERT TO authenticated
-  WITH CHECK (
-    user_id = (SELECT auth.uid())
-    AND EXISTS (
-      SELECT 1
-      FROM public.copilot_sessions s
-      WHERE s.id = session_id
-        AND s.user_id = (SELECT auth.uid())
-    )
-  );
-
 DROP POLICY IF EXISTS copilot_actions_update_own ON public.copilot_actions;
-CREATE POLICY copilot_actions_update_own ON public.copilot_actions
-  FOR UPDATE TO authenticated
-  USING (user_id = (SELECT auth.uid()))
-  WITH CHECK (user_id = (SELECT auth.uid()));
+DROP POLICY IF EXISTS copilot_actions_delete_own ON public.copilot_actions;
 
 REVOKE ALL ON TABLE public.copilot_actions FROM anon, authenticated;
-GRANT SELECT, INSERT, UPDATE ON TABLE public.copilot_actions TO authenticated;
+GRANT SELECT ON TABLE public.copilot_actions TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.copilot_actions TO project_admin;
 
 CREATE OR REPLACE FUNCTION public.count_copilot_user_actions_today(p_user_id UUID)

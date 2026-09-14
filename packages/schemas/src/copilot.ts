@@ -114,6 +114,23 @@ export const copilotActionDecideRequestSchema = z.object({
 
 export type CopilotActionDecideRequest = z.infer<typeof copilotActionDecideRequestSchema>;
 
+/** POST /functions/copilot-orchestrator/decide — admin writes, user JWT auth. */
+export const copilotOrchestratorDecideRequestSchema = copilotActionDecideRequestSchema.extend({
+  op: z.literal("decide"),
+});
+
+export type CopilotOrchestratorDecideRequest = z.infer<
+  typeof copilotOrchestratorDecideRequestSchema
+>;
+
+export const copilotOrchestratorDecideResponseSchema = z.object({
+  action: copilotActionSchema,
+});
+
+export type CopilotOrchestratorDecideResponse = z.infer<
+  typeof copilotOrchestratorDecideResponseSchema
+>;
+
 export const writeToolResultSchema = z.object({
   status: z.enum([
     "awaiting_approval",

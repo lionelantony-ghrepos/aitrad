@@ -7,8 +7,8 @@ import {
   type CopilotAction,
 } from "@meridian/schemas";
 import { createRecordsClient } from "@/lib/api/client";
+import { invokeCopilotDecide } from "@/lib/api/copilot";
 import { createCopilotActionsRepository } from "@/lib/api/copilot-actions";
-import { invokeCopilotActionDecide } from "@/lib/api/copilot";
 import { isAuthStub } from "@/lib/auth/mode";
 import { getAccessToken, getSessionUser } from "@/lib/auth/session";
 import { readPublicInsforgeEnv } from "@/lib/insforge/env";
@@ -115,7 +115,7 @@ export async function decideCopilotActionAction(
       return { ok: true, data: row };
     }
     const env = readPublicInsforgeEnv();
-    const row = await invokeCopilotActionDecide({
+    const row = await invokeCopilotDecide({
       baseUrl: env.baseUrl,
       accessToken: session.token,
       request: parsed.data,
