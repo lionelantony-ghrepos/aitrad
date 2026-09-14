@@ -3,7 +3,9 @@ import { chartRangeSchema } from "./chart";
 import { newsSearchRequestSchema } from "./news-search";
 import { equityCurveRangeSchema } from "./analytics";
 import { screenerCriteriaSchema, screenerSortSchema } from "./screener";
-import { timestamptzSchema, uuidSchema } from "./primitives";
+import { alertKindSchema } from "./alerts";
+import { orderSideSchema, orderTypeSchema, tifSchema } from "./orders";
+import { numericSchema, timestamptzSchema, uuidSchema } from "./primitives";
 
 /** Agent-loop DoS guard (PBI-025). Not a decision-table threshold. */
 export const COPILOT_MAX_TOOL_CALLS = 8;
@@ -29,6 +31,105 @@ export const copilotReadToolNameSchema = z.enum([
 ]);
 
 export type CopilotReadToolName = z.infer<typeof copilotReadToolNameSchema>;
+
+export const copilotWriteToolNameSchema = z.enum([
+  "create_watchlist_item",
+  "create_alert",
+  "propose_order",
+  "create_monitor",
+]);
+
+export type CopilotWriteToolName = z.infer<typeof copilotWriteToolNameSchema>;
+
+export const copilotToolNameSchema = z.union([
+  copilotReadToolNameSchema,
+  copilotWriteToolNameSchema,
+]);
+
+export type CopilotToolName = z.infer<typeof copilotToolNameSchema>;
+
+export const createWatchlistItemToolInputSchema = z.object({
+  symbol: z.string().trim().min(1).max(16),
+  watchlist_id: uuidSchema.optional(),
+});
+
+export const createAlertToolInputSchema = z.object({
+  symbol: z.string().trim().min(1).max(16),
+  kind: alertKindSchema,
+  threshold: numericSchema.optional(),
+  name: z.string().trim().min(1).optional(),
+});
+
+export const proposeOrderToolInputSchema = z.object({
+  symbol: z.string().trim().min(1).max(16),
+  side: orderSideSchema,
+  qty: z.number().positive().finite(),
+  order_type: orderTypeSchema.default("market"),
+  limit_price: z.number().finite().nullable().optional(),
+  stop_price: z.number().finite().nullable().optional(),
+  tif: tifSchema.default("DAY"),
+  last_price: numericSchema.optional(),
+});
+
+export const createMonitorToolInputSchema = z.object({
+  name: z.string().trim().min(1).max(80).optional(),
+  nl_instruction: z.string().trim().min(1).max(2000),
+  symbols: z.array(z.string().trim().min(1).max(16)).optional(),
+});
+
+export const copilotActionStatusSchema = z.enum([
+  "proposed",
+  "auto_approved",
+  "approved",
+  "rejected",
+  "executed",
+  "failed",
+]);
+
+export type CopilotActionStatus = z.infer<typeof copilotActionStatusSchema>;
+
+export const copilotActionSchema = z.object({
+  id: uuidSchema,
+  user_id: uuidSchema,
+  session_id: uuidSchema,
+  tool: copilotWriteToolNameSchema,
+  payload: z.record(z.unknown()),
+  policy_outcome: z.unknown(),
+  status: copilotActionStatusSchema,
+  executed_ref: z.string().nullable(),
+  reject_reason: z.string().nullable(),
+  created_at: timestamptzSchema,
+  updated_at: timestamptzSchema,
+});
+
+export type CopilotAction = z.infer<typeof copilotActionSchema>;
+
+export const copilotActionDecisionSchema = z.enum(["approve", "reject"]);
+
+export const copilotActionDecideRequestSchema = z.object({
+  action_id: uuidSchema,
+  decision: copilotActionDecisionSchema,
+  feedback: z.string().trim().max(2000).optional(),
+});
+
+export type CopilotActionDecideRequest = z.infer<typeof copilotActionDecideRequestSchema>;
+
+export const writeToolResultSchema = z.object({
+  status: z.enum([
+    "awaiting_approval",
+    "auto_approved",
+    "executed",
+    "blocked",
+    "failed",
+    "rate_limited",
+  ]),
+  message: z.string(),
+  action: copilotActionSchema.optional(),
+  executed_ref: z.string().optional(),
+  reject_reason: z.string().optional(),
+});
+
+export type WriteToolResult = z.infer<typeof writeToolResultSchema>;
 
 export const getQuoteToolInputSchema = z.object({
   symbol: z.string().trim().min(1).max(16),
@@ -136,6 +237,7 @@ export const copilotChatEventSchema = z.discriminatedUnion("type", [
   }),
   z.object({ type: z.literal("rate_limited"), message: z.string().min(1) }),
   z.object({ type: z.literal("error"), message: z.string().min(1) }),
+  z.object({ type: z.literal("action"), action: copilotActionSchema }),
 ]);
 
 export type CopilotChatEvent = z.infer<typeof copilotChatEventSchema>;

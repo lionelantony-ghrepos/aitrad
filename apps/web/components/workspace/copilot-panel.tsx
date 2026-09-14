@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { listCopilotSessionsAction, loadCopilotSessionAction } from "@/app/actions/copilot";
+import { listCopilotActionsAction } from "@/app/actions/copilot-actions";
+import { CopilotApprovalCard } from "@/components/workspace/copilot-approval-card";
+import { extractActionFromToolResult } from "@meridian/copilot";
 import { focusPanel } from "@/lib/command-palette/focus-panel";
 import { streamCopilotChat } from "@/lib/copilot/stream-chat";
 import { useCopilotDraft } from "@/lib/copilot-draft";
@@ -10,6 +13,7 @@ import { useSymbolContext } from "@/lib/symbol-context";
 import { useWorkspaceRuntime } from "@/lib/workspace-runtime";
 import { matchingSlashSuggestions, splitMarkdownCitations } from "@meridian/copilot";
 import type {
+  CopilotAction,
   CopilotCitation,
   CopilotChatEvent,
   CopilotMessage,
@@ -21,6 +25,7 @@ type ChatRow = {
   role: "user" | "assistant";
   content: string;
   citations: CopilotCitation[];
+  actions: CopilotAction[];
 };
 
 export function CopilotPanel(): React.JSX.Element {
@@ -38,6 +43,7 @@ export function CopilotPanel(): React.JSX.Element {
   const [activity, setActivity] = useState<string | null>(null);
   const [streaming, setStreaming] = useState("");
   const [busy, setBusy] = useState(false);
+  const [actions, setActions] = useState<CopilotAction[]>([]);
 
   const slashes = useMemo(() => matchingSlashSuggestions(query), [query]);
 
@@ -70,6 +76,10 @@ export function CopilotPanel(): React.JSX.Element {
         .filter((row) => row.role === "user" || row.role === "assistant")
         .map((row) => toRow(row)),
     );
+    const listed = await listCopilotActionsAction(id);
+    if (listed.ok) {
+      setActions(listed.data);
+    }
   }
 
   function openCitation(citation: CopilotCitation): void {
@@ -109,7 +119,7 @@ export function CopilotPanel(): React.JSX.Element {
     setActivity(null);
     setRows((current) => [
       ...current,
-      { id: `user-${Date.now()}`, role: "user", content: message, citations: [] },
+      { id: `user-${Date.now()}`, role: "user", content: message, citations: [], actions: [] },
     ]);
     try {
       await streamCopilotChat({
@@ -140,8 +150,12 @@ export function CopilotPanel(): React.JSX.Element {
                 role: "assistant",
                 content: event.content,
                 citations: event.citations,
+                actions: [],
               },
             ]);
+          }
+          if (event.type === "action") {
+            setActions((current) => upsertAction(current, event.action));
           }
           if (event.type === "rate_limited") {
             setError(event.message);
@@ -176,6 +190,7 @@ export function CopilotPanel(): React.JSX.Element {
           onClick={() => {
             setSessionId(null);
             setRows([]);
+            setActions([]);
           }}
         >
           New
@@ -229,6 +244,15 @@ export function CopilotPanel(): React.JSX.Element {
               <p className="text-muted-foreground">{row.role}</p>
               <MessageBody content={row.content} citations={row.citations} onCite={openCitation} />
             </article>
+          ))}
+          {actions.map((action) => (
+            <CopilotApprovalCard
+              key={action.id}
+              action={action}
+              onChange={(next) => {
+                setActions((current) => upsertAction(current, next));
+              }}
+            />
           ))}
           {streaming ? (
             <p className="whitespace-pre-wrap" data-testid="copilot-stream">
@@ -316,12 +340,24 @@ function toRow(row: CopilotMessage): ChatRow {
           part.type === "citation" ? [part.citation] : [],
         )
       : [];
+  const fromTools = row.tool_calls
+    .map((call) => extractActionFromToolResult(call.result))
+    .filter((item): item is CopilotAction => Boolean(item));
   return {
     id: row.id,
     role: row.role === "assistant" ? "assistant" : "user",
     content: row.content,
     citations,
+    actions: fromTools,
   };
+}
+
+function upsertAction(current: CopilotAction[], next: CopilotAction): CopilotAction[] {
+  const idx = current.findIndex((row) => row.id === next.id);
+  if (idx < 0) {
+    return [...current, next];
+  }
+  return current.map((row, index) => (index === idx ? next : row));
 }
 
 function MessageBody(props: {

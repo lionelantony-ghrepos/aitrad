@@ -24,6 +24,9 @@ describe("copilot-orchestrator source contracts", () => {
     expect(src).toContain("screen_instruments");
     expect(src).toContain("get_portfolio");
     expect(src).toContain("explain_rule_decision");
+    expect(src).toContain("propose_order");
+    expect(src).toContain("create_watchlist_item");
+    expect(src).toContain("handleWriteToolCall");
     expect(src).toContain("ai_action_policy");
     expect(src).toContain("requireOwnedCopilotSession");
     expect(src).toContain("SESSION_NOT_FOUND");
@@ -40,6 +43,7 @@ describe("copilot-orchestrator source contracts", () => {
     expect(panel).toContain("streamCopilotChat");
     expect(panel).toContain("listCopilotSessionsAction");
     expect(panel).toContain("copilot-citation");
+    expect(panel).toContain("copilot-approval-card");
     expect(panel).toContain("Ask about");
     expect(panel).not.toContain("createAdminClient");
   });

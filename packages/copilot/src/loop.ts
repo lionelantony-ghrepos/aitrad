@@ -1,12 +1,13 @@
 import {
   COPILOT_MAX_TOOL_CALLS,
+  copilotActionSchema,
   copilotChatEventSchema,
   type CopilotChatEvent,
   type CopilotCitation,
   type CopilotToolCallRecord,
 } from "@meridian/schemas";
 import { extractCitations, newsMetaFromToolResults } from "./citations";
-import { toolByName, type RegisteredReadTool } from "./tools";
+import { toolByName, type RegisteredTool } from "./tools";
 
 export type ChatRole = "system" | "user" | "assistant" | "tool";
 
@@ -47,7 +48,7 @@ export async function runOrchestratorLoop(input: {
   messages: ChatMessage[];
   executeTool: ToolExecutor;
   llm: LlmPort;
-  tools?: readonly RegisteredReadTool[];
+  tools?: readonly RegisteredTool[];
   maxToolCalls?: number;
   onEvent?: (event: CopilotChatEvent) => void;
 }): Promise<OrchestratorResult> {
@@ -139,6 +140,10 @@ export async function runOrchestratorLoop(input: {
         call_id: call.id,
         ok: error === undefined,
       });
+      const pending = extractActionFromToolResult(result);
+      if (pending) {
+        emit(input.onEvent, { type: "action", action: pending });
+      }
       history.push({
         role: "tool",
         name: call.name,
@@ -147,6 +152,16 @@ export async function runOrchestratorLoop(input: {
       });
     }
   }
+}
+
+export function extractActionFromToolResult(
+  result: unknown,
+): ReturnType<typeof copilotActionSchema.parse> | undefined {
+  if (!result || typeof result !== "object" || !("action" in result)) {
+    return undefined;
+  }
+  const parsed = copilotActionSchema.safeParse((result as { action: unknown }).action);
+  return parsed.success ? parsed.data : undefined;
 }
 
 export function chunkTokens(text: string, size = 24): string[] {

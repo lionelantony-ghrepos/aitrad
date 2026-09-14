@@ -39,6 +39,7 @@ export { createScreensRepository } from "./screens";
 export { createAlertRulesRepository, createAlertsRepository } from "./alerts";
 export { copilotOrchestratorUrl, invokeCopilotOrchestrator, parseSseBlock } from "./copilot";
 export { createCopilotSessionsRepository } from "./copilot-sessions";
+export { createCopilotActionsRepository } from "./copilot-actions";
 export { screenerServiceUrl, invokeScreenerRun } from "./screener";
 export {
   analyticsServiceUrl,

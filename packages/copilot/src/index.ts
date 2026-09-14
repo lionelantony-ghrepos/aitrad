@@ -3,21 +3,39 @@ export const packageName = "@meridian/copilot" as const;
 export { COPILOT_SYSTEM_PROMPT, buildContextPreamble } from "./prompt";
 export {
   READ_TOOLS,
+  WRITE_TOOLS,
   READ_TOOL_LABELS,
+  WRITE_TOOL_LABELS,
   openaiToolSpecs,
   toolByName,
+  isWriteTool,
   type RegisteredReadTool,
+  type RegisteredWriteTool,
+  type RegisteredTool,
 } from "./tools";
 export {
   runOrchestratorLoop,
   chunkTokens,
+  extractActionFromToolResult,
   type ChatMessage,
   type LlmPort,
   type LlmTurn,
   type OrchestratorResult,
   type ToolExecutor,
 } from "./loop";
-export { scriptedLlm, newsSummaryLlm } from "./fake-llm";
+export { scriptedLlm, newsSummaryLlm, actionAwareLlm } from "./fake-llm";
+export {
+  handleWriteToolCall,
+  decidePersistedAction,
+  evaluateWritePolicyBaseline,
+  writeDecisionFromOutcome,
+  writePolicyContext,
+  parseWriteToolArgs,
+  orderNotionalFromPayload,
+  type WriteActionPorts,
+  type WriteExecuteResult,
+} from "./write-actions";
+export { summarizeCopilotAction, summarizeWritePayload } from "./write-summary";
 export { extractCitations, newsMetaFromToolResults, splitMarkdownCitations } from "./citations";
 export { extractFigures, ungroundedFigures, assertGroundedOrThrow } from "./grounding";
 export { evaluateCopilotRateLimit, rateLimitFromAiPolicy } from "./rate-limit";

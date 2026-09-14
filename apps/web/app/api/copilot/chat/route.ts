@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { baselineTable, evaluate } from "@meridian/rules-engine";
 import {
-  newsSummaryLlm,
+  actionAwareLlm,
+  isWriteTool,
   rateLimitFromAiPolicy,
   runCopilotRequest,
   type CopilotPersistPorts,
@@ -9,12 +10,14 @@ import {
 import { copilotChatRequestSchema, type CopilotChatEvent } from "@meridian/schemas";
 import { invokeCopilotOrchestrator } from "@/lib/api/copilot";
 import { executeStubReadTool } from "@/lib/copilot/execute-read-tools";
+import { executeStubWriteTool } from "@/lib/copilot/execute-write-tools";
 import { authorizeUser } from "@/lib/auth/authorize-user";
 import { isAuthStub } from "@/lib/auth/mode";
 import { getAccessToken, getSessionUser } from "@/lib/auth/session";
 import { readPublicInsforgeEnv } from "@/lib/insforge/env";
 import {
   stubAppendCopilotMessage,
+  stubAuditCopilot,
   stubCopilotRateLimited,
   stubCountCopilotUserMessages,
   stubCreateCopilotSession,
@@ -85,8 +88,13 @@ export async function POST(request: Request): Promise<Response> {
     return sseResponse(stream);
   }
 
+  let sessionId = parsed.data.session_id ?? "";
   const persist: CopilotPersistPorts = {
-    createSession: async (title) => stubCreateCopilotSession(user.id, title),
+    createSession: async (title) => {
+      const created = stubCreateCopilotSession(user.id, title);
+      sessionId = created.id;
+      return created;
+    },
     appendMessage: async (row) =>
       stubAppendCopilotMessage({
         userId: user.id,
@@ -95,9 +103,9 @@ export async function POST(request: Request): Promise<Response> {
         content: row.content,
         tool_calls: row.tool_calls,
       }),
-    loadHistory: async (sessionId) => stubListCopilotMessages(user.id, sessionId),
-    auditTool: async () => {
-      return;
+    loadHistory: async (id) => stubListCopilotMessages(user.id, id),
+    auditTool: async (name, args) => {
+      stubAuditCopilot(user.id, `copilot:tool:${name}`, { tool: name, arguments: args });
     },
   };
 
@@ -123,8 +131,18 @@ export async function POST(request: Request): Promise<Response> {
         await runCopilotRequest({
           request: parsed.data,
           policyOutcome,
-          llm: newsSummaryLlm(),
-          executeTool: (name, args) => executeStubReadTool({ name, args, userId: user.id }),
+          llm: actionAwareLlm(),
+          executeTool: async (name, args) => {
+            if (isWriteTool(name)) {
+              return executeStubWriteTool({
+                name,
+                args,
+                userId: user.id,
+                sessionId,
+              });
+            }
+            return executeStubReadTool({ name, args, userId: user.id });
+          },
           persist,
           onEvent: emit,
         });

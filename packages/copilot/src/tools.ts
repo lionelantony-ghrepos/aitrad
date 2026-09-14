@@ -1,12 +1,17 @@
 import {
+  createAlertToolInputSchema,
+  createMonitorToolInputSchema,
+  createWatchlistItemToolInputSchema,
   explainRuleDecisionToolInputSchema,
   getBarsToolInputSchema,
   getFundamentalsToolInputSchema,
   getPortfolioToolInputSchema,
   getQuoteToolInputSchema,
+  proposeOrderToolInputSchema,
   screenInstrumentsToolInputSchema,
   searchNewsToolInputSchema,
   type CopilotReadToolName,
+  type CopilotWriteToolName,
 } from "@meridian/schemas";
 import type { ZodType } from "zod";
 
@@ -25,6 +30,16 @@ export type RegisteredReadTool = {
   jsonSchema: JsonSchemaObject;
 };
 
+export type RegisteredWriteTool = {
+  name: CopilotWriteToolName;
+  description: string;
+  label: string;
+  inputSchema: ZodType;
+  jsonSchema: JsonSchemaObject;
+};
+
+export type RegisteredTool = RegisteredReadTool | RegisteredWriteTool;
+
 export const READ_TOOL_LABELS: Record<CopilotReadToolName, string> = {
   get_quote: "Looking up quote…",
   get_bars: "Loading bars…",
@@ -33,6 +48,13 @@ export const READ_TOOL_LABELS: Record<CopilotReadToolName, string> = {
   screen_instruments: "Screening instruments…",
   get_portfolio: "Loading portfolio…",
   explain_rule_decision: "Explaining rule decision…",
+};
+
+export const WRITE_TOOL_LABELS: Record<CopilotWriteToolName, string> = {
+  create_watchlist_item: "Adding to watchlist…",
+  create_alert: "Creating alert…",
+  propose_order: "Proposing order…",
+  create_monitor: "Creating monitor…",
 };
 
 export const READ_TOOLS: readonly RegisteredReadTool[] = [
@@ -132,15 +154,105 @@ export const READ_TOOLS: readonly RegisteredReadTool[] = [
   },
 ];
 
-export function toolByName(name: string): RegisteredReadTool | undefined {
-  return READ_TOOLS.find((tool) => tool.name === name);
+export const WRITE_TOOLS: readonly RegisteredWriteTool[] = [
+  {
+    name: "create_watchlist_item",
+    description: "Add a symbol to the user's watchlist. May auto-execute per AI action policy.",
+    label: WRITE_TOOL_LABELS.create_watchlist_item,
+    inputSchema: createWatchlistItemToolInputSchema,
+    jsonSchema: {
+      type: "object",
+      properties: {
+        symbol: { type: "string" },
+        watchlist_id: { type: "string" },
+      },
+      required: ["symbol"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "create_alert",
+    description: "Create a price or news alert. May auto-execute per AI action policy.",
+    label: WRITE_TOOL_LABELS.create_alert,
+    inputSchema: createAlertToolInputSchema,
+    jsonSchema: {
+      type: "object",
+      properties: {
+        symbol: { type: "string" },
+        kind: {
+          type: "string",
+          enum: [
+            "price_cross_above",
+            "price_cross_below",
+            "pct_chg",
+            "volume",
+            "rsi",
+            "news_sentiment",
+          ],
+        },
+        threshold: { type: "number" },
+        name: { type: "string" },
+      },
+      required: ["symbol", "kind"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "propose_order",
+    description:
+      "Propose a paper order. Orders always require explicit user approval before order-service.",
+    label: WRITE_TOOL_LABELS.propose_order,
+    inputSchema: proposeOrderToolInputSchema,
+    jsonSchema: {
+      type: "object",
+      properties: {
+        symbol: { type: "string" },
+        side: { type: "string", enum: ["buy", "sell"] },
+        qty: { type: "number" },
+        order_type: { type: "string", enum: ["market", "limit", "stop", "stop_limit"] },
+        limit_price: { type: "number" },
+        stop_price: { type: "number" },
+        tif: { type: "string", enum: ["DAY", "GTC", "IOC"] },
+        last_price: { type: "number" },
+      },
+      required: ["symbol", "side", "qty"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "create_monitor",
+    description:
+      "Record a standing monitor instruction. Compilation/runner land in a later PBI; policy still applies.",
+    label: WRITE_TOOL_LABELS.create_monitor,
+    inputSchema: createMonitorToolInputSchema,
+    jsonSchema: {
+      type: "object",
+      properties: {
+        name: { type: "string" },
+        nl_instruction: { type: "string" },
+        symbols: { type: "array", items: { type: "string" } },
+      },
+      required: ["nl_instruction"],
+      additionalProperties: false,
+    },
+  },
+];
+
+export function isWriteTool(name: string): name is CopilotWriteToolName {
+  return WRITE_TOOLS.some((tool) => tool.name === name);
+}
+
+export function toolByName(name: string): RegisteredTool | undefined {
+  return (
+    READ_TOOLS.find((tool) => tool.name === name) ?? WRITE_TOOLS.find((tool) => tool.name === name)
+  );
 }
 
 export function openaiToolSpecs(): Array<{
   type: "function";
   function: { name: string; description: string; parameters: JsonSchemaObject };
 }> {
-  return READ_TOOLS.map((tool) => ({
+  return [...READ_TOOLS, ...WRITE_TOOLS].map((tool) => ({
     type: "function" as const,
     function: {
       name: tool.name,

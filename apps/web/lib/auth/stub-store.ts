@@ -38,6 +38,7 @@ import type {
   CopilotSession,
   CopilotMessage,
   CopilotToolCallRecord,
+  CopilotAction,
 } from "@meridian/schemas";
 
 export type StubUser = {
@@ -58,6 +59,9 @@ type StubState = {
   alerts: AlertInstance[];
   copilotSessions: CopilotSession[];
   copilotMessages: CopilotMessage[];
+  copilotActions: CopilotAction[];
+  copilotAudit: Array<{ user_id: string; action: string; payload: unknown }>;
+  copilotMonitors: Array<{ id: string; user_id: string; name: string; nl_instruction: string }>;
   copilotForceRateLimitUserIds: Set<string>;
   orders: OrderRecord[];
   executions: ExecutionRecord[];
@@ -82,6 +86,9 @@ function createState(): StubState {
     alerts: [],
     copilotSessions: [],
     copilotMessages: [],
+    copilotActions: [],
+    copilotAudit: [],
+    copilotMonitors: [],
     copilotForceRateLimitUserIds: new Set(),
     orders: [],
     executions: [],
@@ -977,6 +984,72 @@ export function stubCountCopilotUserMessages(userId: string): number {
   return getStubState().copilotMessages.filter(
     (row) => row.user_id === userId && row.role === "user",
   ).length;
+}
+
+export function stubAuditCopilot(userId: string, action: string, payload: unknown): void {
+  getStubState().copilotAudit.push({ user_id: userId, action, payload });
+}
+
+export function stubListCopilotAudit(
+  userId: string,
+): Array<{ user_id: string; action: string; payload: unknown }> {
+  return getStubState().copilotAudit.filter((row) => row.user_id === userId);
+}
+
+export function stubCountCopilotActionsToday(userId: string): number {
+  return getStubState().copilotActions.filter((row) => row.user_id === userId).length;
+}
+
+export function stubCountCopilotMonitors(userId: string): number {
+  return getStubState().copilotMonitors.filter((row) => row.user_id === userId).length;
+}
+
+export function stubInsertCopilotAction(row: CopilotAction): CopilotAction {
+  getStubState().copilotActions.push(row);
+  return row;
+}
+
+export function stubReplaceCopilotAction(row: CopilotAction): CopilotAction {
+  const state = getStubState();
+  const idx = state.copilotActions.findIndex((item) => item.id === row.id);
+  if (idx >= 0) {
+    state.copilotActions[idx] = row;
+  }
+  return row;
+}
+
+export function stubGetCopilotAction(userId: string, id: string): CopilotAction | null {
+  return (
+    getStubState().copilotActions.find((row) => row.id === id && row.user_id === userId) ?? null
+  );
+}
+
+export function stubListCopilotActions(userId: string, sessionId?: string): CopilotAction[] {
+  return getStubState()
+    .copilotActions.filter(
+      (row) => row.user_id === userId && (sessionId ? row.session_id === sessionId : true),
+    )
+    .slice()
+    .sort((a, b) => a.created_at.localeCompare(b.created_at));
+}
+
+export function stubListPendingCopilotActions(userId: string): CopilotAction[] {
+  return stubListCopilotActions(userId).filter((row) => row.status === "proposed");
+}
+
+export function stubInsertCopilotMonitor(input: {
+  userId: string;
+  name: string;
+  nl_instruction: string;
+}): { id: string; user_id: string; name: string; nl_instruction: string } {
+  const row = {
+    id: crypto.randomUUID(),
+    user_id: input.userId,
+    name: input.name,
+    nl_instruction: input.nl_instruction,
+  };
+  getStubState().copilotMonitors.push(row);
+  return row;
 }
 
 export function stubListCopilotSessions(userId: string): CopilotSession[] {

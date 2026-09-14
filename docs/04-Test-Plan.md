@@ -260,12 +260,12 @@ Seeded via `scripts/seed-all.ts` (see doc 06): 150 instruments, 5y daily + 5d 1m
 ### PBI-026 Copilot actions
 | ID | Criterion / Test | Pri | Status |
 |---|---|---|---|
-| AC-026-01 | Orders NEVER execute without explicit approval (policy DT-AI-01) | P0 | ☐ |
-| AC-026-02 | Approved actions run through the same services (trade rules still apply, may still reject) | P0 | ☐ |
-| AC-026-03 | Auto-approved classes (watchlist add) execute immediately and are audited | P1 | ☐ |
-| TC-026-01 | "buy 10 AAPL" → proposed card; DB assert no order row pre-approval (AC-026-01) | P0 | ☐ |
-| TC-026-02 | Approve an order violating DT-RISK-01 → rejected with rule reason (AC-026-02) | P0 | ☐ |
-| TC-026-03 | "add NVDA to watchlist" → immediate + audit row (AC-026-03) | P1 | ☐ |
+| AC-026-01 | Orders NEVER execute without explicit approval (policy DT-AI-01) | P0 | ☑ |
+| AC-026-02 | Approved actions run through the same services (trade rules still apply, may still reject) | P0 | ☑ |
+| AC-026-03 | Auto-approved classes (watchlist add) execute immediately and are audited | P1 | ☑ |
+| TC-026-01 | "buy 10 AAPL" → proposed card; DB assert no order row pre-approval (AC-026-01) | P0 | ☑ |
+| TC-026-02 | Approve an order violating DT-RISK-01 → rejected with rule reason (AC-026-02) | P0 | ☑ |
+| TC-026-03 | "add NVDA to watchlist" → immediate + audit row (AC-026-03) | P1 | ☑ |
 
 ### PBI-027 Monitors
 | ID | Criterion / Test | Pri | Status |

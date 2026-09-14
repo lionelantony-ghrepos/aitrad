@@ -7,6 +7,7 @@ import {
   copilotChatRequestSchema,
   copilotMessageSchema,
   copilotSessionSchema,
+  createAlertToolInputSchema,
   getBarsToolInputSchema,
   getFundamentalsToolInputSchema,
   getPortfolioToolInputSchema,
@@ -14,12 +15,15 @@ import {
   explainRuleDecisionToolInputSchema,
   screenInstrumentsToolInputSchema,
   searchNewsToolInputSchema,
+  type CopilotAction,
   type CopilotChatEvent,
   type CopilotMessage,
   type CopilotSession,
+  type CopilotWriteToolName,
 } from "../../packages/schemas/src/index.ts";
 import {
   baselineTable,
+  compileAlertTemplate,
   evaluate,
   resolveRulesServiceApiKey,
 } from "../../packages/rules-engine/src/index.ts";
@@ -27,9 +31,13 @@ import {
   COPILOT_SESSION_NOT_FOUND,
   DEFAULT_OPENROUTER_CHAT_MODEL,
   DEFAULT_OPENROUTER_CHAT_URL,
+  evaluateWritePolicyBaseline,
+  handleWriteToolCall,
+  isWriteTool,
   newsSummaryLlm,
   openRouterLlm,
   runCopilotRequest,
+  type WriteActionPorts,
 } from "../../packages/copilot/src/index.ts";
 import { authorizeEdgeUser } from "./_shared/entitlements.ts";
 
@@ -190,6 +198,7 @@ export default async function (req: Request): Promise<Response> {
           url: Deno.env.get("OPENROUTER_CHAT_URL") ?? DEFAULT_OPENROUTER_CHAT_URL,
         });
 
+  let sessionId = parsed.data.session_id ?? "";
   const stream = new ReadableStream({
     async start(controller) {
       const emit = (event: CopilotChatEvent): void => {
@@ -201,15 +210,27 @@ export default async function (req: Request): Promise<Response> {
           policyOutcome,
           llm,
           portfolioSummary: undefined,
-          executeTool: (name, args) =>
-            executeReadTool({
+          executeTool: (name, args) => {
+            if (isWriteTool(name)) {
+              return executeWriteTool({
+                name,
+                args,
+                admin,
+                baseUrl,
+                token,
+                userId,
+                sessionId,
+              });
+            }
+            return executeReadTool({
               name,
               args,
               admin,
               baseUrl,
               token,
               userId,
-            }),
+            });
+          },
           persist: {
             async createSession(title) {
               await admin.database
@@ -224,7 +245,9 @@ export default async function (req: Request): Promise<Response> {
               if (error) {
                 throw new Error(error.message);
               }
-              return copilotSessionSchema.parse(asRows<CopilotSession>(data)[0]);
+              const created = copilotSessionSchema.parse(asRows<CopilotSession>(data)[0]);
+              sessionId = created.id;
+              return created;
             },
             async appendMessage(row) {
               await requireOwnedCopilotSession(admin, userId, row.sessionId);
@@ -408,4 +431,230 @@ async function executeReadTool(input: {
     default:
       throw new Error(`UNKNOWN_TOOL:${input.name}`);
   }
+}
+
+async function executeWriteTool(input: {
+  name: string;
+  args: unknown;
+  admin: ReturnType<typeof createAdminClient>;
+  baseUrl: string;
+  token: string;
+  userId: string;
+  sessionId: string;
+}): Promise<unknown> {
+  const db = input.admin.database;
+  const countRpc = await db.rpc("count_copilot_user_actions_today", {
+    p_user_id: input.userId,
+  });
+  const actionsToday = Number(countRpc.data ?? 0);
+  let args = input.args;
+  if (input.name === "propose_order" && args && typeof args === "object") {
+    const row = args as Record<string, unknown>;
+    if (typeof row.last_price !== "number" && typeof row.symbol === "string") {
+      const inst = await db.from("instruments").select("id").eq("symbol", row.symbol.toUpperCase());
+      const instrument = asRows<{ id: string }>(inst.data)[0];
+      if (instrument) {
+        const quotes = await db
+          .from("quotes_latest")
+          .select("last")
+          .eq("instrument_id", instrument.id);
+        const last = asRows<{ last: number }>(quotes.data)[0]?.last;
+        if (typeof last === "number") {
+          args = { ...row, last_price: last };
+        }
+      }
+    }
+  }
+  const ports: WriteActionPorts = {
+    evaluatePolicy: async (context) => {
+      try {
+        const evaluated = await invokeSibling({
+          baseUrl: input.baseUrl,
+          slug: "rules-service",
+          token: input.token,
+          body: { op: "evaluateDomain", domain: "ai_action_policy", context },
+        });
+        if (evaluated && typeof evaluated === "object" && "outcome" in evaluated) {
+          return (evaluated as { outcome: unknown }).outcome;
+        }
+      } catch {
+        // published table unavailable
+      }
+      return evaluateWritePolicyBaseline(context);
+    },
+    persistAction: async (row) => {
+      await db.from("copilot_actions").insert([toActionInsert(row)]);
+      return row;
+    },
+    updateAction: async (row) => {
+      await db
+        .from("copilot_actions")
+        .update({
+          status: row.status,
+          executed_ref: row.executed_ref,
+          reject_reason: row.reject_reason,
+          policy_outcome: row.policy_outcome,
+          updated_at: row.updated_at,
+        })
+        .eq("id", row.id)
+        .eq("user_id", input.userId);
+      return row;
+    },
+    execute: async (tool, payload) =>
+      executeManualWriteOnEdge({
+        tool,
+        payload,
+        admin: input.admin,
+        baseUrl: input.baseUrl,
+        token: input.token,
+        userId: input.userId,
+      }),
+  };
+  return handleWriteToolCall({
+    userId: input.userId,
+    sessionId: input.sessionId,
+    tool: input.name,
+    args,
+    actionsToday,
+    monitorsCount: 0,
+    ports,
+  });
+}
+
+function toActionInsert(row: CopilotAction): Record<string, unknown> {
+  return {
+    id: row.id,
+    user_id: row.user_id,
+    session_id: row.session_id,
+    tool: row.tool,
+    payload: row.payload,
+    policy_outcome: row.policy_outcome,
+    status: row.status,
+    executed_ref: row.executed_ref,
+    reject_reason: row.reject_reason,
+  };
+}
+
+async function executeManualWriteOnEdge(input: {
+  tool: CopilotWriteToolName;
+  payload: Record<string, unknown>;
+  admin: ReturnType<typeof createAdminClient>;
+  baseUrl: string;
+  token: string;
+  userId: string;
+}): Promise<{ ref?: string; error?: string; reject_reason?: string }> {
+  const db = input.admin.database;
+  const actionName =
+    input.tool === "propose_order"
+      ? "trade:create"
+      : input.tool === "create_alert"
+        ? "alerts:create"
+        : input.tool === "create_watchlist_item"
+          ? "watchlist:item:create"
+          : "copilot:act";
+  const gate = await authorizeEdgeUser({ db, userId: input.userId, action: actionName });
+  if (!gate.allowed) {
+    return { error: gate.reason ?? "NOT_ALLOWED" };
+  }
+  if (input.tool === "propose_order") {
+    const created = await invokeSibling({
+      baseUrl: input.baseUrl,
+      slug: "order-service/orders",
+      token: input.token,
+      body: {
+        op: "create",
+        last_price: input.payload.last_price,
+        draft: {
+          symbol: input.payload.symbol,
+          side: input.payload.side,
+          qty: input.payload.qty,
+          order_type: input.payload.order_type ?? "market",
+          limit_price: input.payload.limit_price ?? null,
+          stop_price: input.payload.stop_price ?? null,
+          tif: input.payload.tif ?? "DAY",
+        },
+      },
+    });
+    const order =
+      created && typeof created === "object" && "order" in created
+        ? (created as { order: { id?: string; reject_reason?: string | null } }).order
+        : undefined;
+    if (!order?.id) {
+      return { error: "ORDER_CREATE_FAILED" };
+    }
+    return { ref: order.id, reject_reason: order.reject_reason ?? undefined };
+  }
+  if (input.tool === "create_watchlist_item") {
+    const symbol = String(input.payload.symbol ?? "").toUpperCase();
+    const inst = await db.from("instruments").select("id,symbol").eq("symbol", symbol);
+    const instrument = asRows<{ id: string; symbol: string }>(inst.data)[0];
+    if (!instrument) {
+      return { error: "SYMBOL_NOT_FOUND" };
+    }
+    let watchlistId =
+      typeof input.payload.watchlist_id === "string" ? input.payload.watchlist_id : "";
+    if (!watchlistId) {
+      const lists = await db.from("watchlists").select("id").eq("user_id", input.userId).limit(1);
+      const existing = asRows<{ id: string }>(lists.data)[0];
+      if (existing) {
+        watchlistId = existing.id;
+      } else {
+        await db.from("watchlists").insert([{ user_id: input.userId, name: "Default" }]);
+        const again = await db.from("watchlists").select("id").eq("user_id", input.userId).limit(1);
+        watchlistId = asRows<{ id: string }>(again.data)[0]?.id ?? "";
+      }
+    }
+    if (!watchlistId) {
+      return { error: "WATCHLIST_MISSING" };
+    }
+    const items = await db.from("watchlist_items").select("id").eq("watchlist_id", watchlistId);
+    await db.from("watchlist_items").insert([
+      {
+        watchlist_id: watchlistId,
+        instrument_id: instrument.id,
+        sort_order: asRows(items.data).length,
+      },
+    ]);
+    const created = await db
+      .from("watchlist_items")
+      .select("id")
+      .eq("watchlist_id", watchlistId)
+      .eq("instrument_id", instrument.id);
+    const row = asRows<{ id: string }>(created.data)[0];
+    return row ? { ref: row.id } : { error: "WATCHLIST_ITEM_FAILED" };
+  }
+  if (input.tool === "create_alert") {
+    const parsed = createAlertToolInputSchema.parse(input.payload);
+    const inst = await db
+      .from("instruments")
+      .select("id,symbol")
+      .eq("symbol", parsed.symbol.toUpperCase());
+    const instrument = asRows<{ id: string; symbol: string }>(inst.data)[0];
+    if (!instrument) {
+      return { error: "SYMBOL_NOT_FOUND" };
+    }
+    const condition = compileAlertTemplate({
+      kind: parsed.kind,
+      threshold: parsed.threshold,
+    });
+    await db.from("alert_rules").insert([
+      {
+        user_id: input.userId,
+        instrument_id: instrument.id,
+        name: parsed.name ?? `${parsed.kind} ${instrument.symbol}`,
+        kind: parsed.kind,
+        condition,
+        active: true,
+      },
+    ]);
+    const created = await db
+      .from("alert_rules")
+      .select("id")
+      .eq("user_id", input.userId)
+      .order("created_at", { ascending: false })
+      .limit(1);
+    const row = asRows<{ id: string }>(created.data)[0];
+    return row ? { ref: row.id } : { error: "ALERT_CREATE_FAILED" };
+  }
+  return { ref: crypto.randomUUID() };
 }
