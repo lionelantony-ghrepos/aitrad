@@ -19,6 +19,7 @@ export const MUTATING_AUDIT_SOURCES = [
   { id: "monitor-runner", path: "insforge/functions/monitor-runner-src.ts" },
   { id: "brief-service", path: "insforge/functions/brief-service-src.ts" },
   { id: "audit-service", path: "insforge/functions/audit-service-src.ts" },
+  { id: "telemetry", path: "insforge/functions/telemetry-src.ts" },
   { id: "watchlists-actions", path: "apps/web/app/actions/watchlists.ts" },
   { id: "alerts-actions", path: "apps/web/app/actions/alerts.ts" },
   { id: "screener-actions", path: "apps/web/app/actions/screener.ts" },

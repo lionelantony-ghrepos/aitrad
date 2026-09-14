@@ -39,6 +39,9 @@ export default async function AuditAdminPage(): Promise<React.JSX.Element> {
           <a href="/admin/users" className="text-[11px] text-accent">
             Users
           </a>
+          <a href="/admin/health" className="text-[11px] text-accent">
+            Health
+          </a>
           <a href="/workspace" className="text-[11px] text-accent">
             Back to workspace
           </a>

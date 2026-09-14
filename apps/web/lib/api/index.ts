@@ -49,6 +49,12 @@ export { createCopilotSessionsRepository } from "./copilot-sessions";
 export { createCopilotActionsRepository } from "./copilot-actions";
 export { screenerServiceUrl, invokeScreenerRun } from "./screener";
 export {
+  fetchHealthSnapshot,
+  ingestTelemetry,
+  healthServiceUrl,
+  telemetryServiceUrl,
+} from "./telemetry";
+export {
   analyticsServiceUrl,
   invokeAnalyticsPortfolio,
   invokeAnalyticsSnapshot,

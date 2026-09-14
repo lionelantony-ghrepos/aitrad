@@ -1,6 +1,7 @@
 import { createAdminClient, createClient } from "npm:@insforge/sdk";
 
 import { writeAuditLog } from "./_shared/audit.ts";
+import { withFunctionLog } from "./_shared/logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -20,120 +21,123 @@ function json(status: number, body: unknown): Response {
  * here — set InsForge secret PAPER_ACCOUNT_SEED_CASH to the same figure as
  * `@meridian/rules-engine` `paperAccountSeed()` (see that module, not this file).
  */
-export default async function (req: Request): Promise<Response> {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
-  }
-  if (req.method !== "POST") {
-    return json(405, { error: "METHOD_NOT_ALLOWED" });
-  }
-
-  const authHeader = req.headers.get("Authorization");
-  const userToken = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
-  if (!userToken) {
-    return json(401, { error: "UNAUTHENTICATED" });
-  }
-
-  const seedCashRaw = Deno.env.get("PAPER_ACCOUNT_SEED_CASH");
-  const seedCurrency = Deno.env.get("PAPER_ACCOUNT_SEED_CURRENCY") ?? "USD";
-  const cashBalance = seedCashRaw === undefined ? Number.NaN : Number(seedCashRaw);
-  if (!Number.isFinite(cashBalance)) {
-    return json(500, { error: "POLICY_UNAVAILABLE" });
-  }
-
-  const client = createClient({
-    baseUrl: Deno.env.get("INSFORGE_INTERNAL_URL") ?? Deno.env.get("INSFORGE_BASE_URL"),
-    accessToken: userToken,
-  });
-
-  const { data: userData } = await client.auth.getCurrentUser();
-  const userId = userData?.user?.id as string | undefined;
-  if (!userId) {
-    return json(401, { error: "UNAUTHENTICATED" });
-  }
-
-  const { data: profiles, error: profileErr } = await client.database
-    .from("profiles")
-    .select("*")
-    .eq("user_id", userId);
-  if (profileErr) {
-    return json(500, { error: profileErr.message });
-  }
-
-  const { data: accounts, error: accountErr } = await client.database
-    .from("accounts")
-    .select("*")
-    .eq("user_id", userId);
-  if (accountErr) {
-    return json(500, { error: accountErr.message });
-  }
-
-  const existingProfile = Array.isArray(profiles) ? profiles[0] : null;
-  const existingAccount = Array.isArray(accounts) ? accounts[0] : null;
-  const created = { profile: false, account: false };
-
-  let profile = existingProfile;
-  if (!profile) {
-    const { error } = await client.database
-      .from("profiles")
-      .insert([{ user_id: userId, suitability_tier: null }]);
-    if (error) {
-      return json(500, { error: error.message });
+export default withFunctionLog(
+  "provision-account",
+  async function (req: Request): Promise<Response> {
+    if (req.method === "OPTIONS") {
+      return new Response(null, { status: 204, headers: corsHeaders });
     }
-    // InsForge insert does not return representation; load the row we just wrote.
-    const { data: reloaded, error: reloadErr } = await client.database
-      .from("profiles")
-      .select("*")
-      .eq("user_id", userId);
-    if (reloadErr) {
-      return json(500, { error: reloadErr.message });
+    if (req.method !== "POST") {
+      return json(405, { error: "METHOD_NOT_ALLOWED" });
     }
-    profile = Array.isArray(reloaded) ? (reloaded[0] ?? null) : null;
-    if (!profile) {
-      return json(500, { error: "PROFILE_UNAVAILABLE" });
-    }
-    created.profile = true;
-  }
 
-  let account = existingAccount;
-  if (!account) {
-    const { error } = await client.database
-      .from("accounts")
-      .insert([{ user_id: userId, cash_balance: cashBalance, currency: seedCurrency }]);
-    if (error) {
-      return json(500, { error: error.message });
+    const authHeader = req.headers.get("Authorization");
+    const userToken = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+    if (!userToken) {
+      return json(401, { error: "UNAUTHENTICATED" });
     }
-    // InsForge insert does not return representation; load the row we just wrote.
-    const { data: reloaded, error: reloadErr } = await client.database
-      .from("accounts")
-      .select("*")
-      .eq("user_id", userId);
-    if (reloadErr) {
-      return json(500, { error: reloadErr.message });
-    }
-    account = Array.isArray(reloaded) ? (reloaded[0] ?? null) : null;
-    if (!account) {
-      return json(500, { error: "ACCOUNT_UNAVAILABLE" });
-    }
-    created.account = true;
-  }
 
-  if (created.profile || created.account) {
-    const apiKey = Deno.env.get("API_KEY") ?? Deno.env.get("INSFORGE_API_KEY");
-    const baseUrl = Deno.env.get("INSFORGE_INTERNAL_URL") ?? Deno.env.get("INSFORGE_BASE_URL");
-    if (!apiKey || !baseUrl) {
-      return json(500, { error: "SERVICE_KEY_UNAVAILABLE" });
+    const seedCashRaw = Deno.env.get("PAPER_ACCOUNT_SEED_CASH");
+    const seedCurrency = Deno.env.get("PAPER_ACCOUNT_SEED_CURRENCY") ?? "USD";
+    const cashBalance = seedCashRaw === undefined ? Number.NaN : Number(seedCashRaw);
+    if (!Number.isFinite(cashBalance)) {
+      return json(500, { error: "POLICY_UNAVAILABLE" });
     }
-    const admin = createAdminClient({ baseUrl, apiKey });
-    await writeAuditLog(admin.database, {
-      user_id: userId,
-      action: "provision-account",
-      entity_type: "account",
-      entity_id: account.id,
-      payload: { created },
-      after: created,
+
+    const client = createClient({
+      baseUrl: Deno.env.get("INSFORGE_INTERNAL_URL") ?? Deno.env.get("INSFORGE_BASE_URL"),
+      accessToken: userToken,
     });
-  }
 
-  return json(200, { profile, account, created });
-}
+    const { data: userData } = await client.auth.getCurrentUser();
+    const userId = userData?.user?.id as string | undefined;
+    if (!userId) {
+      return json(401, { error: "UNAUTHENTICATED" });
+    }
+
+    const { data: profiles, error: profileErr } = await client.database
+      .from("profiles")
+      .select("*")
+      .eq("user_id", userId);
+    if (profileErr) {
+      return json(500, { error: profileErr.message });
+    }
+
+    const { data: accounts, error: accountErr } = await client.database
+      .from("accounts")
+      .select("*")
+      .eq("user_id", userId);
+    if (accountErr) {
+      return json(500, { error: accountErr.message });
+    }
+
+    const existingProfile = Array.isArray(profiles) ? profiles[0] : null;
+    const existingAccount = Array.isArray(accounts) ? accounts[0] : null;
+    const created = { profile: false, account: false };
+
+    let profile = existingProfile;
+    if (!profile) {
+      const { error } = await client.database
+        .from("profiles")
+        .insert([{ user_id: userId, suitability_tier: null }]);
+      if (error) {
+        return json(500, { error: error.message });
+      }
+      // InsForge insert does not return representation; load the row we just wrote.
+      const { data: reloaded, error: reloadErr } = await client.database
+        .from("profiles")
+        .select("*")
+        .eq("user_id", userId);
+      if (reloadErr) {
+        return json(500, { error: reloadErr.message });
+      }
+      profile = Array.isArray(reloaded) ? (reloaded[0] ?? null) : null;
+      if (!profile) {
+        return json(500, { error: "PROFILE_UNAVAILABLE" });
+      }
+      created.profile = true;
+    }
+
+    let account = existingAccount;
+    if (!account) {
+      const { error } = await client.database
+        .from("accounts")
+        .insert([{ user_id: userId, cash_balance: cashBalance, currency: seedCurrency }]);
+      if (error) {
+        return json(500, { error: error.message });
+      }
+      // InsForge insert does not return representation; load the row we just wrote.
+      const { data: reloaded, error: reloadErr } = await client.database
+        .from("accounts")
+        .select("*")
+        .eq("user_id", userId);
+      if (reloadErr) {
+        return json(500, { error: reloadErr.message });
+      }
+      account = Array.isArray(reloaded) ? (reloaded[0] ?? null) : null;
+      if (!account) {
+        return json(500, { error: "ACCOUNT_UNAVAILABLE" });
+      }
+      created.account = true;
+    }
+
+    if (created.profile || created.account) {
+      const apiKey = Deno.env.get("API_KEY") ?? Deno.env.get("INSFORGE_API_KEY");
+      const baseUrl = Deno.env.get("INSFORGE_INTERNAL_URL") ?? Deno.env.get("INSFORGE_BASE_URL");
+      if (!apiKey || !baseUrl) {
+        return json(500, { error: "SERVICE_KEY_UNAVAILABLE" });
+      }
+      const admin = createAdminClient({ baseUrl, apiKey });
+      await writeAuditLog(admin.database, {
+        user_id: userId,
+        action: "provision-account",
+        entity_type: "account",
+        entity_id: account.id,
+        payload: { created },
+        after: created,
+      });
+    }
+
+    return json(200, { profile, account, created });
+  },
+);

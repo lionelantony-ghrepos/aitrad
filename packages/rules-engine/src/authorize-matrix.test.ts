@@ -35,6 +35,8 @@ const ENDPOINTS: Array<{ name: string; action: string }> = [
   { name: "audit-service write", action: "audit:write" },
   { name: "copilot-orchestrator chat", action: "copilot:chat" },
   { name: "brief-service generate", action: "copilot:chat" },
+  { name: "telemetry client_error", action: "telemetry:write" },
+  { name: "health-service snapshot", action: "health:read" },
 ];
 
 function expectedStatus(role: UserRole, action: string): 200 | 403 {

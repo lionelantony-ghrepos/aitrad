@@ -14,6 +14,7 @@ import {
 import { resolveRulesServiceApiKey } from "../../packages/rules-engine/src/index.ts";
 import { authorizeEdgeUser } from "./_shared/entitlements.ts";
 import { writeAuditLog } from "./_shared/audit.ts";
+import { withFunctionLog } from "./_shared/logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -32,7 +33,7 @@ function asRows<T>(data: unknown): T[] {
   return Array.isArray(data) ? (data as T[]) : [];
 }
 
-export default async function (req: Request): Promise<Response> {
+export default withFunctionLog("screener", async function (req: Request): Promise<Response> {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
@@ -160,4 +161,4 @@ export default async function (req: Request): Promise<Response> {
       truncated: matchCount > SCREENER_RESULT_LIMIT,
     }),
   );
-}
+});

@@ -20,6 +20,7 @@ import {
   type RuleAuditWrite,
 } from "../../packages/rules-engine/src/index.ts";
 import { writeAuditLog } from "./_shared/audit.ts";
+import { withFunctionLog } from "./_shared/logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -268,7 +269,7 @@ async function adminGetTable(db: AdminDb, tableKey: string) {
   };
 }
 
-export default async function (req: Request): Promise<Response> {
+export default withFunctionLog("rules-service", async function (req: Request): Promise<Response> {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
@@ -608,4 +609,4 @@ export default async function (req: Request): Promise<Response> {
   });
 
   return json(result.status, result.body);
-}
+});

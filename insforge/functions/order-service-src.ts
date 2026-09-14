@@ -36,6 +36,7 @@ import type { OrderLegRole } from "../../packages/schemas/src/index.ts";
 import { resolveRulesServiceApiKey } from "../../packages/rules-engine/src/index.ts";
 import { writeAuditLog } from "./_shared/audit.ts";
 import { authorizeEdgeUser } from "./_shared/entitlements.ts";
+import { withFunctionLog } from "./_shared/logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -412,7 +413,7 @@ function requireAdminWriter(baseUrl: string) {
   });
 }
 
-export default async function (req: Request): Promise<Response> {
+export default withFunctionLog("order-service", async function (req: Request): Promise<Response> {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
@@ -666,4 +667,4 @@ export default async function (req: Request): Promise<Response> {
     const message = error instanceof Error ? error.message : "ORDER_SERVICE_ERROR";
     return json(400, { error: message });
   }
-}
+});

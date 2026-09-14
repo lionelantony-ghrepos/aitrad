@@ -5562,6 +5562,7 @@ var auditAdminOpSchema = external_exports.enum([
   "getConfig",
   "setRetention",
   "cron",
+  "append",
 ]);
 var auditAdminFilterSchema = external_exports.object({
   user_id: uuidSchema.optional(),
@@ -5600,6 +5601,14 @@ var auditAdminCronRequestSchema = external_exports.object({
   op: external_exports.literal("cron"),
   force: external_exports.boolean().optional(),
 });
+var auditAdminAppendRequestSchema = external_exports.object({
+  op: external_exports.literal("append"),
+  action: external_exports.string().min(1),
+  entity_type: external_exports.string().min(1),
+  entity_id: uuidSchema.nullable().optional(),
+  payload: external_exports.record(external_exports.unknown()).optional(),
+  user_id: uuidSchema.nullable().optional(),
+});
 var auditAdminRequestSchema = external_exports.discriminatedUnion("op", [
   auditAdminListRequestSchema,
   auditAdminTimelineRequestSchema,
@@ -5608,6 +5617,7 @@ var auditAdminRequestSchema = external_exports.discriminatedUnion("op", [
   auditAdminGetConfigRequestSchema,
   auditAdminSetRetentionRequestSchema,
   auditAdminCronRequestSchema,
+  auditAdminAppendRequestSchema,
 ]);
 var auditChainVerifyResultSchema = external_exports.object({
   ok: external_exports.boolean(),
@@ -5640,6 +5650,9 @@ var auditAdminCronResponseSchema = external_exports.object({
   purged: external_exports.number().int().nonnegative(),
   alerted: external_exports.number().int().nonnegative(),
   skipped: external_exports.boolean(),
+});
+var auditAdminAppendResponseSchema = external_exports.object({
+  ok: external_exports.literal(true),
 });
 
 // packages/schemas/src/copilot.ts
@@ -5915,6 +5928,98 @@ var portfolioAnalysisFactsSchema = external_exports.object({
   equity: external_exports.number().finite(),
 });
 
+// packages/schemas/src/observability.ts
+var functionLogOutcomeSchema = external_exports.enum(["ok", "error", "throw"]);
+var functionLogSchema = external_exports.object({
+  request_id: external_exports.string().min(1),
+  user_id: external_exports.string().nullable(),
+  fn: external_exports.string().min(1),
+  latency_ms: external_exports.number().nonnegative(),
+  outcome: functionLogOutcomeSchema,
+  status: external_exports.number().int().optional(),
+});
+var realtimeConnectionStateSchema = external_exports.enum([
+  "connecting",
+  "live",
+  "reconnecting",
+  "offline",
+]);
+
+// packages/schemas/src/telemetry.ts
+var telemetryKindSchema = external_exports.enum(["fn_latency", "client_error", "realtime"]);
+var telemetryRecordSchema = external_exports.object({
+  id: uuidSchema,
+  kind: telemetryKindSchema,
+  fn: external_exports.string().nullable(),
+  panel_id: external_exports.string().nullable(),
+  request_id: external_exports.string().nullable(),
+  user_id: uuidSchema.nullable(),
+  latency_ms: numericSchema.nullable(),
+  outcome: external_exports.string().nullable(),
+  payload: external_exports.record(external_exports.unknown()),
+  created_at: timestamptzSchema,
+});
+var telemetryClientErrorRequestSchema = external_exports.object({
+  op: external_exports.literal("client_error"),
+  panel_id: external_exports.string().min(1),
+  message: external_exports.string().min(1).max(2e3),
+  stack: external_exports.string().max(8e3).optional(),
+  request_id: external_exports.string().min(1).optional(),
+});
+var telemetryRealtimeRequestSchema = external_exports.object({
+  op: external_exports.literal("realtime"),
+  state: realtimeConnectionStateSchema,
+  attempt: external_exports.number().int().nonnegative().optional(),
+  request_id: external_exports.string().min(1).optional(),
+});
+var telemetryFnLatencyRequestSchema = external_exports.object({
+  op: external_exports.literal("fn_latency"),
+  fn: external_exports.string().min(1),
+  request_id: external_exports.string().min(1),
+  user_id: uuidSchema.nullable().optional(),
+  latency_ms: external_exports.number().nonnegative(),
+  outcome: functionLogOutcomeSchema,
+  status: external_exports.number().int().optional(),
+});
+var telemetryRequestSchema = external_exports.discriminatedUnion("op", [
+  telemetryClientErrorRequestSchema,
+  telemetryRealtimeRequestSchema,
+  telemetryFnLatencyRequestSchema,
+]);
+var telemetryIngestResponseSchema = external_exports.object({
+  stored: external_exports.boolean(),
+  sampled: external_exports.boolean(),
+});
+var latencyPercentilesSchema = external_exports.object({
+  fn: external_exports.string(),
+  count: external_exports.number().int().nonnegative(),
+  p50_ms: external_exports.number().nullable(),
+  p95_ms: external_exports.number().nullable(),
+  p99_ms: external_exports.number().nullable(),
+});
+var feedHeartbeatSchema = external_exports.object({
+  ts: timestamptzSchema.nullable(),
+  session: external_exports.string().nullable(),
+  ticks_applied: external_exports.number().nullable(),
+  age_ms: external_exports.number().nullable(),
+});
+var realtimeChannelStatsSchema = external_exports.object({
+  live: external_exports.number().int().nonnegative(),
+  reconnecting: external_exports.number().int().nonnegative(),
+  offline: external_exports.number().int().nonnegative(),
+  connecting: external_exports.number().int().nonnegative(),
+  last_ts: timestamptzSchema.nullable(),
+});
+var healthSnapshotSchema = external_exports.object({
+  generated_at: timestamptzSchema,
+  functions: external_exports.array(latencyPercentilesSchema),
+  feed: feedHeartbeatSchema,
+  realtime: realtimeChannelStatsSchema,
+});
+var healthServiceRequestSchema = external_exports.object({
+  op: external_exports.literal("snapshot"),
+});
+
 // packages/schemas/src/index.ts
 var publicInsforgeEnvSchema = external_exports.object({
   NEXT_PUBLIC_INSFORGE_URL: external_exports.string().url(),
@@ -6142,6 +6247,65 @@ async function authorize(input) {
     });
   }
   return { allowed: false, decision: "deny", reason: "FORBIDDEN" };
+}
+
+// packages/rules-engine/src/observability.ts
+function requestIdFromHeaders(headers) {
+  return headers.get("x-request-id") ?? headers.get("x-correlation-id") ?? crypto.randomUUID();
+}
+function userIdFromAuthorization(header) {
+  if (!header?.startsWith("Bearer ")) {
+    return null;
+  }
+  const token = header.slice(7);
+  const parts = token.split(".");
+  if (parts.length < 2) {
+    return null;
+  }
+  try {
+    const json2 = decodeJwtSegment(parts[1] ?? "");
+    const payload = JSON.parse(json2);
+    return typeof payload.sub === "string" ? payload.sub : null;
+  } catch {
+    return null;
+  }
+}
+function decodeJwtSegment(segment) {
+  const b64 = segment.replace(/-/g, "+").replace(/_/g, "/");
+  const pad = b64.length % 4 === 0 ? "" : "=".repeat(4 - (b64.length % 4));
+  if (typeof atob === "function") {
+    return atob(b64 + pad);
+  }
+  return Buffer.from(b64 + pad, "base64").toString("utf8");
+}
+function buildFunctionLog(input) {
+  return functionLogSchema.parse(input);
+}
+function formatFunctionLog(input) {
+  return JSON.stringify(buildFunctionLog(input));
+}
+function shouldSampleTelemetry(requestId, rate) {
+  if (rate >= 1) {
+    return true;
+  }
+  if (rate <= 0) {
+    return false;
+  }
+  let hash = 0;
+  for (let i = 0; i < requestId.length; i += 1) {
+    hash = (hash * 31 + requestId.charCodeAt(i)) >>> 0;
+  }
+  return hash / 4294967295 < rate;
+}
+function parseTelemetrySampleRate(raw, fallback = 1) {
+  if (raw === void 0 || raw.length === 0) {
+    return fallback;
+  }
+  const n = Number(raw);
+  if (!Number.isFinite(n)) {
+    return fallback;
+  }
+  return Math.min(1, Math.max(0, n));
 }
 
 // packages/rules-engine/src/doc05-fixtures.ts
@@ -6548,6 +6712,7 @@ var dtEnt01 = {
             "profile-wizard",
             "news:search",
             "chart:bars",
+            "telemetry:write",
           ],
         },
       ],
@@ -8092,6 +8257,94 @@ async function authorizeEdgeUser(input) {
   });
 }
 
+// insforge/functions/_shared/telemetry-persist.ts
+async function persistFunctionLatencySample(input) {
+  try {
+    const apiKey = resolveRulesServiceApiKey({
+      API_KEY: Deno.env.get("API_KEY"),
+      INSFORGE_API_KEY: Deno.env.get("INSFORGE_API_KEY"),
+    });
+    const baseUrl = Deno.env.get("INSFORGE_INTERNAL_URL") ?? Deno.env.get("INSFORGE_BASE_URL");
+    if (!apiKey || !baseUrl) {
+      return;
+    }
+    const admin = createAdminClient({ baseUrl, apiKey });
+    await admin.database.from("telemetry").insert([
+      {
+        kind: "fn_latency",
+        fn: input.fn,
+        request_id: input.request_id,
+        user_id: input.user_id,
+        latency_ms: input.latency_ms,
+        outcome: input.outcome,
+        payload: { status: input.status ?? null },
+      },
+    ]);
+  } catch {}
+}
+
+// insforge/functions/_shared/logger.ts
+function logLine(entry) {
+  console.log(formatFunctionLog(entry));
+}
+function withRequestId(response, requestId) {
+  const headers = new Headers(response.headers);
+  headers.set("x-request-id", requestId);
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+function outcomeFromStatus(status) {
+  if (status >= 400) {
+    return "error";
+  }
+  return "ok";
+}
+function withFunctionLog(fn, handler) {
+  return async (req) => {
+    if (req.method === "OPTIONS") {
+      return handler(req);
+    }
+    const request_id = requestIdFromHeaders(req.headers);
+    const user_id = userIdFromAuthorization(req.headers.get("Authorization"));
+    const started = Date.now();
+    try {
+      const response = await handler(req);
+      const latency_ms = Date.now() - started;
+      const outcome = outcomeFromStatus(response.status);
+      logLine({ request_id, user_id, fn, latency_ms, outcome, status: response.status });
+      const rate = parseTelemetrySampleRate(
+        typeof Deno !== "undefined" ? Deno.env.get("TELEMETRY_SAMPLE_RATE") : void 0,
+        1,
+      );
+      if (shouldSampleTelemetry(request_id, rate)) {
+        void persistFunctionLatencySample({
+          fn,
+          request_id,
+          user_id,
+          latency_ms,
+          outcome,
+          status: response.status,
+        });
+      }
+      return withRequestId(response, request_id);
+    } catch (error) {
+      const latency_ms = Date.now() - started;
+      logLine({ request_id, user_id, fn, latency_ms, outcome: "throw" });
+      void persistFunctionLatencySample({
+        fn,
+        request_id,
+        user_id,
+        latency_ms,
+        outcome: "throw",
+      });
+      throw error;
+    }
+  };
+}
+
 // insforge/functions/copilot-orchestrator-src.ts
 var corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -8146,223 +8399,226 @@ async function requireOwnedCopilotSession(admin, userId, sessionId) {
     throw new Error(COPILOT_SESSION_NOT_FOUND);
   }
 }
-async function copilot_orchestrator_src_default(req) {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
-  }
-  if (req.method !== "POST") {
-    return json(405, { error: "METHOD_NOT_ALLOWED" });
-  }
-  const authHeader = req.headers.get("Authorization");
-  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
-  if (!token) {
-    return json(401, { error: "UNAUTHENTICATED" });
-  }
-  const baseUrl = Deno.env.get("INSFORGE_INTERNAL_URL") ?? Deno.env.get("INSFORGE_BASE_URL");
-  if (!baseUrl) {
-    return json(500, { error: "INSFORGE_URL_MISSING" });
-  }
-  let body = {};
-  try {
-    body = await req.json();
-  } catch {
-    body = {};
-  }
-  const userClient = createClient({ baseUrl, accessToken: token });
-  const { data: userData } = await userClient.auth.getCurrentUser();
-  const userId = userData?.user?.id;
-  const apiKey = resolveRulesServiceApiKey({
-    API_KEY: Deno.env.get("API_KEY"),
-    INSFORGE_API_KEY: Deno.env.get("INSFORGE_API_KEY"),
-  });
-  if (!apiKey) {
-    return json(500, { error: "API_KEY_MISSING" });
-  }
-  const admin = createAdminClient({ baseUrl, apiKey });
-  const decideFromPath = new URL(req.url).pathname.replace(/\/+$/, "").endsWith("/decide");
-  const opRaw = body && typeof body === "object" && "op" in body ? body.op : void 0;
-  if (opRaw === "decide" || decideFromPath) {
-    const gate2 = await authorizeEdgeUser({ db: admin.database, userId, action: "copilot:act" });
-    if (!gate2.allowed || !userId) {
-      return json(gate2.reason === "UNAUTHENTICATED" || !userId ? 401 : 403, {
-        error: gate2.reason ?? "UNAUTHENTICATED",
+var copilot_orchestrator_src_default = withFunctionLog(
+  "copilot-orchestrator",
+  async function (req) {
+    if (req.method === "OPTIONS") {
+      return new Response(null, { status: 204, headers: corsHeaders });
+    }
+    if (req.method !== "POST") {
+      return json(405, { error: "METHOD_NOT_ALLOWED" });
+    }
+    const authHeader = req.headers.get("Authorization");
+    const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+    if (!token) {
+      return json(401, { error: "UNAUTHENTICATED" });
+    }
+    const baseUrl = Deno.env.get("INSFORGE_INTERNAL_URL") ?? Deno.env.get("INSFORGE_BASE_URL");
+    if (!baseUrl) {
+      return json(500, { error: "INSFORGE_URL_MISSING" });
+    }
+    let body = {};
+    try {
+      body = await req.json();
+    } catch {
+      body = {};
+    }
+    const userClient = createClient({ baseUrl, accessToken: token });
+    const { data: userData } = await userClient.auth.getCurrentUser();
+    const userId = userData?.user?.id;
+    const apiKey = resolveRulesServiceApiKey({
+      API_KEY: Deno.env.get("API_KEY"),
+      INSFORGE_API_KEY: Deno.env.get("INSFORGE_API_KEY"),
+    });
+    if (!apiKey) {
+      return json(500, { error: "API_KEY_MISSING" });
+    }
+    const admin = createAdminClient2({ baseUrl, apiKey });
+    const decideFromPath = new URL(req.url).pathname.replace(/\/+$/, "").endsWith("/decide");
+    const opRaw = body && typeof body === "object" && "op" in body ? body.op : void 0;
+    if (opRaw === "decide" || decideFromPath) {
+      const gate2 = await authorizeEdgeUser({ db: admin.database, userId, action: "copilot:act" });
+      if (!gate2.allowed || !userId) {
+        return json(gate2.reason === "UNAUTHENTICATED" || !userId ? 401 : 403, {
+          error: gate2.reason ?? "UNAUTHENTICATED",
+        });
+      }
+      return decideCopilotActionOnEdge({
+        admin,
+        baseUrl,
+        token,
+        userId,
+        body,
       });
     }
-    return decideCopilotActionOnEdge({
-      admin,
-      baseUrl,
-      token,
-      userId,
-      body,
-    });
-  }
-  const parsed = copilotChatRequestSchema.safeParse(body);
-  if (!parsed.success) {
-    return json(400, { error: "INVALID_BODY" });
-  }
-  const gate = await authorizeEdgeUser({ db: admin.database, userId, action: "copilot:chat" });
-  if (!gate.allowed || !userId) {
-    return json(gate.reason === "UNAUTHENTICATED" || !userId ? 401 : 403, {
-      error: gate.reason ?? "UNAUTHENTICATED",
-    });
-  }
-  const countRpc = await admin.database.rpc("count_copilot_user_messages_today", {
-    p_user_id: userId,
-  });
-  const messagesToday = Number(countRpc.data ?? 0);
-  let policyOutcome = evaluate(
-    baselineTable("DT-AI-01"),
-    {
-      tool: "chat",
-      messages_today: messagesToday,
-    },
-    /* @__PURE__ */ new Date(),
-  ).outcome;
-  try {
-    const evaluated = await invokeSibling({
-      baseUrl,
-      slug: "rules-service",
-      token,
-      body: {
-        op: "evaluateDomain",
-        domain: "ai_action_policy",
-        context: { tool: "chat", messages_today: messagesToday },
-      },
-    });
-    if (evaluated && typeof evaluated === "object" && "outcome" in evaluated) {
-      policyOutcome = evaluated.outcome;
+    const parsed = copilotChatRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      return json(400, { error: "INVALID_BODY" });
     }
-  } catch {}
-  const mode = (Deno.env.get("MERIDIAN_COPILOT_LLM") ?? "").trim().toLowerCase();
-  const openRouterKey = Deno.env.get("OPENROUTER_API_KEY");
-  const llm =
-    mode === "fake" || !openRouterKey
-      ? newsSummaryLlm()
-      : openRouterLlm({
-          apiKey: openRouterKey,
-          model: Deno.env.get("OPENROUTER_CHAT_MODEL") ?? DEFAULT_OPENROUTER_CHAT_MODEL,
-          url: Deno.env.get("OPENROUTER_CHAT_URL") ?? DEFAULT_OPENROUTER_CHAT_URL,
-        });
-  let sessionId = parsed.data.session_id ?? "";
-  const stream = new ReadableStream({
-    async start(controller) {
-      const emit2 = (event) => {
-        controller.enqueue(encodeSse(event));
-      };
-      try {
-        await runCopilotRequest({
-          request: parsed.data,
-          policyOutcome,
-          llm,
-          portfolioSummary: void 0,
-          executeTool: (name, args) => {
-            if (isWriteTool(name)) {
-              return executeWriteTool({
+    const gate = await authorizeEdgeUser({ db: admin.database, userId, action: "copilot:chat" });
+    if (!gate.allowed || !userId) {
+      return json(gate.reason === "UNAUTHENTICATED" || !userId ? 401 : 403, {
+        error: gate.reason ?? "UNAUTHENTICATED",
+      });
+    }
+    const countRpc = await admin.database.rpc("count_copilot_user_messages_today", {
+      p_user_id: userId,
+    });
+    const messagesToday = Number(countRpc.data ?? 0);
+    let policyOutcome = evaluate(
+      baselineTable("DT-AI-01"),
+      {
+        tool: "chat",
+        messages_today: messagesToday,
+      },
+      /* @__PURE__ */ new Date(),
+    ).outcome;
+    try {
+      const evaluated = await invokeSibling({
+        baseUrl,
+        slug: "rules-service",
+        token,
+        body: {
+          op: "evaluateDomain",
+          domain: "ai_action_policy",
+          context: { tool: "chat", messages_today: messagesToday },
+        },
+      });
+      if (evaluated && typeof evaluated === "object" && "outcome" in evaluated) {
+        policyOutcome = evaluated.outcome;
+      }
+    } catch {}
+    const mode = (Deno.env.get("MERIDIAN_COPILOT_LLM") ?? "").trim().toLowerCase();
+    const openRouterKey = Deno.env.get("OPENROUTER_API_KEY");
+    const llm =
+      mode === "fake" || !openRouterKey
+        ? newsSummaryLlm()
+        : openRouterLlm({
+            apiKey: openRouterKey,
+            model: Deno.env.get("OPENROUTER_CHAT_MODEL") ?? DEFAULT_OPENROUTER_CHAT_MODEL,
+            url: Deno.env.get("OPENROUTER_CHAT_URL") ?? DEFAULT_OPENROUTER_CHAT_URL,
+          });
+    let sessionId = parsed.data.session_id ?? "";
+    const stream = new ReadableStream({
+      async start(controller) {
+        const emit2 = (event) => {
+          controller.enqueue(encodeSse(event));
+        };
+        try {
+          await runCopilotRequest({
+            request: parsed.data,
+            policyOutcome,
+            llm,
+            portfolioSummary: void 0,
+            executeTool: (name, args) => {
+              if (isWriteTool(name)) {
+                return executeWriteTool({
+                  name,
+                  args,
+                  admin,
+                  baseUrl,
+                  token,
+                  userId,
+                  sessionId,
+                });
+              }
+              return executeReadTool({
                 name,
                 args,
                 admin,
                 baseUrl,
                 token,
                 userId,
-                sessionId,
               });
-            }
-            return executeReadTool({
-              name,
-              args,
-              admin,
-              baseUrl,
-              token,
-              userId,
-            });
-          },
-          persist: {
-            async createSession(title) {
-              await admin.database
-                .from("copilot_sessions")
-                .insert([{ user_id: userId, title: title.slice(0, 72) || "New session" }]);
-              const { data, error } = await admin.database
-                .from("copilot_sessions")
-                .select("*")
-                .eq("user_id", userId)
-                .order("created_at", { ascending: false })
-                .limit(1);
-              if (error) {
-                throw new Error(error.message);
-              }
-              const created = copilotSessionSchema.parse(asRows2(data)[0]);
-              sessionId = created.id;
-              return created;
             },
-            async appendMessage(row) {
-              await requireOwnedCopilotSession(admin, userId, row.sessionId);
-              await admin.database.from("copilot_messages").insert([
-                {
+            persist: {
+              async createSession(title) {
+                await admin.database
+                  .from("copilot_sessions")
+                  .insert([{ user_id: userId, title: title.slice(0, 72) || "New session" }]);
+                const { data, error } = await admin.database
+                  .from("copilot_sessions")
+                  .select("*")
+                  .eq("user_id", userId)
+                  .order("created_at", { ascending: false })
+                  .limit(1);
+                if (error) {
+                  throw new Error(error.message);
+                }
+                const created = copilotSessionSchema.parse(asRows2(data)[0]);
+                sessionId = created.id;
+                return created;
+              },
+              async appendMessage(row) {
+                await requireOwnedCopilotSession(admin, userId, row.sessionId);
+                await admin.database.from("copilot_messages").insert([
+                  {
+                    session_id: row.sessionId,
+                    user_id: userId,
+                    role: row.role,
+                    content: row.content,
+                    tool_calls: row.tool_calls,
+                  },
+                ]);
+                await admin.database
+                  .from("copilot_sessions")
+                  .update({ updated_at: /* @__PURE__ */ new Date().toISOString() })
+                  .eq("id", row.sessionId)
+                  .eq("user_id", userId);
+                return copilotMessageSchema.parse({
+                  id: crypto.randomUUID(),
                   session_id: row.sessionId,
                   user_id: userId,
                   role: row.role,
                   content: row.content,
                   tool_calls: row.tool_calls,
-                },
-              ]);
-              await admin.database
-                .from("copilot_sessions")
-                .update({ updated_at: /* @__PURE__ */ new Date().toISOString() })
-                .eq("id", row.sessionId)
-                .eq("user_id", userId);
-              return copilotMessageSchema.parse({
-                id: crypto.randomUUID(),
-                session_id: row.sessionId,
-                user_id: userId,
-                role: row.role,
-                content: row.content,
-                tool_calls: row.tool_calls,
-                created_at: /* @__PURE__ */ new Date().toISOString(),
-              });
+                  created_at: /* @__PURE__ */ new Date().toISOString(),
+                });
+              },
+              async loadHistory(sessionId2) {
+                await requireOwnedCopilotSession(admin, userId, sessionId2);
+                const { data, error } = await admin.database
+                  .from("copilot_messages")
+                  .select("*")
+                  .eq("session_id", sessionId2)
+                  .eq("user_id", userId)
+                  .order("created_at", { ascending: true });
+                if (error) {
+                  throw new Error(error.message);
+                }
+                return asRows2(data).map((row) => copilotMessageSchema.parse(row));
+              },
+              async auditTool(name, args) {
+                await writeAuditLog(admin.database, {
+                  user_id: userId,
+                  action: `copilot:tool:${name}`,
+                  entity_type: "copilot_messages",
+                  payload: { tool: name, arguments: args },
+                });
+              },
             },
-            async loadHistory(sessionId2) {
-              await requireOwnedCopilotSession(admin, userId, sessionId2);
-              const { data, error } = await admin.database
-                .from("copilot_messages")
-                .select("*")
-                .eq("session_id", sessionId2)
-                .eq("user_id", userId)
-                .order("created_at", { ascending: true });
-              if (error) {
-                throw new Error(error.message);
-              }
-              return asRows2(data).map((row) => copilotMessageSchema.parse(row));
-            },
-            async auditTool(name, args) {
-              await writeAuditLog(admin.database, {
-                user_id: userId,
-                action: `copilot:tool:${name}`,
-                entity_type: "copilot_messages",
-                payload: { tool: name, arguments: args },
-              });
-            },
-          },
-          onEvent: emit2,
-        });
-      } catch (error) {
-        emit2({
-          type: "error",
-          message: error instanceof Error ? error.message : "COPILOT_FAILED",
-        });
-      } finally {
-        controller.close();
-      }
-    },
-  });
-  return new Response(stream, {
-    status: 200,
-    headers: {
-      ...corsHeaders,
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-    },
-  });
-}
+            onEvent: emit2,
+          });
+        } catch (error) {
+          emit2({
+            type: "error",
+            message: error instanceof Error ? error.message : "COPILOT_FAILED",
+          });
+        } finally {
+          controller.close();
+        }
+      },
+    });
+    return new Response(stream, {
+      status: 200,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+      },
+    });
+  },
+);
 async function executeReadTool(input) {
   const db = input.admin.database;
   switch (input.name) {

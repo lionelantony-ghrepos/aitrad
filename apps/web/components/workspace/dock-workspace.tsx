@@ -21,6 +21,7 @@ import { NewsPanel } from "./news-panel";
 import { PortfolioPanel } from "./portfolio-panel";
 import { ScreenerPanel } from "./screener-panel";
 import { WatchlistPanel } from "./watchlist-panel";
+import { wrapPanel } from "./wrap-panel";
 
 const components = {
   ...Object.fromEntries(
@@ -35,17 +36,17 @@ const components = {
         id !== "news" &&
         id !== "des" &&
         id !== "screener",
-    ).map((id) => [id, PlaceholderPanel]),
+    ).map((id) => [id, wrapPanel(id, PlaceholderPanel)]),
   ),
-  watchlist: WatchlistPanel,
-  chart: ChartPanel,
-  copilot: CopilotPanel,
-  orderTicket: OrderTicketPanel,
-  blotter: BlotterPanel,
-  portfolio: PortfolioPanel,
-  news: NewsPanel,
-  des: DesPanel,
-  screener: ScreenerPanel,
+  watchlist: wrapPanel("watchlist", WatchlistPanel),
+  chart: wrapPanel("chart", ChartPanel),
+  copilot: wrapPanel("copilot", CopilotPanel),
+  orderTicket: wrapPanel("orderTicket", OrderTicketPanel),
+  blotter: wrapPanel("blotter", BlotterPanel),
+  portfolio: wrapPanel("portfolio", PortfolioPanel),
+  news: wrapPanel("news", NewsPanel),
+  des: wrapPanel("des", DesPanel),
+  screener: wrapPanel("screener", ScreenerPanel),
 };
 
 function snapshot(api: DockviewApi): Record<string, unknown> {

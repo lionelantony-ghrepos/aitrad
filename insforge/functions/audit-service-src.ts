@@ -11,6 +11,7 @@ import {
 } from "../../packages/rules-engine/src/index.ts";
 import { writeAuditLog } from "./_shared/audit.ts";
 import { loadPublishedEntitlementsTable, loadUserRole } from "./_shared/entitlements.ts";
+import { withFunctionLog } from "./_shared/logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -75,7 +76,7 @@ function daysFromFlag(value: unknown): number | null {
   return null;
 }
 
-export default async function (req: Request): Promise<Response> {
+export default withFunctionLog("audit-service", async function (req: Request): Promise<Response> {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
@@ -259,4 +260,4 @@ export default async function (req: Request): Promise<Response> {
   });
 
   return json(result.status, result.body);
-}
+});

@@ -109,3 +109,12 @@ npx -y @insforge/cli functions deploy audit-service --file insforge/functions/au
 ```
 
 `audit-service` accepts `POST` `{ op: "list" | "timeline" | "verify" | "export" | "getConfig" | "setRetention" | "append" | "cron" }`. User JWT + `authorize` `audit:read` (DT-ENT-01) for browse/verify/export; `audit:write` for retention. `append` is any logged-in JWT (not service cron): `user_id` is forced to the caller and the row is written with `writeAuditLog` on the admin client — traders cannot mint foreign-user chain rows and do not gain `/admin/audit` read. Cron is service-key (invoked from `market-tick` once per UTC day): `verify_audit_chain`, alert admins via `audit:chain_mismatch` rows, optional `apply_audit_retention`. Apply migrations **0025 then 0026** (`audit_log` JWT has no DML; hashes are SQL `prev_hash`/`row_hash` on insert).
+
+```bash
+pnpm functions:bundle:telemetry
+npx -y @insforge/cli functions deploy telemetry --file insforge/functions/telemetry.ts --name "Telemetry"
+pnpm functions:bundle:health-service
+npx -y @insforge/cli functions deploy health-service --file insforge/functions/health-service.ts --name "Health service"
+```
+
+`telemetry` accepts `POST` `{ op: "client_error" | "realtime" | "fn_latency" }`. User JWT + `authorize` `telemetry:write` (DT-ENT-01) for client/realtime; `fn_latency` is service-key. Sampled inserts into `telemetry` (JWT has no DML). Next.js `POST /telemetry` is the browser path. `health-service` `op: "snapshot"` is JWT + `health:read`. Apply migration **0027**. Every function default export is wrapped with `_shared/logger.ts` (`request_id`, `user_id`, `fn`, `latency_ms`, `outcome`). `market-tick` writes `feed.last_heartbeat`.

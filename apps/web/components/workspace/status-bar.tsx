@@ -10,7 +10,7 @@ import { useAlertsUi } from "@/lib/alerts/store";
 import type { AlertInstance, CopilotAction } from "@meridian/schemas";
 
 type StatusBarProps = {
-  connection: "live" | "offline";
+  connection: "connecting" | "live" | "reconnecting" | "offline";
 };
 
 export function StatusBar({ connection }: StatusBarProps): React.JSX.Element {
@@ -160,12 +160,20 @@ export function StatusBar({ connection }: StatusBarProps): React.JSX.Element {
             className={
               connection === "live"
                 ? "inline-block size-1.5 rounded-full bg-up"
-                : "inline-block size-1.5 rounded-full bg-down"
+                : connection === "reconnecting" || connection === "connecting"
+                  ? "inline-block size-1.5 rounded-full bg-primary"
+                  : "inline-block size-1.5 rounded-full bg-down"
             }
             aria-hidden
           />
           <span className="text-muted-foreground">
-            {connection === "live" ? "Connected" : "Offline"}
+            {connection === "live"
+              ? "Connected"
+              : connection === "reconnecting"
+                ? "Reconnecting"
+                : connection === "connecting"
+                  ? "Connecting"
+                  : "Offline"}
           </span>
         </div>
       </div>

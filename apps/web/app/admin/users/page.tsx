@@ -40,6 +40,9 @@ export default async function UsersAdminPage(): Promise<React.JSX.Element> {
           <a href="/admin/rules" className="text-[11px] text-accent">
             Rules
           </a>
+          <a href="/admin/health" className="text-[11px] text-accent">
+            Health
+          </a>
           <a href="/workspace" className="text-[11px] text-accent">
             Back to workspace
           </a>

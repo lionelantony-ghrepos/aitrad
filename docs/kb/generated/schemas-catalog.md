@@ -188,6 +188,9 @@ Exported `*Schema` bindings discovered by static scan. Full OpenAPI from Zod is 
 - news.ts: newsItemSchema
 - news.ts: newsRealtimeBatchSchema
 - news.ts: newsTemplatesFileSchema
+- observability.ts: functionLogOutcomeSchema
+- observability.ts: functionLogSchema
+- observability.ts: realtimeConnectionStateSchema
 - orders.ts: blotterFiltersSchema
 - orders.ts: blotterSideFilterSchema
 - orders.ts: blotterTabSchema
@@ -258,4 +261,16 @@ Exported `*Schema` bindings discovered by static scan. Full OpenAPI from Zod is 
 - screener.ts: screenerSortColumnSchema
 - screener.ts: screenerSortDirSchema
 - screener.ts: screenerSortSchema
+- telemetry.ts: feedHeartbeatSchema
+- telemetry.ts: healthServiceRequestSchema
+- telemetry.ts: healthSnapshotSchema
+- telemetry.ts: latencyPercentilesSchema
+- telemetry.ts: realtimeChannelStatsSchema
+- telemetry.ts: telemetryClientErrorRequestSchema
+- telemetry.ts: telemetryFnLatencyRequestSchema
+- telemetry.ts: telemetryIngestResponseSchema
+- telemetry.ts: telemetryKindSchema
+- telemetry.ts: telemetryRealtimeRequestSchema
+- telemetry.ts: telemetryRecordSchema
+- telemetry.ts: telemetryRequestSchema
 - workspace-layout.ts: workspaceLayoutV1Schema

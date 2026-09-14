@@ -20,6 +20,7 @@ import {
   type GatewayEmbedResult,
 } from "../../packages/rag/src/index.ts";
 import { writeAuditLog } from "./_shared/audit.ts";
+import { withFunctionLog } from "./_shared/logger.ts";
 
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -32,7 +33,7 @@ function asRows<T>(data: unknown): T[] {
   return Array.isArray(data) ? (data as T[]) : [];
 }
 
-export default async function (req: Request): Promise<Response> {
+export default withFunctionLog("embed-worker", async function (req: Request): Promise<Response> {
   if (req.method !== "POST") {
     return json(405, { error: "METHOD_NOT_ALLOWED" });
   }
@@ -153,4 +154,4 @@ export default async function (req: Request): Promise<Response> {
   });
 
   return json(200, embedWorkerResponseSchema.parse(result));
-}
+});

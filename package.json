@@ -34,6 +34,8 @@
     "functions:bundle:monitor-runner": "node scripts/bundle-monitor-runner.mjs",
     "functions:bundle:brief-service": "node scripts/bundle-brief-service.mjs",
     "functions:bundle:audit-service": "node scripts/bundle-audit-service.mjs",
+    "functions:bundle:telemetry": "node scripts/bundle-telemetry.mjs",
+    "functions:bundle:health-service": "node scripts/bundle-health-service.mjs",
     "prepare": "husky"
   },
   "dependencies": {

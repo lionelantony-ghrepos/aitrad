@@ -15,6 +15,7 @@ import {
 } from "../../packages/mock-data/src/feed.ts";
 import { newsShocksForSymbols } from "../../packages/mock-data/src/news.ts";
 import { writeAuditLog } from "./_shared/audit.ts";
+import { withFunctionLog } from "./_shared/logger.ts";
 
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -37,7 +38,7 @@ function flagValue(row: {
   return { key: row.key, value: row.value };
 }
 
-export default async function (req: Request): Promise<Response> {
+export default withFunctionLog("market-tick", async function (req: Request): Promise<Response> {
   if (req.method !== "POST") {
     return json(405, { error: "METHOD_NOT_ALLOWED" });
   }
@@ -374,6 +375,25 @@ export default async function (req: Request): Promise<Response> {
     }
   }
 
+  const heartbeat = {
+    ts: nowIso,
+    session: result.session,
+    ticks_applied: result.ticksApplied,
+  };
+  const heartbeatRow = asRows<{ id: string; key: string }>(flagData).find(
+    (row) => row.key === "feed.last_heartbeat",
+  );
+  if (heartbeatRow) {
+    await admin.database
+      .from("feature_flags")
+      .update({ value: heartbeat })
+      .eq("id", heartbeatRow.id);
+  } else {
+    await admin.database
+      .from("feature_flags")
+      .insert([{ key: "feed.last_heartbeat", value: heartbeat, user_id: null }]);
+  }
+
   await writeAuditLog(admin.database, {
     action: "market-tick",
     entity_type: "quotes_latest",
@@ -396,4 +416,4 @@ export default async function (req: Request): Promise<Response> {
     matching,
     alerting,
   });
-}
+});

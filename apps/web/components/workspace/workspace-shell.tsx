@@ -12,6 +12,7 @@ import { CommandPalette } from "./command-palette";
 import { DockWorkspace, resetDockLayout } from "./dock-workspace";
 import { StatusBar } from "./status-bar";
 import { AlertListener } from "./alert-listener";
+import { useRealtimeConnection } from "@/lib/realtime/store";
 
 type WorkspaceShellProps = {
   email: string;
@@ -33,6 +34,25 @@ export function WorkspaceShell({
   const [focusedPanel, setFocusedPanel] = useState("");
   const activeSymbol = useSymbolContext((s) => s.activeSymbol);
   const setTicketSide = useOrderTicketIntent((s) => s.setSide);
+  const connection = useRealtimeConnection((s) => s.connection);
+  const setConnection = useRealtimeConnection((s) => s.setConnection);
+  const noteTick = useRealtimeConnection((s) => s.noteTick);
+
+  useEffect(() => {
+    if (e2eFeed) {
+      setConnection("live");
+      noteTick();
+    }
+  }, [e2eFeed, setConnection, noteTick]);
+
+  useEffect(() => {
+    void fetch("/telemetry", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ op: "realtime", state: connection }),
+    });
+  }, [connection]);
 
   const openPalette = useCallback(() => {
     setPaletteOpen(true);
@@ -97,7 +117,7 @@ export function WorkspaceShell({
           <DockWorkspace onApiReady={setApi} />
         </div>
         <AlertListener />
-        <StatusBar connection="live" />
+        <StatusBar connection={connection} />
         <CommandPalette
           open={paletteOpen}
           onClose={() => setPaletteOpen(false)}
