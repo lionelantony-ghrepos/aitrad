@@ -2,6 +2,21 @@ import { expect, test } from "@playwright/test";
 import { signUpThroughWizard } from "./helpers/onboard";
 import { dispatchPaletteHotkey, waitForWorkspaceReady } from "./helpers/palette";
 
+async function runMonitors(
+  page: import("@playwright/test").Page,
+  force_position_day_pct: number,
+): Promise<{ fired?: number; error?: string }> {
+  return page.evaluate(async (pct) => {
+    const response = await fetch("/api/e2e/run-monitors", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ force_position_day_pct: pct }),
+    });
+    return (await response.json()) as { fired?: number; error?: string };
+  }, force_position_day_pct);
+}
+
 test.describe("PBI-027 monitors", () => {
   test.describe.configure({ timeout: 90_000 });
 
@@ -13,10 +28,7 @@ test.describe("PBI-027 monitors", () => {
     );
   });
 
-  test("TC-027-02 portfolio-drop monitor fires once at forced -6% @TC-027-02", async ({
-    page,
-    request,
-  }) => {
+  test("TC-027-02 portfolio-drop monitor fires once at forced -6% @TC-027-02", async ({ page }) => {
     await waitForWorkspaceReady(page);
     if (
       !(await page
@@ -42,24 +54,19 @@ test.describe("PBI-027 monitors", () => {
     await page.getByTestId(`monitor-explain-${monitorId}`).click();
     await expect(page.getByTestId(`monitor-explain-text-${monitorId}`)).toContainText("-5");
 
-    const first = await request.post("/api/e2e/run-monitors", {
-      data: { force_position_day_pct: -6 },
-    });
-    expect(first.ok()).toBeTruthy();
-    expect((await first.json()) as { fired: number }).toMatchObject({ fired: 1 });
+    const first = await runMonitors(page, -6);
+    expect(first).toMatchObject({ fired: 1 });
     await page.getByTestId(`monitor-history-${monitorId}`).click();
     await expect(page.getByTestId("monitor-history-item")).toHaveCount(1);
     await expect(page.getByTestId("monitor-history-item")).toContainText("-6");
 
-    const second = await request.post("/api/e2e/run-monitors", {
-      data: { force_position_day_pct: -6 },
-    });
-    expect((await second.json()) as { fired: number }).toMatchObject({ fired: 0 });
+    const second = await runMonitors(page, -6);
+    expect(second).toMatchObject({ fired: 0 });
     await page.getByTestId(`monitor-history-${monitorId}`).click();
     await expect(page.getByTestId("monitor-history-item")).toHaveCount(1);
   });
 
-  test("TC-027-03 paused monitor stays silent @TC-027-03", async ({ page, request }) => {
+  test("TC-027-03 paused monitor stays silent @TC-027-03", async ({ page }) => {
     await waitForWorkspaceReady(page);
     if (
       !(await page
@@ -83,10 +90,8 @@ test.describe("PBI-027 monitors", () => {
     const monitorId = (await row.getAttribute("data-testid"))?.replace("monitor-row-", "") ?? "";
     await page.getByTestId(`monitor-pause-${monitorId}`).click();
     await expect(row).toHaveAttribute("data-active", "0");
-    const run = await request.post("/api/e2e/run-monitors", {
-      data: { force_position_day_pct: -6 },
-    });
-    expect((await run.json()) as { fired: number }).toMatchObject({ fired: 0 });
+    const run = await runMonitors(page, -6);
+    expect(run).toMatchObject({ fired: 0 });
     await page.getByTestId(`monitor-history-${monitorId}`).click();
     await expect(page.getByTestId("monitor-history-item")).toHaveCount(0);
   });
