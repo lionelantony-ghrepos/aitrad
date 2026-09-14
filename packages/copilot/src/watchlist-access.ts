@@ -45,6 +45,9 @@ export async function insertOwnedWatchlistItemAsAdmin(input: {
       watchlist = await input.ports.createDefaultWatchlist(input.userId);
     }
   }
+  if (!watchlist) {
+    return { error: COPILOT_WATCHLIST_NOT_FOUND };
+  }
   try {
     assertOwnedWatchlist({ watchlist, userId: input.userId });
   } catch {
