@@ -33,6 +33,7 @@ const ENDPOINTS: Array<{ name: string; action: string }> = [
   { name: "admin-users assign", action: "users:assign" },
   { name: "audit read", action: "audit:read" },
   { name: "copilot-orchestrator chat", action: "copilot:chat" },
+  { name: "brief-service generate", action: "copilot:chat" },
 ];
 
 function expectedStatus(role: UserRole, action: string): 200 | 403 {

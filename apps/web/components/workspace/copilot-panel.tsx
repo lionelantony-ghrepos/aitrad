@@ -5,6 +5,7 @@ import { listCopilotSessionsAction, loadCopilotSessionAction } from "@/app/actio
 import { listCopilotActionsAction } from "@/app/actions/copilot-actions";
 import { CopilotApprovalCard } from "@/components/workspace/copilot-approval-card";
 import { CopilotMonitorsTab } from "@/components/workspace/copilot-monitors-tab";
+import { CopilotBriefsTab } from "@/components/workspace/copilot-briefs-tab";
 import { extractActionFromToolResult } from "@meridian/copilot";
 import { focusPanel } from "@/lib/command-palette/focus-panel";
 import { streamCopilotChat } from "@/lib/copilot/stream-chat";
@@ -45,7 +46,7 @@ export function CopilotPanel(): React.JSX.Element {
   const [streaming, setStreaming] = useState("");
   const [busy, setBusy] = useState(false);
   const [actions, setActions] = useState<CopilotAction[]>([]);
-  const [tab, setTab] = useState<"chat" | "monitors">("chat");
+  const [tab, setTab] = useState<"chat" | "monitors" | "briefs">("chat");
 
   const slashes = useMemo(() => matchingSlashSuggestions(query), [query]);
 
@@ -242,8 +243,19 @@ export function CopilotPanel(): React.JSX.Element {
           >
             Monitors
           </button>
+          <button
+            type="button"
+            className={`border px-1 ${tab === "briefs" ? "border-primary text-primary" : "border-border"}`}
+            data-testid="copilot-tab-briefs"
+            onClick={() => {
+              setTab("briefs");
+            }}
+          >
+            Briefs
+          </button>
         </div>
         {tab === "monitors" ? <CopilotMonitorsTab /> : null}
+        {tab === "briefs" ? <CopilotBriefsTab /> : null}
         {tab === "chat" ? (
           <>
             {status === "loading" ? (

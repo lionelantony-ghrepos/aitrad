@@ -40,6 +40,7 @@ import type {
   CopilotToolCallRecord,
   Monitor,
   CopilotAction,
+  Brief,
 } from "@meridian/schemas";
 
 export type StubUser = {
@@ -63,6 +64,7 @@ type StubState = {
   copilotActions: CopilotAction[];
   copilotAudit: Array<{ user_id: string; action: string; payload: unknown }>;
   copilotMonitors: Monitor[];
+  briefs: Brief[];
   copilotForceRateLimitUserIds: Set<string>;
   orders: OrderRecord[];
   executions: ExecutionRecord[];
@@ -90,6 +92,7 @@ function createState(): StubState {
     copilotActions: [],
     copilotAudit: [],
     copilotMonitors: [],
+    briefs: [],
     copilotForceRateLimitUserIds: new Set(),
     orders: [],
     executions: [],
@@ -215,6 +218,7 @@ export function stubInsertProfile(userId: string): Profile {
     experience_level: null,
     suitability_tier: null,
     objectives: null,
+    morning_brief_opt_in: false,
     created_at: ts,
     updated_at: ts,
   };
@@ -1149,4 +1153,28 @@ export function stubListCopilotMessages(userId: string, sessionId: string): Copi
   return getStubState()
     .copilotMessages.filter((row) => row.user_id === userId && row.session_id === sessionId)
     .sort((a, b) => (a.created_at < b.created_at ? -1 : 1));
+}
+
+export function stubListBriefs(userId: string): Brief[] {
+  return getStubState()
+    .briefs.filter((row) => row.user_id === userId)
+    .sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+}
+
+export function stubInsertBrief(row: Brief): Brief {
+  getStubState().briefs.push(row);
+  return row;
+}
+
+export function stubGetBrief(userId: string, id: string): Brief | null {
+  return getStubState().briefs.find((row) => row.id === id && row.user_id === userId) ?? null;
+}
+
+export function stubPatchBrief(userId: string, id: string, patch: Partial<Brief>): Brief | null {
+  const row = stubGetBrief(userId, id);
+  if (!row) {
+    return null;
+  }
+  Object.assign(row, patch);
+  return row;
 }

@@ -341,6 +341,21 @@ export default async function (req: Request): Promise<Response> {
     } catch {
       // best-effort cron companion
     }
+    try {
+      await fetch(
+        `${(Deno.env.get("INSFORGE_INTERNAL_URL") ?? Deno.env.get("INSFORGE_BASE_URL") ?? "").replace(/\/+$/, "")}/functions/brief-service`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${expected}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ op: "cron" }),
+        },
+      );
+    } catch {
+      // best-effort morning briefs at simulated open
+    }
   }
 
   await admin.database.from("audit_log").insert([

@@ -5,6 +5,7 @@ import type { IDockviewPanelProps } from "dockview-react";
 import type { DesProfile } from "@meridian/schemas";
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { getDesProfileAction } from "@/app/actions/des";
+import { generateBriefAction } from "@/app/actions/briefs";
 import { keyStatsForDisplay, week52MarkerPct } from "@/lib/des/view";
 import { useQuotes } from "@/lib/quotes/use-quotes";
 import { createInsforgeQuotesTransport, createWindowQuotesTransport } from "@/lib/quotes/transport";
@@ -120,6 +121,18 @@ export function DesPanel(props: IDockviewPanelProps): React.JSX.Element {
         <p className="font-mono text-primary" data-testid="des-symbol">
           {activeSymbol ?? ""}
         </p>
+        {activeSymbol ? (
+          <button
+            type="button"
+            className="border border-primary px-1 text-primary"
+            data-testid="des-generate-brief"
+            onClick={() => {
+              void generateBriefAction({ kind: "instrument", subject: activeSymbol });
+            }}
+          >
+            Generate brief
+          </button>
+        ) : null}
       </div>
       {!activeSymbol ? (
         <p className="text-muted-foreground" data-testid="des-empty">

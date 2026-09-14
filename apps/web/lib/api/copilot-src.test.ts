@@ -57,6 +57,7 @@ describe("copilot-orchestrator source contracts", () => {
     expect(panel).toContain("copilot-citation");
     expect(panel).toContain("copilot-approval-card");
     expect(panel).toContain("copilot-tab-monitors");
+    expect(panel).toContain("copilot-tab-briefs");
     expect(panel).toContain("Ask about");
     expect(panel).not.toContain("createAdminClient");
   });

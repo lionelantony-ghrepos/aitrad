@@ -32,6 +32,7 @@
     "functions:bundle:admin-users": "node scripts/bundle-admin-users.mjs",
     "functions:bundle:copilot-orchestrator": "node scripts/bundle-copilot-orchestrator.mjs",
     "functions:bundle:monitor-runner": "node scripts/bundle-monitor-runner.mjs",
+    "functions:bundle:brief-service": "node scripts/bundle-brief-service.mjs",
     "prepare": "husky"
   },
   "dependencies": {

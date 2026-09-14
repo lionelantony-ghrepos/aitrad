@@ -188,3 +188,18 @@ PRD named this migration 0014; 0014 is already alerts.
 | ---------- | ----------------------------------------------------------------------------------------------- |
 | `monitors` | JWT INSERT (owner fields, not `last_run`); JWT UPDATE (`name`, `active`, `throttle_state` only) |
 |            | `last_run` / compiled eval columns: `project_admin` / `monitor-runner` only                     |
+
+## 0023 contents
+
+| Table / object                  | Access                                                                               |
+| ------------------------------- | ------------------------------------------------------------------------------------ |
+| `profiles.morning_brief_opt_in` | Authenticated may INSERT/UPDATE the opt-in column (existing profile grants)          |
+| `briefs`                        | Owner RLS SELECT; 0023 also granted JWT INSERT/UPDATE/DELETE — tightened by **0024** |
+
+PRD named this migration 0015; 0015 is news embeddings.
+
+## 0024 contents
+
+| Object   | Access                                                                                        |
+| -------- | --------------------------------------------------------------------------------------------- |
+| `briefs` | JWT **SELECT-only** (owner RLS). INSERT/UPDATE/DELETE `project_admin` (`brief-service` admin) |
