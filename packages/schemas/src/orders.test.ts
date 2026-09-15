@@ -38,6 +38,27 @@ describe("orderDraftSchema", () => {
     expect(parsed.trail_type).toBe("percent");
   });
 
+  it("accepts qty 0 and oversize so DT-VAL-01 owns those checks", () => {
+    expect(
+      orderDraftSchema.parse({
+        symbol: "AAPL",
+        side: "buy",
+        qty: 0,
+        order_type: "limit",
+        tif: "DAY",
+      }).qty,
+    ).toBe(0);
+    expect(
+      orderDraftSchema.parse({
+        symbol: "AAPL",
+        side: "buy",
+        qty: "10001",
+        order_type: "market",
+        tif: "DAY",
+      }).qty,
+    ).toBe(10001);
+  });
+
   it("rejects unknown fields and invalid enums", () => {
     expect(
       orderDraftSchema.safeParse({

@@ -4600,7 +4600,7 @@ var orderDraftSchema = external_exports
   .object({
     symbol: external_exports.string().min(1),
     side: orderSideSchema,
-    qty: external_exports.number().finite(),
+    qty: numericSchema.finite(),
     order_type: orderTypeSchema,
     limit_price: external_exports.number().finite().nullable().optional(),
     stop_price: external_exports.number().finite().nullable().optional(),
@@ -5698,7 +5698,7 @@ var createAlertToolInputSchema = external_exports.object({
 var proposeOrderToolInputSchema = external_exports.object({
   symbol: external_exports.string().trim().min(1).max(16),
   side: orderSideSchema,
-  qty: external_exports.number().positive().finite(),
+  qty: numericSchema.finite(),
   order_type: orderTypeSchema.default("market"),
   limit_price: external_exports.number().finite().nullable().optional(),
   stop_price: external_exports.number().finite().nullable().optional(),
@@ -6019,6 +6019,68 @@ var healthSnapshotSchema = external_exports.object({
 var healthServiceRequestSchema = external_exports.object({
   op: external_exports.literal("snapshot"),
 });
+
+// packages/schemas/src/demo-seed.ts
+var demoUserRecordSchema = external_exports.object({
+  email: external_exports.string().email(),
+  password: external_exports.string().min(1),
+  role: userRoleSchema,
+  display_name: external_exports.string().min(1),
+  experience_level: experienceLevelSchema,
+});
+var demoPositionRecordSchema = external_exports.object({
+  symbol: external_exports.string().min(1),
+  qty: external_exports.number().positive(),
+  avg_cost: external_exports.number().nonnegative(),
+});
+var demoPortfolioRecordSchema = external_exports.object({
+  cash: external_exports.number().nonnegative(),
+  positions: external_exports.array(demoPositionRecordSchema).min(1),
+  watchlists: external_exports.record(
+    external_exports.string().min(1),
+    external_exports.array(external_exports.string().min(1)).min(1),
+  ),
+});
+var demoUsersFixtureSchema = external_exports.object({
+  users: external_exports.array(demoUserRecordSchema).min(1),
+  portfolios: external_exports.record(external_exports.string().email(), demoPortfolioRecordSchema),
+});
+var seedAllStepSchema = external_exports.enum([
+  "instruments",
+  "market_calendar",
+  "bars",
+  "quotes_latest",
+  "rules",
+  "fundamentals",
+  "news",
+  "demo_users",
+  "demo_portfolio",
+  "watchlists",
+  "feed_test_mode",
+  "verify",
+]);
+var SEED_ALL_STEPS = seedAllStepSchema.options;
+var fullSeedCountsSchema = external_exports.object({
+  instruments: external_exports.number().int().nonnegative(),
+  dailyBars: external_exports.number().int().nonnegative(),
+  minuteBars: external_exports.number().int().nonnegative(),
+  quotes: external_exports.number().int().nonnegative(),
+  publishedTables: external_exports.number().int().nonnegative(),
+  newsItems: external_exports.number().int().nonnegative(),
+  newsEmbeddings: external_exports.number().int().nonnegative(),
+  fundamentals: external_exports.number().int().nonnegative(),
+  users: external_exports.number().int().nonnegative(),
+  demoPositions: external_exports.number().int().nonnegative(),
+  watchlists: external_exports.number().int().nonnegative(),
+});
+var releaseRunbookStepSchema = external_exports.enum([
+  "migrate",
+  "seed",
+  "verify_audit_chain",
+  "e2e",
+  "tag",
+]);
+var RELEASE_RUNBOOK_STEPS = releaseRunbookStepSchema.options;
 
 // packages/schemas/src/index.ts
 var publicInsforgeEnvSchema = external_exports.object({
