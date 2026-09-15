@@ -14,6 +14,8 @@ import {
   type FeedQuote,
 } from "../../packages/mock-data/src/feed.ts";
 import { newsShocksForSymbols } from "../../packages/mock-data/src/news.ts";
+import { writeAuditLog } from "./_shared/audit.ts";
+import { withFunctionLog } from "./_shared/logger.ts";
 
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -36,7 +38,7 @@ function flagValue(row: {
   return { key: row.key, value: row.value };
 }
 
-export default async function (req: Request): Promise<Response> {
+export default withFunctionLog("market-tick", async function (req: Request): Promise<Response> {
   if (req.method !== "POST") {
     return json(405, { error: "METHOD_NOT_ALLOWED" });
   }
@@ -356,23 +358,55 @@ export default async function (req: Request): Promise<Response> {
     } catch {
       // best-effort morning briefs at simulated open
     }
+    try {
+      await fetch(
+        `${(Deno.env.get("INSFORGE_INTERNAL_URL") ?? Deno.env.get("INSFORGE_BASE_URL") ?? "").replace(/\/+$/, "")}/functions/audit-service`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${expected}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ op: "cron" }),
+        },
+      );
+    } catch {
+      // best-effort nightly chain verify
+    }
   }
 
-  await admin.database.from("audit_log").insert([
-    {
-      action: "market-tick",
-      entity_type: "quotes_latest",
-      payload: {
-        session: result.session,
-        ticksApplied: result.ticksApplied,
-        published: result.publishes.length,
-        paused: flags.paused,
-        consumeForcePrice: result.consumeForcePrice,
-        matching,
-        alerting,
-      },
+  const heartbeat = {
+    ts: nowIso,
+    session: result.session,
+    ticks_applied: result.ticksApplied,
+  };
+  const heartbeatRow = asRows<{ id: string; key: string }>(flagData).find(
+    (row) => row.key === "feed.last_heartbeat",
+  );
+  if (heartbeatRow) {
+    await admin.database
+      .from("feature_flags")
+      .update({ value: heartbeat })
+      .eq("id", heartbeatRow.id);
+  } else {
+    await admin.database
+      .from("feature_flags")
+      .insert([{ key: "feed.last_heartbeat", value: heartbeat, user_id: null }]);
+  }
+
+  await writeAuditLog(admin.database, {
+    action: "market-tick",
+    entity_type: "quotes_latest",
+    payload: {
+      session: result.session,
+      ticksApplied: result.ticksApplied,
+      published: result.publishes.length,
+      paused: flags.paused,
+      consumeForcePrice: result.consumeForcePrice,
+      matching,
+      alerting,
     },
-  ]);
+  });
 
   return json(200, {
     session: result.session,
@@ -382,4 +416,4 @@ export default async function (req: Request): Promise<Response> {
     matching,
     alerting,
   });
-}
+});

@@ -51,7 +51,9 @@ PBI-023 embeds **news** (and later filings) for the copilot. It must **not** ing
 | 026 | [PBI-026](as-built/PBI-026.md) | Write tools + `copilot_actions` 0019; DT-AI-01 approval cards in chat and notification center |
 | 027 | [PBI-027](as-built/PBI-027.md) | Monitors 0021+0022 JWT owner PATCH, NL compiler, service-only `monitor-runner`, Copilot Monitors tab; DT-ALRT-01 |
 | 028 | [PBI-028](as-built/PBI-028.md) | Briefs 0023+0024 JWT SELECT-only, `brief-service`, Copilot Briefs tab, DES/PORT generate, DT-RISK-02 Portfolio Health |
-| 029–031 | _pending_ | Copy [`_template-as-built.md`](_template-as-built.md) when the PBI ships |
+| 029 | [PBI-029](as-built/PBI-029.md) | Hash-chained `audit_log` 0025+0026 JWT no DML, `audit-service` (`append`), `/admin/audit`, mutation sweep, retention |
+| 030 | [PBI-030](as-built/PBI-030.md) | Structured logs, `/telemetry`, panel ErrorBoundary, STALE + realtime backoff, `/admin/health`, Lighthouse CI + k6 preview |
+| 031 | [PBI-031](as-built/PBI-031.md) | P0 Playwright regression, seed-all, RELEASE.md, CI release gate |
 
 ## Architecture decision records
 
@@ -60,6 +62,7 @@ PBI-023 embeds **news** (and later filings) for the copilot. It must **not** ing
 | [0001](adr/0001-docs-as-code-knowledge-layer.md) | Docs-as-code knowledge layer beside the spec |
 | [0002](adr/0002-decision-condition-negate.md) | Optional `negate` on decision-table condition cells |
 | [0003](adr/0003-openrouter-embeddings-gateway.md) | Embeddings via OpenRouter key provisioned by InsForge Model Gateway |
+| [0004](adr/0004-p0-regression-ci-gate.md) | P0 Playwright regression as the CI release gate |
 
 Add further ADRs from [`_template-adr.md`](_template-adr.md) only for durable choices not already in doc 02.
 

@@ -23,7 +23,7 @@ describe("admin-users edge function", () => {
     expect(src).toContain("handleAdminUsersRequest");
     expect(src).toContain("list_user_directory");
     expect(src).toContain("user_roles");
-    expect(src).toContain("audit_log");
+    expect(src).toContain("writeAuditLog");
     expect(src).toContain("loadUserRole");
     expect(src).not.toContain("profiles.persona");
   });

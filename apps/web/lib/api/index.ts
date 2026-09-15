@@ -5,7 +5,7 @@ export { createInstrumentsRepository } from "./instruments";
 export { createMarketBarsRepository } from "./market-bars";
 export { createQuotesLatestRepository } from "./quotes-latest";
 export { createMarketCalendarRepository } from "./market-calendar";
-export { createAuditLogRepository } from "./audit-log";
+export { auditServiceUrl, invokeAuditService, appendAuditLog } from "./audit-service";
 export { createFeatureFlagsRepository } from "./feature-flags";
 export {
   containsArrayFilter,
@@ -48,6 +48,12 @@ export {
 export { createCopilotSessionsRepository } from "./copilot-sessions";
 export { createCopilotActionsRepository } from "./copilot-actions";
 export { screenerServiceUrl, invokeScreenerRun } from "./screener";
+export {
+  fetchHealthSnapshot,
+  ingestTelemetry,
+  healthServiceUrl,
+  telemetryServiceUrl,
+} from "./telemetry";
 export {
   analyticsServiceUrl,
   invokeAnalyticsPortfolio,

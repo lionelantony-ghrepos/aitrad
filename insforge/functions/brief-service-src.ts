@@ -38,6 +38,8 @@ import {
   type LlmPort,
 } from "../../packages/copilot/src/index.ts";
 import { authorizeEdgeUser } from "./_shared/entitlements.ts";
+import { writeAuditLog } from "./_shared/audit.ts";
+import { withFunctionLog } from "./_shared/logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -456,19 +458,18 @@ async function generateForUser(input: {
       citations,
     },
   });
-  await input.admin.database.from("audit_log").insert([
-    {
-      user_id: input.userId,
-      action: "briefs:generate",
-      entity_type: "briefs",
-      entity_id: brief.id,
-      payload: { kind: input.kind, subject },
-    },
-  ]);
+  await writeAuditLog(input.admin.database, {
+    user_id: input.userId,
+    action: "briefs:generate",
+    entity_type: "briefs",
+    entity_id: brief.id,
+    payload: { kind: input.kind, subject },
+    after: { kind: input.kind, subject },
+  });
   return { brief, citations };
 }
 
-export default async function (req: Request): Promise<Response> {
+export default withFunctionLog("brief-service", async function (req: Request): Promise<Response> {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
@@ -557,14 +558,12 @@ export default async function (req: Request): Promise<Response> {
         skipped += 1;
       }
     }
-    await admin.database.from("audit_log").insert([
-      {
-        user_id: null,
-        action: "briefs:cron",
-        entity_type: "briefs",
-        payload: { generated, skipped },
-      },
-    ]);
+    await writeAuditLog(admin.database, {
+      user_id: null,
+      action: "briefs:cron",
+      entity_type: "briefs",
+      payload: { generated, skipped },
+    });
     return json(200, briefCronResponseSchema.parse({ generated, skipped }));
   }
 
@@ -647,15 +646,13 @@ export default async function (req: Request): Promise<Response> {
     if (patch.error) {
       return json(500, { error: patch.error.message });
     }
-    await admin.database.from("audit_log").insert([
-      {
-        user_id: userId,
-        action: "briefs:export",
-        entity_type: "briefs",
-        entity_id: brief.id,
-        payload: { key: uploaded.data.key },
-      },
-    ]);
+    await writeAuditLog(admin.database, {
+      user_id: userId,
+      action: "briefs:export",
+      entity_type: "briefs",
+      entity_id: brief.id,
+      payload: { key: uploaded.data.key },
+    });
     return json(
       200,
       briefExportResponseSchema.parse({
@@ -690,4 +687,4 @@ export default async function (req: Request): Promise<Response> {
   } catch (error) {
     return json(500, { error: error instanceof Error ? error.message : "BRIEF_FAILED" });
   }
-}
+});

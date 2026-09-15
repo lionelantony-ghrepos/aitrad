@@ -7,8 +7,10 @@ Open **`/signup`** (email + password) or **`/login`**. Google OAuth is available
 
 You receive a **paper cash account** on first login (amount comes from the opening-account seed policy — all trading is simulated; no real money moves). Open **`/workspace`** once the wizard is done. The command-bar **user menu** shows your email and paper cash; **Log out** returns you to `/login`. Reloading the workspace keeps you signed in. Visiting `/workspace` while signed out sends you to `/login`.
 
+On a **seeded demo environment** you can also sign in as `demo.trader@meridian.test`, `demo.admin@meridian.test`, or `demo.compliance@meridian.test` (password in the test-environment fixture). Admin opens `/admin/rules`, `/admin/users`, `/admin/audit`, and `/admin/health`.
+
 ## 2. The workspace
-Meridian is a multi-panel terminal. Open **`/workspace`**. Drag panel edges to resize, drag tabs to rearrange, and your layout is saved automatically (**Reset layout** in the top command bar). The status bar shows the market clock (America/New_York, OPEN/CLOSED), a **bell** with unread alert count, and a connection indicator.
+Meridian is a multi-panel terminal. Open **`/workspace`**. Drag panel edges to resize, drag tabs to rearrange, and your layout is saved automatically (**Reset layout** in the top command bar). The status bar shows the market clock (America/New_York, OPEN/CLOSED), a **bell** with unread alert count, and a connection indicator (**Connecting** / **Connected** / **Reconnecting** / **Offline**) with automatic reconnect. Panels overlay **STALE** when the quote feed gaps while the session is open.
 
 **Watchlist** (PBI-007), **Chart** (PBI-008), **Order ticket** (PBI-013), **Blotter** (PBI-017), **Portfolio** (PBI-018), **News** (PBI-019), **Description / DES** (PBI-020), **Screener / SCR** (PBI-021), and **Copilot / AI** (PBI-025) with **Monitors** (PBI-027) and **Briefs** (PBI-028) tabs are live. `DES <symbol>` opens the instrument profile (key stats, financials, analyst mix, industry peers). `SCR` opens the criteria builder. `AI <question>` opens Copilot with the question filled.
 
@@ -55,7 +57,7 @@ It can also **act**: "add NVDA to my watchlist", "alert me if AAPL drops below 2
 Meridian Copilot provides information and analysis, not personalized financial advice.
 
 ## 7. For administrators
-`/admin/rules`: entitlement-gated spreadsheet editor (draft, side-by-side diff, history/rollback, simulate against recent `rule_audit` contexts, searchable evaluation traces). Publish applies immediately with no deploy. Traders are denied. `/admin/users`: admin-only directory — list accounts and assign **trader**, **admin**, or **compliance**. Role changes apply on the next request (the entitlement table is evaluated live; publishing a table change does not require a deploy). `/admin/audit`: tamper-evident audit trail of every action (compliance role has read-only access). `/admin/health`: feed and service status.
+`/admin/rules`: entitlement-gated spreadsheet editor (draft, side-by-side diff, history/rollback, simulate against recent `rule_audit` contexts, searchable evaluation traces). Publish applies immediately with no deploy. Traders are denied. `/admin/users`: admin-only directory — list accounts and assign **trader**, **admin**, or **compliance**. Role changes apply on the next request (the entitlement table is evaluated live; publishing a table change does not require a deploy). `/admin/audit`: tamper-evident hash-chained log of mutating actions. Filter by user, entity, action, and date; open a row for that entity’s timeline; **Verify chain** recomputes hashes; **Export CSV** downloads the current filter. Compliance has read-only access (no retention edit). Admins can set retention days (purged by the nightly verify job). `/admin/health`: feed and service status.
 
 ## 8. FAQ
 **Is my money real?** No — v1 is paper trading with simulated fills (realistic slippage and partial fills).

@@ -4,7 +4,7 @@ import { compileMonitorInstruction } from "@meridian/copilot";
 import { authorizeUser } from "@/lib/auth/authorize-user";
 import { monitorCreateRequestSchema, type AlertInstance, type Monitor } from "@meridian/schemas";
 import { createAlertsRepository } from "@/lib/api/alerts";
-import { createAuditLogRepository } from "@/lib/api/audit-log";
+import { appendAuditLog } from "@/lib/api/audit-service";
 import { createRecordsClient } from "@/lib/api/client";
 import { createMonitorsRepository } from "@/lib/api/monitors";
 import { isAuthStub } from "@/lib/auth/mode";
@@ -116,28 +116,31 @@ export async function createMonitorAction(input: unknown): Promise<ActionResult<
     nl_instruction: parsed.data.nl_instruction,
     compiled,
   });
+  let created: Monitor;
   if (isAuthStub()) {
-    const created = stubInsertCopilotMonitor(row);
-    return { ok: true, data: created };
+    created = stubInsertCopilotMonitor(row);
+  } else {
+    const inserted = await createMonitorsRepository(records(session.token)).insert({
+      user_id: row.user_id,
+      session_id: row.session_id,
+      name: row.name,
+      nl_instruction: row.nl_instruction,
+      compiled_condition: row.compiled_condition,
+      scope: row.scope,
+      cadence: row.cadence,
+      active: row.active,
+      throttle_state: row.throttle_state,
+      propose_action: row.propose_action ?? null,
+    });
+    const insertedRow = inserted[0];
+    if (!insertedRow) {
+      return { ok: false, message: "Monitor create failed." };
+    }
+    created = insertedRow;
   }
-  const inserted = await createMonitorsRepository(records(session.token)).insert({
-    user_id: row.user_id,
-    session_id: row.session_id,
-    name: row.name,
-    nl_instruction: row.nl_instruction,
-    compiled_condition: row.compiled_condition,
-    scope: row.scope,
-    cadence: row.cadence,
-    active: row.active,
-    throttle_state: row.throttle_state,
-    propose_action: row.propose_action ?? null,
-  });
-  const created = inserted[0];
-  if (!created) {
-    return { ok: false, message: "Monitor create failed." };
-  }
-  await createAuditLogRepository(records(session.token)).insert({
-    user_id: session.userId,
+  await appendAuditLog({
+    userId: session.userId,
+    accessToken: session.token,
     action: "monitors:create",
     entity_type: "monitors",
     entity_id: created.id,
@@ -162,36 +165,31 @@ export async function pauseMonitorAction(
   if (!gate.allowed) {
     return { ok: false, message: "Not allowed." };
   }
+  let row: Monitor | null;
   if (isAuthStub()) {
-    const current = stubListMonitors(session.userId).find((row) => row.id === id);
+    const current = stubListMonitors(session.userId).find((item) => item.id === id);
     if (!current) {
       return { ok: false, message: "Monitor not found." };
     }
-    const row = stubPatchMonitor(
-      session.userId,
+    row = stubPatchMonitor(session.userId, id, ownerPausePatch(active, current.throttle_state));
+  } else {
+    const existing = await createMonitorsRepository(records(session.token)).get(id);
+    const current = existing[0];
+    if (!current) {
+      return { ok: false, message: "Monitor not found." };
+    }
+    const updated = await createMonitorsRepository(records(session.token)).update(
       id,
       ownerPausePatch(active, current.throttle_state),
     );
-    if (!row) {
-      return { ok: false, message: "Monitor not found." };
-    }
-    return { ok: true, data: row };
+    row = updated[0] ?? null;
   }
-  const existing = await createMonitorsRepository(records(session.token)).get(id);
-  const current = existing[0];
-  if (!current) {
-    return { ok: false, message: "Monitor not found." };
-  }
-  const updated = await createMonitorsRepository(records(session.token)).update(
-    id,
-    ownerPausePatch(active, current.throttle_state),
-  );
-  const row = updated[0];
   if (!row) {
     return { ok: false, message: "Monitor not found." };
   }
-  await createAuditLogRepository(records(session.token)).insert({
-    user_id: session.userId,
+  await appendAuditLog({
+    userId: session.userId,
+    accessToken: session.token,
     action: active ? "monitors:resume" : "monitors:pause",
     entity_type: "monitors",
     entity_id: id,
@@ -215,11 +213,12 @@ export async function deleteMonitorAction(id: string): Promise<ActionResult<{ id
   }
   if (isAuthStub()) {
     stubDeleteMonitor(session.userId, id);
-    return { ok: true, data: { id } };
+  } else {
+    await createMonitorsRepository(records(session.token)).remove(id);
   }
-  await createMonitorsRepository(records(session.token)).remove(id);
-  await createAuditLogRepository(records(session.token)).insert({
-    user_id: session.userId,
+  await appendAuditLog({
+    userId: session.userId,
+    accessToken: session.token,
     action: "monitors:delete",
     entity_type: "monitors",
     entity_id: id,
@@ -241,23 +240,22 @@ export async function resetMonitorThrottleAction(id: string): Promise<ActionResu
   if (!gate.allowed) {
     return { ok: false, message: "Not allowed." };
   }
+  let row: Monitor | null;
   if (isAuthStub()) {
-    const row = stubPatchMonitor(session.userId, id, ownerThrottleResetPatch());
-    if (!row) {
-      return { ok: false, message: "Monitor not found." };
-    }
-    return { ok: true, data: row };
+    row = stubPatchMonitor(session.userId, id, ownerThrottleResetPatch());
+  } else {
+    const updated = await createMonitorsRepository(records(session.token)).update(
+      id,
+      ownerThrottleResetPatch(),
+    );
+    row = updated[0] ?? null;
   }
-  const updated = await createMonitorsRepository(records(session.token)).update(
-    id,
-    ownerThrottleResetPatch(),
-  );
-  const row = updated[0];
   if (!row) {
     return { ok: false, message: "Monitor not found." };
   }
-  await createAuditLogRepository(records(session.token)).insert({
-    user_id: session.userId,
+  await appendAuditLog({
+    userId: session.userId,
+    accessToken: session.token,
     action: "monitors:throttle_reset",
     entity_type: "monitors",
     entity_id: id,

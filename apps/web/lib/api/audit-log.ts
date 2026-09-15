@@ -1,18 +1,8 @@
-import { auditLogInsertSchema, auditLogSchema, type AuditLogInsert } from "@meridian/schemas";
-import type { RecordsClient } from "./client";
-import { recordTables } from "./rest";
-
-export function createAuditLogRepository(client: RecordsClient) {
-  return {
-    listMine() {
-      return client.list(recordTables.audit_log, auditLogSchema);
-    },
-    insert(row: AuditLogInsert) {
-      return client.insert(recordTables.audit_log, auditLogSchema, [
-        auditLogInsertSchema.parse(row),
-      ]);
-    },
-  };
+/**
+ * JWT REST DML/SELECT on audit_log is disabled (PBI-029 AE).
+ * Mutations must call `appendAuditLog` → audit-service `op: "append"` (admin writer).
+ * Admin browse/verify/export stay on `invokeAuditService` (DT-ENT-01 gated).
+ */
+export function createAuditLogRepository(): never {
+  throw new Error("JWT audit_log repository is disabled; use appendAuditLog");
 }
-
-export type AuditLogRepository = ReturnType<typeof createAuditLogRepository>;
