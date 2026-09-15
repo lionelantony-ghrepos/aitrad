@@ -1,9 +1,17 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
+    "allowJs": true,
     "noEmit": true,
     "types": ["node"],
     "rootDir": "."
   },
-  "include": ["scripts/seed.ts", "scripts/seed-rules.ts"]
+  "include": [
+    "scripts/seed.ts",
+    "scripts/seed-rules.ts",
+    "scripts/seed-all.ts",
+    "scripts/seed-demo-users.ts",
+    "scripts/verify-audit-chain.ts",
+    "scripts/verify-audit-parse.mjs"
+  ]
 }

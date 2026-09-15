@@ -7,6 +7,8 @@ Open **`/signup`** (email + password) or **`/login`**. Google OAuth is available
 
 You receive a **paper cash account** on first login (amount comes from the opening-account seed policy — all trading is simulated; no real money moves). Open **`/workspace`** once the wizard is done. The command-bar **user menu** shows your email and paper cash; **Log out** returns you to `/login`. Reloading the workspace keeps you signed in. Visiting `/workspace` while signed out sends you to `/login`.
 
+On a **seeded demo environment** you can also sign in as `demo.trader@meridian.test`, `demo.admin@meridian.test`, or `demo.compliance@meridian.test` (password in the test-environment fixture). Admin opens `/admin/rules`, `/admin/users`, `/admin/audit`, and `/admin/health`.
+
 ## 2. The workspace
 Meridian is a multi-panel terminal. Open **`/workspace`**. Drag panel edges to resize, drag tabs to rearrange, and your layout is saved automatically (**Reset layout** in the top command bar). The status bar shows the market clock (America/New_York, OPEN/CLOSED), a **bell** with unread alert count, and a connection indicator (**Connecting** / **Connected** / **Reconnecting** / **Offline**) with automatic reconnect. Panels overlay **STALE** when the quote feed gaps while the session is open.
 
