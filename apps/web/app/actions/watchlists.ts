@@ -11,7 +11,7 @@ import {
   type Watchlist,
   type WatchlistItem,
 } from "@meridian/schemas";
-import { createAuditLogRepository } from "@/lib/api/audit-log";
+import { appendAuditLog } from "@/lib/api/audit-service";
 import { createRecordsClient } from "@/lib/api/client";
 import { InsForgeApiError } from "@/lib/api/rest";
 import { createInstrumentsRepository } from "@/lib/api/instruments";
@@ -101,17 +101,20 @@ export async function createWatchlistAction(name: string): Promise<ActionResult<
   if (!gate.allowed) {
     return { ok: false, message: "Not allowed." };
   }
+  let row: Watchlist;
   if (isAuthStub()) {
-    return { ok: true, data: stubCreateWatchlist(session.userId, parsed.data.name) };
+    row = stubCreateWatchlist(session.userId, parsed.data.name);
+  } else {
+    const created = await createWatchlistsRepository(records(session.token)).insert(parsed.data);
+    const createdRow = created[0];
+    if (!createdRow) {
+      return { ok: false, message: "Could not create list." };
+    }
+    row = createdRow;
   }
-  const client = records(session.token);
-  const created = await createWatchlistsRepository(client).insert(parsed.data);
-  const row = created[0];
-  if (!row) {
-    return { ok: false, message: "Could not create list." };
-  }
-  await createAuditLogRepository(client).insert({
-    user_id: session.userId,
+  await appendAuditLog({
+    userId: session.userId,
+    accessToken: session.token,
     action: "watchlist:create",
     entity_type: "watchlists",
     entity_id: row.id,
@@ -140,18 +143,21 @@ export async function renameWatchlistAction(
   if (!gate.allowed) {
     return { ok: false, message: "Not allowed." };
   }
+  let row: Watchlist | null;
   if (isAuthStub()) {
-    const row = stubRenameWatchlist(session.userId, id, trimmed);
-    return row ? { ok: true, data: row } : { ok: false, message: "List not found." };
+    row = stubRenameWatchlist(session.userId, id, trimmed);
+  } else {
+    const updated = await createWatchlistsRepository(records(session.token)).update(id, {
+      name: trimmed,
+    });
+    row = updated[0] ?? null;
   }
-  const client = records(session.token);
-  const updated = await createWatchlistsRepository(client).update(id, { name: trimmed });
-  const row = updated[0];
   if (!row) {
     return { ok: false, message: "List not found." };
   }
-  await createAuditLogRepository(client).insert({
-    user_id: session.userId,
+  await appendAuditLog({
+    userId: session.userId,
+    accessToken: session.token,
     action: "watchlist:update",
     entity_type: "watchlists",
     entity_id: row.id,
@@ -175,12 +181,15 @@ export async function deleteWatchlistAction(id: string): Promise<ActionResult<{ 
   }
   if (isAuthStub()) {
     const ok = stubDeleteWatchlist(session.userId, id);
-    return ok ? { ok: true, data: { id } } : { ok: false, message: "List not found." };
+    if (!ok) {
+      return { ok: false, message: "List not found." };
+    }
+  } else {
+    await createWatchlistsRepository(records(session.token)).remove(id);
   }
-  const client = records(session.token);
-  await createWatchlistsRepository(client).remove(id);
-  await createAuditLogRepository(client).insert({
-    user_id: session.userId,
+  await appendAuditLog({
+    userId: session.userId,
+    accessToken: session.token,
     action: "watchlist:delete",
     entity_type: "watchlists",
     entity_id: id,
@@ -230,50 +239,53 @@ export async function addWatchlistItemAction(
   if (!gate.allowed) {
     return { ok: false, message: "Not allowed." };
   }
+  let row: WatchlistItem;
   if (isAuthStub()) {
     try {
       const existing = stubListWatchlistItems(session.userId, watchlistId);
       if (findDuplicateInstrument(existing, instrumentId)) {
         return { ok: false, message: duplicateWatchlistItemMessage(symbol) };
       }
-      return { ok: true, data: stubAddWatchlistItem(session.userId, watchlistId, instrumentId) };
+      row = stubAddWatchlistItem(session.userId, watchlistId, instrumentId);
     } catch (error) {
       if (error instanceof Error && error.message === "DUPLICATE_WATCHLIST_ITEM") {
         return { ok: false, message: duplicateWatchlistItemMessage(symbol) };
       }
       throw error;
     }
-  }
-  const client = records(session.token);
-  const items = createWatchlistItemsRepository(client);
-  const existing = await items.listByWatchlist(watchlistId);
-  if (findDuplicateInstrument(existing, instrumentId)) {
-    return { ok: false, message: duplicateWatchlistItemMessage(symbol) };
-  }
-  try {
-    const created = await items.insert({
-      watchlist_id: watchlistId,
-      instrument_id: instrumentId,
-      sort_order: existing.length,
-    });
-    const row = created[0];
-    if (!row) {
-      return { ok: false, message: "Could not add symbol." };
-    }
-    await createAuditLogRepository(client).insert({
-      user_id: session.userId,
-      action: "watchlist:item:create",
-      entity_type: "watchlist_items",
-      entity_id: row.id,
-      payload: { symbol, watchlist_id: watchlistId },
-    });
-    return { ok: true, data: row };
-  } catch (error) {
-    if (uniqueViolation(error)) {
+  } else {
+    const items = createWatchlistItemsRepository(records(session.token));
+    const existing = await items.listByWatchlist(watchlistId);
+    if (findDuplicateInstrument(existing, instrumentId)) {
       return { ok: false, message: duplicateWatchlistItemMessage(symbol) };
     }
-    throw error;
+    try {
+      const created = await items.insert({
+        watchlist_id: watchlistId,
+        instrument_id: instrumentId,
+        sort_order: existing.length,
+      });
+      const createdRow = created[0];
+      if (!createdRow) {
+        return { ok: false, message: "Could not add symbol." };
+      }
+      row = createdRow;
+    } catch (error) {
+      if (uniqueViolation(error)) {
+        return { ok: false, message: duplicateWatchlistItemMessage(symbol) };
+      }
+      throw error;
+    }
   }
+  await appendAuditLog({
+    userId: session.userId,
+    accessToken: session.token,
+    action: "watchlist:item:create",
+    entity_type: "watchlist_items",
+    entity_id: row.id,
+    payload: { symbol, watchlist_id: watchlistId },
+  });
+  return { ok: true, data: row };
 }
 
 export async function removeWatchlistItemAction(
@@ -293,12 +305,15 @@ export async function removeWatchlistItemAction(
   }
   if (isAuthStub()) {
     const ok = stubRemoveWatchlistItem(session.userId, itemId);
-    return ok ? { ok: true, data: { id: itemId } } : { ok: false, message: "Row not found." };
+    if (!ok) {
+      return { ok: false, message: "Row not found." };
+    }
+  } else {
+    await createWatchlistItemsRepository(records(session.token)).remove(itemId);
   }
-  const client = records(session.token);
-  await createWatchlistItemsRepository(client).remove(itemId);
-  await createAuditLogRepository(client).insert({
-    user_id: session.userId,
+  await appendAuditLog({
+    userId: session.userId,
+    accessToken: session.token,
     action: "watchlist:item:delete",
     entity_type: "watchlist_items",
     entity_id: itemId,

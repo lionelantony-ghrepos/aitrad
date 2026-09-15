@@ -2,7 +2,7 @@
 
 import { authorizeUser } from "@/lib/auth/authorize-user";
 import type { Brief, BriefKind, CopilotCitation } from "@meridian/schemas";
-import { createAuditLogRepository } from "@/lib/api/audit-log";
+import { appendAuditLog } from "@/lib/api/audit-service";
 import { invokeBriefExport, invokeBriefGenerate, invokeBriefList } from "@/lib/api/briefs";
 import { createRecordsClient } from "@/lib/api/client";
 import { createProfilesRepository } from "@/lib/api/profiles";
@@ -130,28 +130,32 @@ export async function setMorningBriefOptInAction(
   if (!gate.allowed) {
     return { ok: false, message: "Not allowed." };
   }
+  let profileId: string | null = null;
   if (isAuthStub()) {
-    stubPatchProfile(session.userId, { morning_brief_opt_in: enabled });
-    return { ok: true, data: { morning_brief_opt_in: enabled } };
+    const profile = stubPatchProfile(session.userId, { morning_brief_opt_in: enabled });
+    profileId = profile.id;
+  } else {
+    const env = readPublicInsforgeEnv();
+    const client = createRecordsClient({
+      baseUrl: env.baseUrl,
+      getAccessToken: () => session.token,
+    });
+    const profiles = await createProfilesRepository(client).listMine();
+    const profile = profiles[0];
+    if (!profile) {
+      return { ok: false, message: "Profile missing." };
+    }
+    await createProfilesRepository(client).updateById(profile.id, {
+      morning_brief_opt_in: enabled,
+    });
+    profileId = profile.id;
   }
-  const env = readPublicInsforgeEnv();
-  const client = createRecordsClient({
-    baseUrl: env.baseUrl,
-    getAccessToken: () => session.token,
-  });
-  const profiles = await createProfilesRepository(client).listMine();
-  const profile = profiles[0];
-  if (!profile) {
-    return { ok: false, message: "Profile missing." };
-  }
-  await createProfilesRepository(client).updateById(profile.id, {
-    morning_brief_opt_in: enabled,
-  });
-  await createAuditLogRepository(client).insert({
-    user_id: session.userId,
+  await appendAuditLog({
+    userId: session.userId,
+    accessToken: session.token,
     action: "briefs:opt_in",
     entity_type: "profiles",
-    entity_id: profile.id,
+    entity_id: profileId,
     payload: { morning_brief_opt_in: enabled },
   });
   return { ok: true, data: { morning_brief_opt_in: enabled } };

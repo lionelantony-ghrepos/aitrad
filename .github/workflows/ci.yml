@@ -34,8 +34,16 @@ jobs:
         run: pnpm --filter @meridian/web exec playwright install chromium --with-deps
       - name: Build web app
         run: pnpm --filter @meridian/web build
-      - name: Playwright smoke
-        run: pnpm --filter @meridian/web test:e2e
+      - name: Playwright P0 regression (release gate)
+        run: pnpm --filter @meridian/web test:e2e:regression
+      - name: Playwright remaining
+        run: pnpm --filter @meridian/web exec playwright test --project=chromium
+      - name: P0 traceability tags
+        run: pnpm test:traceability
+      - name: Lighthouse CI (workspace TTI)
+        env:
+          E2E_AUTH_STUB: "1"
+        run: npx --yes @lhci/cli@0.14.0 autorun --config=lighthouserc.cjs
       - name: Collect commit subjects for kb gate
         run: |
           set -e

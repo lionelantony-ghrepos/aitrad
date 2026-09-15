@@ -46,7 +46,9 @@ import {
   runCopilotRequest,
   type WriteActionPorts,
 } from "../../packages/copilot/src/index.ts";
+import { writeAuditLog } from "./_shared/audit.ts";
 import { authorizeEdgeUser } from "./_shared/entitlements.ts";
+import { withFunctionLog } from "./_shared/logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -115,239 +117,240 @@ async function requireOwnedCopilotSession(
   }
 }
 
-export default async function (req: Request): Promise<Response> {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
-  }
-  if (req.method !== "POST") {
-    return json(405, { error: "METHOD_NOT_ALLOWED" });
-  }
+export default withFunctionLog(
+  "copilot-orchestrator",
+  async function (req: Request): Promise<Response> {
+    if (req.method === "OPTIONS") {
+      return new Response(null, { status: 204, headers: corsHeaders });
+    }
+    if (req.method !== "POST") {
+      return json(405, { error: "METHOD_NOT_ALLOWED" });
+    }
 
-  const authHeader = req.headers.get("Authorization");
-  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
-  if (!token) {
-    return json(401, { error: "UNAUTHENTICATED" });
-  }
+    const authHeader = req.headers.get("Authorization");
+    const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+    if (!token) {
+      return json(401, { error: "UNAUTHENTICATED" });
+    }
 
-  const baseUrl = Deno.env.get("INSFORGE_INTERNAL_URL") ?? Deno.env.get("INSFORGE_BASE_URL");
-  if (!baseUrl) {
-    return json(500, { error: "INSFORGE_URL_MISSING" });
-  }
+    const baseUrl = Deno.env.get("INSFORGE_INTERNAL_URL") ?? Deno.env.get("INSFORGE_BASE_URL");
+    if (!baseUrl) {
+      return json(500, { error: "INSFORGE_URL_MISSING" });
+    }
 
-  let body: unknown = {};
-  try {
-    body = await req.json();
-  } catch {
-    body = {};
-  }
+    let body: unknown = {};
+    try {
+      body = await req.json();
+    } catch {
+      body = {};
+    }
 
-  const userClient = createClient({ baseUrl, accessToken: token });
-  const { data: userData } = await userClient.auth.getCurrentUser();
-  const userId = userData?.user?.id as string | undefined;
-  const apiKey = resolveRulesServiceApiKey({
-    API_KEY: Deno.env.get("API_KEY"),
-    INSFORGE_API_KEY: Deno.env.get("INSFORGE_API_KEY"),
-  });
-  if (!apiKey) {
-    return json(500, { error: "API_KEY_MISSING" });
-  }
-  const admin = createAdminClient({ baseUrl, apiKey });
-  const decideFromPath = new URL(req.url).pathname.replace(/\/+$/, "").endsWith("/decide");
-  const opRaw =
-    body && typeof body === "object" && "op" in body ? (body as { op?: unknown }).op : undefined;
-  if (opRaw === "decide" || decideFromPath) {
-    const gate = await authorizeEdgeUser({ db: admin.database, userId, action: "copilot:act" });
+    const userClient = createClient({ baseUrl, accessToken: token });
+    const { data: userData } = await userClient.auth.getCurrentUser();
+    const userId = userData?.user?.id as string | undefined;
+    const apiKey = resolveRulesServiceApiKey({
+      API_KEY: Deno.env.get("API_KEY"),
+      INSFORGE_API_KEY: Deno.env.get("INSFORGE_API_KEY"),
+    });
+    if (!apiKey) {
+      return json(500, { error: "API_KEY_MISSING" });
+    }
+    const admin = createAdminClient({ baseUrl, apiKey });
+    const decideFromPath = new URL(req.url).pathname.replace(/\/+$/, "").endsWith("/decide");
+    const opRaw =
+      body && typeof body === "object" && "op" in body ? (body as { op?: unknown }).op : undefined;
+    if (opRaw === "decide" || decideFromPath) {
+      const gate = await authorizeEdgeUser({ db: admin.database, userId, action: "copilot:act" });
+      if (!gate.allowed || !userId) {
+        return json(gate.reason === "UNAUTHENTICATED" || !userId ? 401 : 403, {
+          error: gate.reason ?? "UNAUTHENTICATED",
+        });
+      }
+      return decideCopilotActionOnEdge({
+        admin,
+        baseUrl,
+        token,
+        userId,
+        body,
+      });
+    }
+
+    const parsed = copilotChatRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      return json(400, { error: "INVALID_BODY" });
+    }
+
+    const gate = await authorizeEdgeUser({ db: admin.database, userId, action: "copilot:chat" });
     if (!gate.allowed || !userId) {
       return json(gate.reason === "UNAUTHENTICATED" || !userId ? 401 : 403, {
         error: gate.reason ?? "UNAUTHENTICATED",
       });
     }
-    return decideCopilotActionOnEdge({
-      admin,
-      baseUrl,
-      token,
-      userId,
-      body,
+
+    const countRpc = await admin.database.rpc("count_copilot_user_messages_today", {
+      p_user_id: userId,
     });
-  }
+    const messagesToday = Number(countRpc.data ?? 0);
 
-  const parsed = copilotChatRequestSchema.safeParse(body);
-  if (!parsed.success) {
-    return json(400, { error: "INVALID_BODY" });
-  }
-
-  const gate = await authorizeEdgeUser({ db: admin.database, userId, action: "copilot:chat" });
-  if (!gate.allowed || !userId) {
-    return json(gate.reason === "UNAUTHENTICATED" || !userId ? 401 : 403, {
-      error: gate.reason ?? "UNAUTHENTICATED",
-    });
-  }
-
-  const countRpc = await admin.database.rpc("count_copilot_user_messages_today", {
-    p_user_id: userId,
-  });
-  const messagesToday = Number(countRpc.data ?? 0);
-
-  let policyOutcome: unknown = evaluate(
-    baselineTable("DT-AI-01"),
-    {
-      tool: "chat",
-      messages_today: messagesToday,
-    },
-    new Date(),
-  ).outcome;
-  try {
-    const evaluated = await invokeSibling({
-      baseUrl,
-      slug: "rules-service",
-      token,
-      body: {
-        op: "evaluateDomain",
-        domain: "ai_action_policy",
-        context: { tool: "chat", messages_today: messagesToday },
+    let policyOutcome: unknown = evaluate(
+      baselineTable("DT-AI-01"),
+      {
+        tool: "chat",
+        messages_today: messagesToday,
       },
-    });
-    if (evaluated && typeof evaluated === "object" && "outcome" in evaluated) {
-      policyOutcome = (evaluated as { outcome: unknown }).outcome;
+      new Date(),
+    ).outcome;
+    try {
+      const evaluated = await invokeSibling({
+        baseUrl,
+        slug: "rules-service",
+        token,
+        body: {
+          op: "evaluateDomain",
+          domain: "ai_action_policy",
+          context: { tool: "chat", messages_today: messagesToday },
+        },
+      });
+      if (evaluated && typeof evaluated === "object" && "outcome" in evaluated) {
+        policyOutcome = (evaluated as { outcome: unknown }).outcome;
+      }
+    } catch {
+      // published table unavailable — baseline DT-AI-01 already evaluated
     }
-  } catch {
-    // published table unavailable — baseline DT-AI-01 already evaluated
-  }
 
-  const mode = (Deno.env.get("MERIDIAN_COPILOT_LLM") ?? "").trim().toLowerCase();
-  const openRouterKey = Deno.env.get("OPENROUTER_API_KEY");
-  const llm =
-    mode === "fake" || !openRouterKey
-      ? newsSummaryLlm()
-      : openRouterLlm({
-          apiKey: openRouterKey,
-          model: Deno.env.get("OPENROUTER_CHAT_MODEL") ?? DEFAULT_OPENROUTER_CHAT_MODEL,
-          url: Deno.env.get("OPENROUTER_CHAT_URL") ?? DEFAULT_OPENROUTER_CHAT_URL,
-        });
+    const mode = (Deno.env.get("MERIDIAN_COPILOT_LLM") ?? "").trim().toLowerCase();
+    const openRouterKey = Deno.env.get("OPENROUTER_API_KEY");
+    const llm =
+      mode === "fake" || !openRouterKey
+        ? newsSummaryLlm()
+        : openRouterLlm({
+            apiKey: openRouterKey,
+            model: Deno.env.get("OPENROUTER_CHAT_MODEL") ?? DEFAULT_OPENROUTER_CHAT_MODEL,
+            url: Deno.env.get("OPENROUTER_CHAT_URL") ?? DEFAULT_OPENROUTER_CHAT_URL,
+          });
 
-  let sessionId = parsed.data.session_id ?? "";
-  const stream = new ReadableStream({
-    async start(controller) {
-      const emit = (event: CopilotChatEvent): void => {
-        controller.enqueue(encodeSse(event));
-      };
-      try {
-        await runCopilotRequest({
-          request: parsed.data,
-          policyOutcome,
-          llm,
-          portfolioSummary: undefined,
-          executeTool: (name, args) => {
-            if (isWriteTool(name)) {
-              return executeWriteTool({
+    let sessionId = parsed.data.session_id ?? "";
+    const stream = new ReadableStream({
+      async start(controller) {
+        const emit = (event: CopilotChatEvent): void => {
+          controller.enqueue(encodeSse(event));
+        };
+        try {
+          await runCopilotRequest({
+            request: parsed.data,
+            policyOutcome,
+            llm,
+            portfolioSummary: undefined,
+            executeTool: (name, args) => {
+              if (isWriteTool(name)) {
+                return executeWriteTool({
+                  name,
+                  args,
+                  admin,
+                  baseUrl,
+                  token,
+                  userId,
+                  sessionId,
+                });
+              }
+              return executeReadTool({
                 name,
                 args,
                 admin,
                 baseUrl,
                 token,
                 userId,
-                sessionId,
               });
-            }
-            return executeReadTool({
-              name,
-              args,
-              admin,
-              baseUrl,
-              token,
-              userId,
-            });
-          },
-          persist: {
-            async createSession(title) {
-              await admin.database
-                .from("copilot_sessions")
-                .insert([{ user_id: userId, title: title.slice(0, 72) || "New session" }]);
-              const { data, error } = await admin.database
-                .from("copilot_sessions")
-                .select("*")
-                .eq("user_id", userId)
-                .order("created_at", { ascending: false })
-                .limit(1);
-              if (error) {
-                throw new Error(error.message);
-              }
-              const created = copilotSessionSchema.parse(asRows<CopilotSession>(data)[0]);
-              sessionId = created.id;
-              return created;
             },
-            async appendMessage(row) {
-              await requireOwnedCopilotSession(admin, userId, row.sessionId);
-              await admin.database.from("copilot_messages").insert([
-                {
+            persist: {
+              async createSession(title) {
+                await admin.database
+                  .from("copilot_sessions")
+                  .insert([{ user_id: userId, title: title.slice(0, 72) || "New session" }]);
+                const { data, error } = await admin.database
+                  .from("copilot_sessions")
+                  .select("*")
+                  .eq("user_id", userId)
+                  .order("created_at", { ascending: false })
+                  .limit(1);
+                if (error) {
+                  throw new Error(error.message);
+                }
+                const created = copilotSessionSchema.parse(asRows<CopilotSession>(data)[0]);
+                sessionId = created.id;
+                return created;
+              },
+              async appendMessage(row) {
+                await requireOwnedCopilotSession(admin, userId, row.sessionId);
+                await admin.database.from("copilot_messages").insert([
+                  {
+                    session_id: row.sessionId,
+                    user_id: userId,
+                    role: row.role,
+                    content: row.content,
+                    tool_calls: row.tool_calls,
+                  },
+                ]);
+                await admin.database
+                  .from("copilot_sessions")
+                  .update({ updated_at: new Date().toISOString() })
+                  .eq("id", row.sessionId)
+                  .eq("user_id", userId);
+                return copilotMessageSchema.parse({
+                  id: crypto.randomUUID(),
                   session_id: row.sessionId,
                   user_id: userId,
                   role: row.role,
                   content: row.content,
                   tool_calls: row.tool_calls,
-                },
-              ]);
-              await admin.database
-                .from("copilot_sessions")
-                .update({ updated_at: new Date().toISOString() })
-                .eq("id", row.sessionId)
-                .eq("user_id", userId);
-              return copilotMessageSchema.parse({
-                id: crypto.randomUUID(),
-                session_id: row.sessionId,
-                user_id: userId,
-                role: row.role,
-                content: row.content,
-                tool_calls: row.tool_calls,
-                created_at: new Date().toISOString(),
-              });
-            },
-            async loadHistory(sessionId) {
-              await requireOwnedCopilotSession(admin, userId, sessionId);
-              const { data, error } = await admin.database
-                .from("copilot_messages")
-                .select("*")
-                .eq("session_id", sessionId)
-                .eq("user_id", userId)
-                .order("created_at", { ascending: true });
-              if (error) {
-                throw new Error(error.message);
-              }
-              return asRows<CopilotMessage>(data).map((row) => copilotMessageSchema.parse(row));
-            },
-            async auditTool(name, args) {
-              await admin.database.from("audit_log").insert([
-                {
+                  created_at: new Date().toISOString(),
+                });
+              },
+              async loadHistory(sessionId) {
+                await requireOwnedCopilotSession(admin, userId, sessionId);
+                const { data, error } = await admin.database
+                  .from("copilot_messages")
+                  .select("*")
+                  .eq("session_id", sessionId)
+                  .eq("user_id", userId)
+                  .order("created_at", { ascending: true });
+                if (error) {
+                  throw new Error(error.message);
+                }
+                return asRows<CopilotMessage>(data).map((row) => copilotMessageSchema.parse(row));
+              },
+              async auditTool(name, args) {
+                await writeAuditLog(admin.database, {
                   user_id: userId,
                   action: `copilot:tool:${name}`,
                   entity_type: "copilot_messages",
                   payload: { tool: name, arguments: args },
-                },
-              ]);
+                });
+              },
             },
-          },
-          onEvent: emit,
-        });
-      } catch (error) {
-        emit({
-          type: "error",
-          message: error instanceof Error ? error.message : "COPILOT_FAILED",
-        });
-      } finally {
-        controller.close();
-      }
-    },
-  });
+            onEvent: emit,
+          });
+        } catch (error) {
+          emit({
+            type: "error",
+            message: error instanceof Error ? error.message : "COPILOT_FAILED",
+          });
+        } finally {
+          controller.close();
+        }
+      },
+    });
 
-  return new Response(stream, {
-    status: 200,
-    headers: {
-      ...corsHeaders,
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-    },
-  });
-}
+    return new Response(stream, {
+      status: 200,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+      },
+    });
+  },
+);
 
 async function executeReadTool(input: {
   name: string;
@@ -630,15 +633,14 @@ async function decideCopilotActionOnEdge(input: {
           }),
       },
     });
-    await db.from("audit_log").insert([
-      {
-        user_id: input.userId,
-        action: `copilot:action:${parsed.data.decision}`,
-        entity_type: "copilot_actions",
-        entity_id: row.id,
-        payload: { tool: row.tool, status: row.status },
-      },
-    ]);
+    await writeAuditLog(db, {
+      user_id: input.userId,
+      action: `copilot:action:${parsed.data.decision}`,
+      entity_type: "copilot_actions",
+      entity_id: row.id,
+      payload: { tool: row.tool, status: row.status },
+      after: { status: row.status },
+    });
     return json(200, { action: row });
   } catch (error) {
     const message = error instanceof Error ? error.message : "ACTION_DECIDE_FAILED";
@@ -874,15 +876,14 @@ async function executeManualWriteOnEdge(input: {
     if (!monitor) {
       return { error: "MONITOR_CREATE_FAILED" };
     }
-    await db.from("audit_log").insert([
-      {
-        user_id: input.userId,
-        action: "monitors:create",
-        entity_type: "monitors",
-        entity_id: monitor.id,
-        payload: { name, tool: "create_monitor" },
-      },
-    ]);
+    await writeAuditLog(db, {
+      user_id: input.userId,
+      action: "monitors:create",
+      entity_type: "monitors",
+      entity_id: monitor.id,
+      payload: { name, tool: "create_monitor" },
+      after: { name },
+    });
     return { ref: monitor.id };
   }
   return { error: `UNKNOWN_WRITE_TOOL:${input.tool}` };

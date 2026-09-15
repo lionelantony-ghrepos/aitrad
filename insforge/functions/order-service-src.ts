@@ -34,7 +34,9 @@ import {
 } from "../../packages/paper-engine/src/index.ts";
 import type { OrderLegRole } from "../../packages/schemas/src/index.ts";
 import { resolveRulesServiceApiKey } from "../../packages/rules-engine/src/index.ts";
+import { writeAuditLog } from "./_shared/audit.ts";
 import { authorizeEdgeUser } from "./_shared/entitlements.ts";
+import { withFunctionLog } from "./_shared/logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -411,7 +413,7 @@ function requireAdminWriter(baseUrl: string) {
   });
 }
 
-export default async function (req: Request): Promise<Response> {
+export default withFunctionLog("order-service", async function (req: Request): Promise<Response> {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
@@ -533,15 +535,15 @@ export default async function (req: Request): Promise<Response> {
         reserved_amount: 0,
         updated_at: updatedAt,
       };
-      await client.database.from("audit_log").insert([
-        {
-          user_id: userId,
-          action: "trade:cancel",
-          entity_type: "orders",
-          entity_id: cancelled.id,
-          payload: { from: current.status, to: "cancelled" },
-        },
-      ]);
+      await writeAuditLog(admin.database, {
+        user_id: userId,
+        action: "trade:cancel",
+        entity_type: "orders",
+        entity_id: cancelled.id,
+        payload: { from: current.status, to: "cancelled" },
+        before: { status: current.status },
+        after: { status: "cancelled" },
+      });
       await publishOrder(admin, userId, cancelled);
       return json(200, { order: cancelled });
     }
@@ -642,22 +644,21 @@ export default async function (req: Request): Promise<Response> {
     if (!parsedRow) {
       throw new Error("ORDER_CREATE_EMPTY");
     }
-    await client.database.from("audit_log").insert([
-      {
-        user_id: userId,
-        action: "trade:create",
-        entity_type: "orders",
-        entity_id: parsedRow.id,
-        payload: {
-          status: parsedRow.status,
-          symbol: draft.symbol,
-          reject_reason: parsedRow.reject_reason,
-          rule_audit_id: parsedRow.rule_audit_id,
-          group_id: groupId,
-          legs: created.length,
-        },
+    await writeAuditLog(admin.database, {
+      user_id: userId,
+      action: "trade:create",
+      entity_type: "orders",
+      entity_id: parsedRow.id,
+      payload: {
+        status: parsedRow.status,
+        symbol: draft.symbol,
+        reject_reason: parsedRow.reject_reason,
+        rule_audit_id: parsedRow.rule_audit_id,
+        group_id: groupId,
+        legs: created.length,
       },
-    ]);
+      after: { status: parsedRow.status, symbol: draft.symbol },
+    });
     for (const row of created) {
       await publishOrder(admin, userId, row);
     }
@@ -666,4 +667,4 @@ export default async function (req: Request): Promise<Response> {
     const message = error instanceof Error ? error.message : "ORDER_SERVICE_ERROR";
     return json(400, { error: message });
   }
-}
+});

@@ -19,6 +19,8 @@ import {
   type PublishedDomainTable,
   type RuleAuditWrite,
 } from "../../packages/rules-engine/src/index.ts";
+import { writeAuditLog } from "./_shared/audit.ts";
+import { withFunctionLog } from "./_shared/logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -267,7 +269,7 @@ async function adminGetTable(db: AdminDb, tableKey: string) {
   };
 }
 
-export default async function (req: Request): Promise<Response> {
+export default withFunctionLog("rules-service", async function (req: Request): Promise<Response> {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
@@ -373,18 +375,7 @@ export default async function (req: Request): Promise<Response> {
         }
       },
       async writeAuditLog(row) {
-        const insert = await admin.database.from("audit_log").insert([
-          {
-            user_id: row.user_id,
-            action: row.action,
-            entity_type: row.entity_type,
-            entity_id: row.entity_id ?? null,
-            payload: row.payload,
-          },
-        ]);
-        if (insert.error) {
-          throw new Error(insert.error.message);
-        }
+        await writeAuditLog(admin.database, row);
       },
       async readPublishGeneration() {
         const { data, error } = await admin.database
@@ -618,4 +609,4 @@ export default async function (req: Request): Promise<Response> {
   });
 
   return json(result.status, result.body);
-}
+});

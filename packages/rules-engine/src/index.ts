@@ -34,6 +34,40 @@ export {
   type EntitlementDecision,
 } from "./authorize";
 export { handleAdminUsersRequest, type AdminUsersPorts } from "./admin-users";
+export {
+  handleAuditServiceRequest,
+  parseAuditLogRows,
+  verifyListedChain,
+  type AuditAdminPorts,
+} from "./audit-admin";
+export {
+  AUDIT_CHAIN_GENESIS,
+  appendAuditChainRow,
+  auditRowsToCsv,
+  canonicalAuditRowJson,
+  computeAuditRowHash,
+  verifyAuditChain,
+  type AuditChainRecord,
+} from "./audit-chain";
+export { MUTATING_AUDIT_SOURCES } from "./mutating-endpoints";
+export {
+  buildFunctionLog,
+  formatFunctionLog,
+  isFeedStale,
+  nextRealtimeBackoffMs,
+  nextRealtimeState,
+  parseTelemetrySampleRate,
+  percentileNearestRank,
+  requestIdFromHeaders,
+  shouldSampleTelemetry,
+  userIdFromAuthorization,
+} from "./observability";
+export {
+  handleHealthServiceRequest,
+  handleTelemetryRequest,
+  type HealthPorts,
+  type TelemetryPorts,
+} from "./telemetry";
 export { paperAccountSeed } from "./paper-account-seed";
 export {
   executeProvision,

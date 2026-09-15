@@ -285,6 +285,7 @@ const dtEnt01: DecisionTable = {
             "profile-wizard",
             "news:search",
             "chart:bars",
+            "telemetry:write",
           ],
         },
       ],

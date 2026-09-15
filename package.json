@@ -15,9 +15,12 @@
     "format:check": "prettier --check .",
     "docs:kb-check": "node scripts/check-kb.mjs",
     "docs:generate": "node scripts/generate-kb-reference.mjs",
-    "docs:kb-test": "node --test scripts/check-kb.test.mjs",
+    "docs:kb-test": "node --test scripts/check-kb.test.mjs scripts/traceability.test.mjs",
     "seed": "node --import tsx --env-file=.env scripts/seed.ts",
+    "seed:all": "node --import tsx --env-file=.env scripts/seed-all.ts",
     "seed:rules": "node --import tsx --env-file=.env scripts/seed-rules.ts",
+    "verify:audit-chain": "node --import tsx --env-file=.env scripts/verify-audit-chain.ts",
+    "test:traceability": "node scripts/traceability.mjs && node --test scripts/traceability.test.mjs",
     "functions:bundle:rules-service": "node scripts/bundle-rules-service.mjs",
     "functions:bundle:order-service": "node scripts/bundle-order-service.mjs",
     "functions:bundle:matching-runner": "node scripts/bundle-matching-runner.mjs",
@@ -33,6 +36,9 @@
     "functions:bundle:copilot-orchestrator": "node scripts/bundle-copilot-orchestrator.mjs",
     "functions:bundle:monitor-runner": "node scripts/bundle-monitor-runner.mjs",
     "functions:bundle:brief-service": "node scripts/bundle-brief-service.mjs",
+    "functions:bundle:audit-service": "node scripts/bundle-audit-service.mjs",
+    "functions:bundle:telemetry": "node scripts/bundle-telemetry.mjs",
+    "functions:bundle:health-service": "node scripts/bundle-health-service.mjs",
     "prepare": "husky"
   },
   "dependencies": {

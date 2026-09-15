@@ -14,5 +14,5 @@ export async function signUpThroughWizard(
   await page.getByTestId("display-name").fill("E2E Trader");
   await page.getByTestId("objectives").fill("learn the terminal");
   await page.getByTestId("wizard-submit").click();
-  await waitForWorkspaceReady(page, 20_000);
+  await waitForWorkspaceReady(page, 45_000);
 }

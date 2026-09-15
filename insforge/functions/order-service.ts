@@ -4325,6 +4325,7 @@ var profileSchema = external_exports.object({
   experience_level: experienceLevelSchema.nullable(),
   suitability_tier: suitabilityTierSchema.nullable(),
   objectives: external_exports.string().nullable(),
+  morning_brief_opt_in: external_exports.boolean().optional(),
   created_at: timestamptzSchema,
   updated_at: timestamptzSchema,
 });
@@ -4335,6 +4336,7 @@ var profileInsertSchema = external_exports
     experience_level: experienceLevelSchema.nullable().optional(),
     suitability_tier: suitabilityTierSchema.nullable().optional(),
     objectives: external_exports.string().nullable().optional(),
+    morning_brief_opt_in: external_exports.boolean().optional(),
   })
   .strict();
 var profileAdminInsertSchema = profileInsertSchema.extend({
@@ -4463,9 +4465,11 @@ var auditLogSchema = external_exports.object({
   entity_id: uuidSchema.nullable(),
   payload: external_exports.record(external_exports.unknown()),
   created_at: timestamptzSchema,
+  prev_hash: external_exports.string().nullable().optional(),
+  row_hash: external_exports.string().nullable().optional(),
 });
 var auditLogInsertSchema = external_exports.object({
-  user_id: uuidSchema,
+  user_id: uuidSchema.nullable(),
   action: external_exports.string().min(1),
   entity_type: external_exports.string().min(1),
   entity_id: uuidSchema.nullable().optional(),
@@ -5542,7 +5546,8 @@ var alertCreateRequestSchema = external_exports
 var alertInstanceSchema = external_exports.object({
   id: uuidSchema,
   user_id: uuidSchema,
-  alert_rule_id: uuidSchema,
+  alert_rule_id: uuidSchema.nullable(),
+  monitor_id: uuidSchema.nullable().optional(),
   instrument_id: uuidSchema.nullable(),
   fired_at: timestamptzSchema,
   message: external_exports.string().min(1),
@@ -5553,7 +5558,8 @@ var alertInstanceSchema = external_exports.object({
 var alertInstanceInsertSchema = external_exports
   .object({
     user_id: uuidSchema,
-    alert_rule_id: uuidSchema,
+    alert_rule_id: uuidSchema.nullable().optional(),
+    monitor_id: uuidSchema.nullable().optional(),
     instrument_id: uuidSchema.nullable().optional(),
     fired_at: timestamptzSchema.optional(),
     message: external_exports.string().min(1),
@@ -5585,6 +5591,140 @@ var evaluateAlertsRequestSchema = external_exports
   .strict();
 var alertConditionListSchema = external_exports.array(decisionConditionSchema).min(1);
 
+// packages/schemas/src/monitors.ts
+var MONITOR_FACT_INPUTS = [
+  "position_day_pct",
+  "portfolio_day_pct",
+  "pct_chg",
+  "last",
+  "volume",
+  "rsi_14",
+  "news_sentiment",
+];
+var monitorFactInputSchema = external_exports.enum(MONITOR_FACT_INPUTS);
+var monitorCadenceSchema = external_exports.enum(["5m", "15m", "1h", "1d"]);
+var monitorScopeKindSchema = external_exports.enum(["symbols", "sector", "portfolio"]);
+var monitorScopeSchema = external_exports
+  .object({
+    kind: monitorScopeKindSchema,
+    symbols: external_exports
+      .array(external_exports.string().trim().min(1).max(16))
+      .max(50)
+      .optional(),
+    sector: external_exports.string().trim().min(1).max(64).optional(),
+  })
+  .strict()
+  .superRefine((scope, ctx) => {
+    if (scope.kind === "symbols" && (!scope.symbols || scope.symbols.length === 0)) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        message: "SCOPE_SYMBOLS_REQUIRED",
+      });
+    }
+    if (scope.kind === "sector" && !scope.sector) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        message: "SCOPE_SECTOR_REQUIRED",
+      });
+    }
+  });
+var compiledMonitorConditionSchema = decisionRowSchema.superRefine((row, ctx) => {
+  if (row.outputs.decision !== "fire") {
+    ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message: "MONITOR_OUTPUT_FIRE" });
+  }
+  if (row.conditions.length < 1) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      message: "MONITOR_CONDITION_REQUIRED",
+    });
+  }
+  for (const cell of row.conditions) {
+    const input = monitorFactInputSchema.safeParse(cell.input);
+    if (!input.success) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        message: `MONITOR_FACT_UNKNOWN:${cell.input}`,
+      });
+    }
+  }
+});
+var monitorCompileResultSchema = external_exports
+  .object({
+    name: external_exports.string().trim().min(1).max(80).optional(),
+    cadence: monitorCadenceSchema.optional(),
+    scope: monitorScopeSchema,
+    compiled_condition: compiledMonitorConditionSchema,
+    propose_action: external_exports.record(external_exports.unknown()).nullable().optional(),
+  })
+  .strict();
+var monitorSchema = external_exports.object({
+  id: uuidSchema,
+  user_id: uuidSchema,
+  session_id: uuidSchema.nullable().optional(),
+  name: external_exports.string().min(1),
+  nl_instruction: external_exports.string().min(1),
+  compiled_condition: compiledMonitorConditionSchema,
+  scope: monitorScopeSchema,
+  cadence: monitorCadenceSchema,
+  last_run: timestamptzSchema.nullable(),
+  active: external_exports.boolean(),
+  throttle_state: alertThrottleStateSchema,
+  propose_action: external_exports.record(external_exports.unknown()).nullable().optional(),
+  created_at: timestamptzSchema,
+  updated_at: timestamptzSchema,
+});
+var monitorInsertSchema = external_exports
+  .object({
+    user_id: uuidSchema,
+    session_id: uuidSchema.nullable().optional(),
+    name: external_exports.string().min(1),
+    nl_instruction: external_exports.string().min(1),
+    compiled_condition: compiledMonitorConditionSchema,
+    scope: monitorScopeSchema,
+    cadence: monitorCadenceSchema.optional(),
+    last_run: timestamptzSchema.nullable().optional(),
+    active: external_exports.boolean().optional(),
+    throttle_state: alertThrottleStateSchema.optional(),
+    propose_action: external_exports.record(external_exports.unknown()).nullable().optional(),
+  })
+  .strict();
+var monitorOwnerPatchSchema = external_exports
+  .object({
+    name: external_exports.string().min(1).optional(),
+    active: external_exports.boolean().optional(),
+    throttle_state: alertThrottleStateSchema.optional(),
+  })
+  .strict();
+var monitorPatchSchema = monitorOwnerPatchSchema
+  .extend({
+    last_run: timestamptzSchema.nullable().optional(),
+  })
+  .strict();
+var monitorCreateRequestSchema = external_exports
+  .object({
+    name: external_exports.string().trim().min(1).max(80).optional(),
+    nl_instruction: external_exports.string().trim().min(1).max(2e3),
+    symbols: external_exports.array(external_exports.string().trim().min(1).max(16)).optional(),
+    session_id: uuidSchema.optional(),
+  })
+  .strict();
+var monitorRunnerRequestSchema = external_exports
+  .object({
+    clock: timestamptzSchema.optional(),
+    force: external_exports.boolean().optional(),
+    force_position_day_pct: external_exports.number().optional(),
+    user_id: uuidSchema.optional(),
+  })
+  .strict();
+var monitorRunnerResponseSchema = external_exports.object({
+  evaluated: external_exports.number().int().nonnegative(),
+  fired: external_exports.number().int().nonnegative(),
+  suppressed: external_exports.number().int().nonnegative(),
+});
+var monitorLlmConditionCellSchema = decisionConditionSchema.extend({
+  input: monitorFactInputSchema,
+});
+
 // packages/schemas/src/admin-users.ts
 var userRoleSchema = rulesAdminRoleSchema;
 var adminUsersOpSchema = external_exports.enum(["list", "assign"]);
@@ -5613,6 +5753,462 @@ var adminUsersAssignResponseSchema = external_exports.object({
   ok: external_exports.literal(true),
   user_id: uuidSchema,
   role: userRoleSchema,
+});
+
+// packages/schemas/src/audit-admin.ts
+var auditAdminOpSchema = external_exports.enum([
+  "list",
+  "timeline",
+  "verify",
+  "export",
+  "getConfig",
+  "setRetention",
+  "cron",
+  "append",
+]);
+var auditAdminFilterSchema = external_exports.object({
+  user_id: uuidSchema.optional(),
+  entity_type: external_exports.string().min(1).optional(),
+  entity_id: uuidSchema.optional(),
+  action: external_exports.string().min(1).optional(),
+  from: timestamptzSchema.optional(),
+  to: timestamptzSchema.optional(),
+  limit: external_exports.coerce.number().int().positive().max(500).optional(),
+  offset: external_exports.coerce.number().int().nonnegative().optional(),
+});
+var auditAdminListRequestSchema = auditAdminFilterSchema.extend({
+  op: external_exports.literal("list"),
+});
+var auditAdminTimelineRequestSchema = external_exports.object({
+  op: external_exports.literal("timeline"),
+  entity_type: external_exports.string().min(1),
+  entity_id: uuidSchema,
+});
+var auditAdminVerifyRequestSchema = external_exports.object({
+  op: external_exports.literal("verify"),
+  from: timestamptzSchema.optional(),
+  to: timestamptzSchema.optional(),
+});
+var auditAdminExportRequestSchema = auditAdminFilterSchema.extend({
+  op: external_exports.literal("export"),
+});
+var auditAdminGetConfigRequestSchema = external_exports.object({
+  op: external_exports.literal("getConfig"),
+});
+var auditAdminSetRetentionRequestSchema = external_exports.object({
+  op: external_exports.literal("setRetention"),
+  days: external_exports.coerce.number().int().positive().nullable(),
+});
+var auditAdminCronRequestSchema = external_exports.object({
+  op: external_exports.literal("cron"),
+  force: external_exports.boolean().optional(),
+});
+var auditAdminAppendRequestSchema = external_exports.object({
+  op: external_exports.literal("append"),
+  action: external_exports.string().min(1),
+  entity_type: external_exports.string().min(1),
+  entity_id: uuidSchema.nullable().optional(),
+  payload: external_exports.record(external_exports.unknown()).optional(),
+  user_id: uuidSchema.nullable().optional(),
+});
+var auditAdminRequestSchema = external_exports.discriminatedUnion("op", [
+  auditAdminListRequestSchema,
+  auditAdminTimelineRequestSchema,
+  auditAdminVerifyRequestSchema,
+  auditAdminExportRequestSchema,
+  auditAdminGetConfigRequestSchema,
+  auditAdminSetRetentionRequestSchema,
+  auditAdminCronRequestSchema,
+  auditAdminAppendRequestSchema,
+]);
+var auditChainVerifyResultSchema = external_exports.object({
+  ok: external_exports.boolean(),
+  checked: external_exports.number().int().nonnegative(),
+  broken_id: uuidSchema.nullable(),
+  expected_hash: external_exports.string().nullable(),
+  actual_hash: external_exports.string().nullable(),
+  reason: external_exports.string().nullable(),
+});
+var auditAdminListResponseSchema = external_exports.object({
+  rows: external_exports.array(auditLogSchema),
+  total: external_exports.number().int().nonnegative(),
+  can_write: external_exports.boolean(),
+});
+var auditAdminTimelineResponseSchema = external_exports.object({
+  rows: external_exports.array(auditLogSchema),
+});
+var auditAdminExportResponseSchema = external_exports.object({
+  csv: external_exports.string(),
+  rows: external_exports.number().int().nonnegative(),
+});
+var auditAdminConfigResponseSchema = external_exports.object({
+  retention_days: external_exports.number().int().positive().nullable(),
+  chain: auditChainVerifyResultSchema,
+  can_write: external_exports.boolean(),
+});
+var auditAdminCronResponseSchema = external_exports.object({
+  verified: external_exports.boolean(),
+  chain: auditChainVerifyResultSchema,
+  purged: external_exports.number().int().nonnegative(),
+  alerted: external_exports.number().int().nonnegative(),
+  skipped: external_exports.boolean(),
+});
+var auditAdminAppendResponseSchema = external_exports.object({
+  ok: external_exports.literal(true),
+});
+
+// packages/schemas/src/copilot.ts
+var copilotReadToolNameSchema = external_exports.enum([
+  "get_quote",
+  "get_bars",
+  "search_news",
+  "get_fundamentals",
+  "screen_instruments",
+  "get_portfolio",
+  "explain_rule_decision",
+]);
+var copilotWriteToolNameSchema = external_exports.enum([
+  "create_watchlist_item",
+  "create_alert",
+  "propose_order",
+  "create_monitor",
+]);
+var copilotToolNameSchema = external_exports.union([
+  copilotReadToolNameSchema,
+  copilotWriteToolNameSchema,
+]);
+var createWatchlistItemToolInputSchema = external_exports.object({
+  symbol: external_exports.string().trim().min(1).max(16),
+  watchlist_id: uuidSchema.optional(),
+});
+var createAlertToolInputSchema = external_exports.object({
+  symbol: external_exports.string().trim().min(1).max(16),
+  kind: alertKindSchema,
+  threshold: numericSchema.optional(),
+  name: external_exports.string().trim().min(1).optional(),
+});
+var proposeOrderToolInputSchema = external_exports.object({
+  symbol: external_exports.string().trim().min(1).max(16),
+  side: orderSideSchema,
+  qty: external_exports.number().positive().finite(),
+  order_type: orderTypeSchema.default("market"),
+  limit_price: external_exports.number().finite().nullable().optional(),
+  stop_price: external_exports.number().finite().nullable().optional(),
+  tif: tifSchema.default("DAY"),
+  last_price: numericSchema.optional(),
+});
+var createMonitorToolInputSchema = external_exports.object({
+  name: external_exports.string().trim().min(1).max(80).optional(),
+  nl_instruction: external_exports.string().trim().min(1).max(2e3),
+  symbols: external_exports.array(external_exports.string().trim().min(1).max(16)).optional(),
+});
+var copilotActionStatusSchema = external_exports.enum([
+  "proposed",
+  "auto_approved",
+  "approved",
+  "rejected",
+  "executed",
+  "failed",
+]);
+var copilotActionSchema = external_exports.object({
+  id: uuidSchema,
+  user_id: uuidSchema,
+  session_id: uuidSchema,
+  tool: copilotWriteToolNameSchema,
+  payload: external_exports.record(external_exports.unknown()),
+  policy_outcome: external_exports.unknown(),
+  status: copilotActionStatusSchema,
+  executed_ref: external_exports.string().nullable(),
+  reject_reason: external_exports.string().nullable(),
+  created_at: timestamptzSchema,
+  updated_at: timestamptzSchema,
+});
+var copilotActionDecisionSchema = external_exports.enum(["approve", "reject"]);
+var copilotActionDecideRequestSchema = external_exports.object({
+  action_id: uuidSchema,
+  decision: copilotActionDecisionSchema,
+  feedback: external_exports.string().trim().max(2e3).optional(),
+});
+var copilotOrchestratorDecideRequestSchema = copilotActionDecideRequestSchema.extend({
+  op: external_exports.literal("decide"),
+});
+var copilotOrchestratorDecideResponseSchema = external_exports.object({
+  action: copilotActionSchema,
+});
+var writeToolResultSchema = external_exports.object({
+  status: external_exports.enum([
+    "awaiting_approval",
+    "auto_approved",
+    "executed",
+    "blocked",
+    "failed",
+    "rate_limited",
+  ]),
+  message: external_exports.string(),
+  action: copilotActionSchema.optional(),
+  executed_ref: external_exports.string().optional(),
+  reject_reason: external_exports.string().optional(),
+});
+var getQuoteToolInputSchema = external_exports.object({
+  symbol: external_exports.string().trim().min(1).max(16),
+});
+var getBarsToolInputSchema = external_exports.object({
+  symbol: external_exports.string().trim().min(1).max(16),
+  range: chartRangeSchema.default("1M"),
+});
+var getFundamentalsToolInputSchema = external_exports.object({
+  symbol: external_exports.string().trim().min(1).max(16),
+});
+var screenInstrumentsToolInputSchema = external_exports.object({
+  sector: external_exports.string().trim().min(1).optional(),
+  criteria: screenerCriteriaSchema.optional(),
+  sort: screenerSortSchema.optional(),
+});
+var getPortfolioToolInputSchema = external_exports.object({
+  range: equityCurveRangeSchema.optional(),
+});
+var explainRuleDecisionToolInputSchema = external_exports.object({
+  audit_id: external_exports.string().min(1),
+});
+var copilotMessageRoleSchema = external_exports.enum(["system", "user", "assistant", "tool"]);
+var copilotToolCallRecordSchema = external_exports.object({
+  id: external_exports.string().min(1),
+  name: external_exports.string().min(1),
+  arguments: external_exports.unknown(),
+  result: external_exports.unknown().optional(),
+  error: external_exports.string().optional(),
+});
+var copilotSessionSchema = external_exports.object({
+  id: uuidSchema,
+  user_id: uuidSchema,
+  title: external_exports.string().min(1),
+  created_at: timestamptzSchema,
+  updated_at: timestamptzSchema,
+});
+var copilotMessageSchema = external_exports.object({
+  id: uuidSchema,
+  session_id: uuidSchema,
+  user_id: uuidSchema,
+  role: copilotMessageRoleSchema,
+  content: external_exports.string(),
+  tool_calls: external_exports.array(copilotToolCallRecordSchema),
+  created_at: timestamptzSchema,
+});
+var copilotCitationSchema = external_exports.object({
+  kind: external_exports.enum(["news", "des"]),
+  id: external_exports.string().min(1),
+  label: external_exports.string().min(1),
+  headline: external_exports.string().optional(),
+  symbol: external_exports.string().optional(),
+});
+var copilotChatRequestSchema = external_exports.object({
+  session_id: uuidSchema.optional(),
+  message: external_exports.string().trim().min(1).max(4e3),
+  active_symbol: external_exports.string().trim().min(1).max(16).optional(),
+});
+var copilotChatEventSchema = external_exports.discriminatedUnion("type", [
+  external_exports.object({ type: external_exports.literal("session"), session_id: uuidSchema }),
+  external_exports.object({
+    type: external_exports.literal("tool_start"),
+    name: external_exports.string().min(1),
+    label: external_exports.string().min(1),
+    call_id: external_exports.string().min(1),
+  }),
+  external_exports.object({
+    type: external_exports.literal("tool_end"),
+    name: external_exports.string().min(1),
+    call_id: external_exports.string().min(1),
+    ok: external_exports.boolean(),
+  }),
+  external_exports.object({
+    type: external_exports.literal("token"),
+    text: external_exports.string(),
+  }),
+  external_exports.object({
+    type: external_exports.literal("message"),
+    role: external_exports.literal("assistant"),
+    content: external_exports.string(),
+    citations: external_exports.array(copilotCitationSchema),
+  }),
+  external_exports.object({
+    type: external_exports.literal("rate_limited"),
+    message: external_exports.string().min(1),
+  }),
+  external_exports.object({
+    type: external_exports.literal("error"),
+    message: external_exports.string().min(1),
+  }),
+  external_exports.object({
+    type: external_exports.literal("action"),
+    action: copilotActionSchema,
+  }),
+]);
+var copilotSessionsResponseSchema = external_exports.object({
+  sessions: external_exports.array(copilotSessionSchema),
+});
+var copilotSessionDetailSchema = external_exports.object({
+  session: copilotSessionSchema,
+  messages: external_exports.array(copilotMessageSchema),
+});
+
+// packages/schemas/src/briefs.ts
+var briefKindSchema = external_exports.enum(["morning", "instrument", "portfolio"]);
+var briefSchema = external_exports.object({
+  id: uuidSchema,
+  user_id: uuidSchema,
+  kind: briefKindSchema,
+  subject: external_exports.string().min(1),
+  content_md: external_exports.string(),
+  data: external_exports.record(external_exports.unknown()),
+  pdf_key: external_exports.string().nullable(),
+  pdf_url: external_exports.string().nullable(),
+  created_at: timestamptzSchema,
+});
+var briefGenerateRequestSchema = external_exports
+  .object({
+    op: external_exports.literal("generate").optional(),
+    kind: briefKindSchema,
+    subject: external_exports.string().trim().min(1).max(32).optional(),
+  })
+  .strict();
+var briefListRequestSchema = external_exports
+  .object({
+    op: external_exports.literal("list").optional(),
+    kind: briefKindSchema.optional(),
+  })
+  .strict();
+var briefExportRequestSchema = external_exports
+  .object({
+    op: external_exports.literal("export"),
+    brief_id: uuidSchema,
+  })
+  .strict();
+var briefCronRequestSchema = external_exports
+  .object({
+    op: external_exports.literal("cron"),
+    force: external_exports.boolean().optional(),
+  })
+  .strict();
+var briefServiceRequestSchema = external_exports.discriminatedUnion("op", [
+  briefGenerateRequestSchema.extend({ op: external_exports.literal("generate") }),
+  briefListRequestSchema.extend({ op: external_exports.literal("list") }),
+  briefExportRequestSchema,
+  briefCronRequestSchema,
+]);
+var briefGenerateResponseSchema = external_exports.object({
+  brief: briefSchema,
+  citations: external_exports.array(copilotCitationSchema),
+});
+var briefListResponseSchema = external_exports.object({
+  briefs: external_exports.array(briefSchema),
+});
+var briefExportResponseSchema = external_exports.object({
+  brief: briefSchema,
+  download_url: external_exports.string().min(1),
+});
+var briefCronResponseSchema = external_exports.object({
+  generated: external_exports.number().int().nonnegative(),
+  skipped: external_exports.number().int().nonnegative(),
+});
+var portfolioAnalysisFactsSchema = external_exports.object({
+  max_position_pct: external_exports.number().finite(),
+  max_sector_pct: external_exports.number().finite(),
+  portfolio_beta: external_exports.number().finite(),
+  cash_pct: external_exports.number().finite(),
+  positions_count: external_exports.number().int().nonnegative(),
+  equity: external_exports.number().finite(),
+});
+
+// packages/schemas/src/observability.ts
+var functionLogOutcomeSchema = external_exports.enum(["ok", "error", "throw"]);
+var functionLogSchema = external_exports.object({
+  request_id: external_exports.string().min(1),
+  user_id: external_exports.string().nullable(),
+  fn: external_exports.string().min(1),
+  latency_ms: external_exports.number().nonnegative(),
+  outcome: functionLogOutcomeSchema,
+  status: external_exports.number().int().optional(),
+});
+var realtimeConnectionStateSchema = external_exports.enum([
+  "connecting",
+  "live",
+  "reconnecting",
+  "offline",
+]);
+
+// packages/schemas/src/telemetry.ts
+var telemetryKindSchema = external_exports.enum(["fn_latency", "client_error", "realtime"]);
+var telemetryRecordSchema = external_exports.object({
+  id: uuidSchema,
+  kind: telemetryKindSchema,
+  fn: external_exports.string().nullable(),
+  panel_id: external_exports.string().nullable(),
+  request_id: external_exports.string().nullable(),
+  user_id: uuidSchema.nullable(),
+  latency_ms: numericSchema.nullable(),
+  outcome: external_exports.string().nullable(),
+  payload: external_exports.record(external_exports.unknown()),
+  created_at: timestamptzSchema,
+});
+var telemetryClientErrorRequestSchema = external_exports.object({
+  op: external_exports.literal("client_error"),
+  panel_id: external_exports.string().min(1),
+  message: external_exports.string().min(1).max(2e3),
+  stack: external_exports.string().max(8e3).optional(),
+  request_id: external_exports.string().min(1).optional(),
+});
+var telemetryRealtimeRequestSchema = external_exports.object({
+  op: external_exports.literal("realtime"),
+  state: realtimeConnectionStateSchema,
+  attempt: external_exports.number().int().nonnegative().optional(),
+  request_id: external_exports.string().min(1).optional(),
+});
+var telemetryFnLatencyRequestSchema = external_exports.object({
+  op: external_exports.literal("fn_latency"),
+  fn: external_exports.string().min(1),
+  request_id: external_exports.string().min(1),
+  user_id: uuidSchema.nullable().optional(),
+  latency_ms: external_exports.number().nonnegative(),
+  outcome: functionLogOutcomeSchema,
+  status: external_exports.number().int().optional(),
+});
+var telemetryRequestSchema = external_exports.discriminatedUnion("op", [
+  telemetryClientErrorRequestSchema,
+  telemetryRealtimeRequestSchema,
+  telemetryFnLatencyRequestSchema,
+]);
+var telemetryIngestResponseSchema = external_exports.object({
+  stored: external_exports.boolean(),
+  sampled: external_exports.boolean(),
+});
+var latencyPercentilesSchema = external_exports.object({
+  fn: external_exports.string(),
+  count: external_exports.number().int().nonnegative(),
+  p50_ms: external_exports.number().nullable(),
+  p95_ms: external_exports.number().nullable(),
+  p99_ms: external_exports.number().nullable(),
+});
+var feedHeartbeatSchema = external_exports.object({
+  ts: timestamptzSchema.nullable(),
+  session: external_exports.string().nullable(),
+  ticks_applied: external_exports.number().nullable(),
+  age_ms: external_exports.number().nullable(),
+});
+var realtimeChannelStatsSchema = external_exports.object({
+  live: external_exports.number().int().nonnegative(),
+  reconnecting: external_exports.number().int().nonnegative(),
+  offline: external_exports.number().int().nonnegative(),
+  connecting: external_exports.number().int().nonnegative(),
+  last_ts: timestamptzSchema.nullable(),
+});
+var healthSnapshotSchema = external_exports.object({
+  generated_at: timestamptzSchema,
+  functions: external_exports.array(latencyPercentilesSchema),
+  feed: feedHeartbeatSchema,
+  realtime: realtimeChannelStatsSchema,
+});
+var healthServiceRequestSchema = external_exports.object({
+  op: external_exports.literal("snapshot"),
 });
 
 // packages/schemas/src/index.ts
@@ -6326,6 +6922,65 @@ async function authorize(input) {
   return { allowed: false, decision: "deny", reason: "FORBIDDEN" };
 }
 
+// packages/rules-engine/src/observability.ts
+function requestIdFromHeaders(headers) {
+  return headers.get("x-request-id") ?? headers.get("x-correlation-id") ?? crypto.randomUUID();
+}
+function userIdFromAuthorization(header) {
+  if (!header?.startsWith("Bearer ")) {
+    return null;
+  }
+  const token = header.slice(7);
+  const parts = token.split(".");
+  if (parts.length < 2) {
+    return null;
+  }
+  try {
+    const json2 = decodeJwtSegment(parts[1] ?? "");
+    const payload = JSON.parse(json2);
+    return typeof payload.sub === "string" ? payload.sub : null;
+  } catch {
+    return null;
+  }
+}
+function decodeJwtSegment(segment) {
+  const b64 = segment.replace(/-/g, "+").replace(/_/g, "/");
+  const pad = b64.length % 4 === 0 ? "" : "=".repeat(4 - (b64.length % 4));
+  if (typeof atob === "function") {
+    return atob(b64 + pad);
+  }
+  return Buffer.from(b64 + pad, "base64").toString("utf8");
+}
+function buildFunctionLog(input) {
+  return functionLogSchema.parse(input);
+}
+function formatFunctionLog(input) {
+  return JSON.stringify(buildFunctionLog(input));
+}
+function shouldSampleTelemetry(requestId, rate) {
+  if (rate >= 1) {
+    return true;
+  }
+  if (rate <= 0) {
+    return false;
+  }
+  let hash = 0;
+  for (let i = 0; i < requestId.length; i += 1) {
+    hash = (hash * 31 + requestId.charCodeAt(i)) >>> 0;
+  }
+  return hash / 4294967295 < rate;
+}
+function parseTelemetrySampleRate(raw, fallback = 1) {
+  if (raw === void 0 || raw.length === 0) {
+    return fallback;
+  }
+  const n = Number(raw);
+  if (!Number.isFinite(n)) {
+    return fallback;
+  }
+  return Math.min(1, Math.max(0, n));
+}
+
 // packages/rules-engine/src/doc05-fixtures.ts
 var dtRisk01 = {
   id: "DT-RISK-01",
@@ -6730,6 +7385,7 @@ var dtEnt01 = {
             "profile-wizard",
             "news:search",
             "chart:bars",
+            "telemetry:write",
           ],
         },
       ],
@@ -6904,6 +7560,37 @@ function resolveRulesServiceApiKey(env) {
   return key;
 }
 
+// packages/rules-engine/src/monitor-cycle.ts
+var CADENCE_MS = {
+  "5m": 5 * 6e4,
+  "15m": 15 * 6e4,
+  "1h": 60 * 6e4,
+  "1d": 24 * 60 * 6e4,
+};
+
+// insforge/functions/_shared/audit.ts
+async function writeAuditLog(db, row) {
+  const payload = { ...(row.payload ?? {}) };
+  if (row.before !== void 0) {
+    payload.before = row.before;
+  }
+  if (row.after !== void 0) {
+    payload.after = row.after;
+  }
+  const insert = await db.from("audit_log").insert([
+    {
+      user_id: row.user_id ?? null,
+      action: row.action,
+      entity_type: row.entity_type,
+      entity_id: row.entity_id ?? null,
+      payload,
+    },
+  ]);
+  if (insert.error) {
+    throw new Error(insert.error.message);
+  }
+}
+
 // insforge/functions/_shared/entitlements.ts
 function asRows(data) {
   return Array.isArray(data) ? data : [];
@@ -6974,6 +7661,94 @@ async function authorizeEdgeUser(input) {
       },
     },
   });
+}
+
+// insforge/functions/_shared/telemetry-persist.ts
+async function persistFunctionLatencySample(input) {
+  try {
+    const apiKey = resolveRulesServiceApiKey({
+      API_KEY: Deno.env.get("API_KEY"),
+      INSFORGE_API_KEY: Deno.env.get("INSFORGE_API_KEY"),
+    });
+    const baseUrl = Deno.env.get("INSFORGE_INTERNAL_URL") ?? Deno.env.get("INSFORGE_BASE_URL");
+    if (!apiKey || !baseUrl) {
+      return;
+    }
+    const admin = createAdminClient({ baseUrl, apiKey });
+    await admin.database.from("telemetry").insert([
+      {
+        kind: "fn_latency",
+        fn: input.fn,
+        request_id: input.request_id,
+        user_id: input.user_id,
+        latency_ms: input.latency_ms,
+        outcome: input.outcome,
+        payload: { status: input.status ?? null },
+      },
+    ]);
+  } catch {}
+}
+
+// insforge/functions/_shared/logger.ts
+function logLine(entry) {
+  console.log(formatFunctionLog(entry));
+}
+function withRequestId(response, requestId) {
+  const headers = new Headers(response.headers);
+  headers.set("x-request-id", requestId);
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+function outcomeFromStatus(status) {
+  if (status >= 400) {
+    return "error";
+  }
+  return "ok";
+}
+function withFunctionLog(fn, handler) {
+  return async (req) => {
+    if (req.method === "OPTIONS") {
+      return handler(req);
+    }
+    const request_id = requestIdFromHeaders(req.headers);
+    const user_id = userIdFromAuthorization(req.headers.get("Authorization"));
+    const started = Date.now();
+    try {
+      const response = await handler(req);
+      const latency_ms = Date.now() - started;
+      const outcome = outcomeFromStatus(response.status);
+      logLine({ request_id, user_id, fn, latency_ms, outcome, status: response.status });
+      const rate = parseTelemetrySampleRate(
+        typeof Deno !== "undefined" ? Deno.env.get("TELEMETRY_SAMPLE_RATE") : void 0,
+        1,
+      );
+      if (shouldSampleTelemetry(request_id, rate)) {
+        void persistFunctionLatencySample({
+          fn,
+          request_id,
+          user_id,
+          latency_ms,
+          outcome,
+          status: response.status,
+        });
+      }
+      return withRequestId(response, request_id);
+    } catch (error) {
+      const latency_ms = Date.now() - started;
+      logLine({ request_id, user_id, fn, latency_ms, outcome: "throw" });
+      void persistFunctionLatencySample({
+        fn,
+        request_id,
+        user_id,
+        latency_ms,
+        outcome: "throw",
+      });
+      throw error;
+    }
+  };
 }
 
 // insforge/functions/order-service-src.ts
@@ -7270,12 +8045,12 @@ function requireAdminWriter(baseUrl) {
   if (!apiKey) {
     return null;
   }
-  return createAdminClient({
+  return createAdminClient2({
     baseUrl,
     apiKey,
   });
 }
-async function order_service_src_default(req) {
+var order_service_src_default = withFunctionLog("order-service", async function (req) {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
@@ -7387,15 +8162,15 @@ async function order_service_src_default(req) {
         reserved_amount: 0,
         updated_at: updatedAt,
       };
-      await client.database.from("audit_log").insert([
-        {
-          user_id: userId,
-          action: "trade:cancel",
-          entity_type: "orders",
-          entity_id: cancelled.id,
-          payload: { from: current.status, to: "cancelled" },
-        },
-      ]);
+      await writeAuditLog(admin2.database, {
+        user_id: userId,
+        action: "trade:cancel",
+        entity_type: "orders",
+        entity_id: cancelled.id,
+        payload: { from: current.status, to: "cancelled" },
+        before: { status: current.status },
+        after: { status: "cancelled" },
+      });
       await publishOrder(admin2, userId, cancelled);
       return json(200, { order: cancelled });
     }
@@ -7495,22 +8270,21 @@ async function order_service_src_default(req) {
     if (!parsedRow) {
       throw new Error("ORDER_CREATE_EMPTY");
     }
-    await client.database.from("audit_log").insert([
-      {
-        user_id: userId,
-        action: "trade:create",
-        entity_type: "orders",
-        entity_id: parsedRow.id,
-        payload: {
-          status: parsedRow.status,
-          symbol: draft.symbol,
-          reject_reason: parsedRow.reject_reason,
-          rule_audit_id: parsedRow.rule_audit_id,
-          group_id: groupId,
-          legs: created.length,
-        },
+    await writeAuditLog(admin.database, {
+      user_id: userId,
+      action: "trade:create",
+      entity_type: "orders",
+      entity_id: parsedRow.id,
+      payload: {
+        status: parsedRow.status,
+        symbol: draft.symbol,
+        reject_reason: parsedRow.reject_reason,
+        rule_audit_id: parsedRow.rule_audit_id,
+        group_id: groupId,
+        legs: created.length,
       },
-    ]);
+      after: { status: parsedRow.status, symbol: draft.symbol },
+    });
     for (const row of created) {
       await publishOrder(admin, userId, row);
     }
@@ -7519,6 +8293,6 @@ async function order_service_src_default(req) {
     const message = error instanceof Error ? error.message : "ORDER_SERVICE_ERROR";
     return json(400, { error: message });
   }
-}
+});
 
 module.exports = order_service_src_default;
