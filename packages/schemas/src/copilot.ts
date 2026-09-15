@@ -63,7 +63,7 @@ export const createAlertToolInputSchema = z.object({
 export const proposeOrderToolInputSchema = z.object({
   symbol: z.string().trim().min(1).max(16),
   side: orderSideSchema,
-  qty: z.number().positive().finite(),
+  qty: numericSchema.finite(),
   order_type: orderTypeSchema.default("market"),
   limit_price: z.number().finite().nullable().optional(),
   stop_price: z.number().finite().nullable().optional(),

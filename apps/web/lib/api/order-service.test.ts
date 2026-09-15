@@ -31,6 +31,13 @@ describe("orderServiceUrl", () => {
 });
 
 describe("order-service security", () => {
+  it("does not short-circuit qty with INVALID_QTY before DT-VAL", () => {
+    expect(orderServiceSrc).not.toContain("INVALID_QTY");
+    expect(orderServiceSrc).toContain("evaluateRemote");
+    expect(orderServiceSrc).toContain("order_validation");
+    expect(orderServiceSrc).toContain("INVALID_DRAFT");
+  });
+
   it("evaluates risk/fees from quotes_latest, not client last_price", () => {
     expect(orderServiceSrc).toContain('.from("quotes_latest")');
     expect(orderServiceSrc).toContain("lastPriceForRuleFacts");

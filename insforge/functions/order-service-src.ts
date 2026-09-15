@@ -44,6 +44,14 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
+/** Structural parse failures only. Qty/limit policy is DT-VAL COLLECT. */
+function clientErrorCode(error: unknown): string {
+  if (error && typeof error === "object" && "issues" in error) {
+    return "INVALID_DRAFT";
+  }
+  return error instanceof Error ? error.message : "ORDER_SERVICE_ERROR";
+}
+
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -664,7 +672,6 @@ export default withFunctionLog("order-service", async function (req: Request): P
     }
     return json(placement.status === "accepted" ? 200 : 422, { order: parsedRow, preview });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "ORDER_SERVICE_ERROR";
-    return json(400, { error: message });
+    return json(400, { error: clientErrorCode(error) });
   }
 });

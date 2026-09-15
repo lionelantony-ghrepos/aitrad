@@ -4802,7 +4802,7 @@ var orderDraftSchema = external_exports
   .object({
     symbol: external_exports.string().min(1),
     side: orderSideSchema,
-    qty: external_exports.number().finite(),
+    qty: numericSchema.finite(),
     order_type: orderTypeSchema,
     limit_price: external_exports.number().finite().nullable().optional(),
     stop_price: external_exports.number().finite().nullable().optional(),
@@ -5890,7 +5890,7 @@ var createAlertToolInputSchema = external_exports.object({
 var proposeOrderToolInputSchema = external_exports.object({
   symbol: external_exports.string().trim().min(1).max(16),
   side: orderSideSchema,
-  qty: external_exports.number().positive().finite(),
+  qty: numericSchema.finite(),
   order_type: orderTypeSchema.default("market"),
   limit_price: external_exports.number().finite().nullable().optional(),
   stop_price: external_exports.number().finite().nullable().optional(),
@@ -6211,6 +6211,68 @@ var healthServiceRequestSchema = external_exports.object({
   op: external_exports.literal("snapshot"),
 });
 
+// packages/schemas/src/demo-seed.ts
+var demoUserRecordSchema = external_exports.object({
+  email: external_exports.string().email(),
+  password: external_exports.string().min(1),
+  role: userRoleSchema,
+  display_name: external_exports.string().min(1),
+  experience_level: experienceLevelSchema,
+});
+var demoPositionRecordSchema = external_exports.object({
+  symbol: external_exports.string().min(1),
+  qty: external_exports.number().positive(),
+  avg_cost: external_exports.number().nonnegative(),
+});
+var demoPortfolioRecordSchema = external_exports.object({
+  cash: external_exports.number().nonnegative(),
+  positions: external_exports.array(demoPositionRecordSchema).min(1),
+  watchlists: external_exports.record(
+    external_exports.string().min(1),
+    external_exports.array(external_exports.string().min(1)).min(1),
+  ),
+});
+var demoUsersFixtureSchema = external_exports.object({
+  users: external_exports.array(demoUserRecordSchema).min(1),
+  portfolios: external_exports.record(external_exports.string().email(), demoPortfolioRecordSchema),
+});
+var seedAllStepSchema = external_exports.enum([
+  "instruments",
+  "market_calendar",
+  "bars",
+  "quotes_latest",
+  "rules",
+  "fundamentals",
+  "news",
+  "demo_users",
+  "demo_portfolio",
+  "watchlists",
+  "feed_test_mode",
+  "verify",
+]);
+var SEED_ALL_STEPS = seedAllStepSchema.options;
+var fullSeedCountsSchema = external_exports.object({
+  instruments: external_exports.number().int().nonnegative(),
+  dailyBars: external_exports.number().int().nonnegative(),
+  minuteBars: external_exports.number().int().nonnegative(),
+  quotes: external_exports.number().int().nonnegative(),
+  publishedTables: external_exports.number().int().nonnegative(),
+  newsItems: external_exports.number().int().nonnegative(),
+  newsEmbeddings: external_exports.number().int().nonnegative(),
+  fundamentals: external_exports.number().int().nonnegative(),
+  users: external_exports.number().int().nonnegative(),
+  demoPositions: external_exports.number().int().nonnegative(),
+  watchlists: external_exports.number().int().nonnegative(),
+});
+var releaseRunbookStepSchema = external_exports.enum([
+  "migrate",
+  "seed",
+  "verify_audit_chain",
+  "e2e",
+  "tag",
+]);
+var RELEASE_RUNBOOK_STEPS = releaseRunbookStepSchema.options;
+
 // packages/schemas/src/index.ts
 var publicInsforgeEnvSchema = external_exports.object({
   NEXT_PUBLIC_INSFORGE_URL: external_exports.string().url(),
@@ -6220,6 +6282,32 @@ var seedEnvSchema = external_exports.object({
   INSFORGE_URL: external_exports.string().url(),
   INSFORGE_API_KEY: external_exports.string().min(1),
 });
+
+// packages/mock-data/src/seed-pipeline.ts
+var FULL_SEED_COUNT_SQL = `
+SELECT
+  (SELECT COUNT(*)::int FROM public.instruments) AS instruments,
+  (SELECT COUNT(*)::int FROM public.market_bars WHERE timeframe = '1d') AS daily_bars,
+  (SELECT COUNT(*)::int FROM public.market_bars WHERE timeframe = '1m') AS minute_bars,
+  (SELECT COUNT(*)::int FROM public.quotes_latest) AS quotes,
+  (SELECT COUNT(DISTINCT table_key)::int FROM public.decision_tables WHERE status = 'published') AS published_tables,
+  (SELECT COUNT(*)::int FROM public.news_items) AS news_items,
+  (SELECT COUNT(*)::int FROM public.news_embeddings) AS news_embeddings,
+  (SELECT COUNT(*)::int FROM public.fundamentals) AS fundamentals,
+  (SELECT COUNT(*)::int FROM auth.users WHERE email IN (
+    'demo.trader@meridian.test',
+    'demo.novice@meridian.test',
+    'demo.admin@meridian.test',
+    'demo.compliance@meridian.test'
+  )) AS users,
+  (SELECT COUNT(*)::int FROM public.positions p
+     JOIN public.profiles pr ON pr.user_id = p.user_id
+     JOIN auth.users u ON u.id = p.user_id
+     WHERE u.email = 'demo.trader@meridian.test') AS demo_positions,
+  (SELECT COUNT(*)::int FROM public.watchlists w
+     JOIN auth.users u ON u.id = w.user_id
+     WHERE u.email = 'demo.trader@meridian.test') AS watchlists
+`.trim();
 
 // packages/paper-engine/src/qty-mode.ts
 function notionalFromShares(shares, lastPrice) {
@@ -7757,6 +7845,12 @@ var corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
+function clientErrorCode(error) {
+  if (error && typeof error === "object" && "issues" in error) {
+    return "INVALID_DRAFT";
+  }
+  return error instanceof Error ? error.message : "ORDER_SERVICE_ERROR";
+}
 function json(status, body) {
   return new Response(JSON.stringify(body), {
     status,
@@ -8290,8 +8384,7 @@ var order_service_src_default = withFunctionLog("order-service", async function 
     }
     return json(placement.status === "accepted" ? 200 : 422, { order: parsedRow, preview });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "ORDER_SERVICE_ERROR";
-    return json(400, { error: message });
+    return json(400, { error: clientErrorCode(error) });
   }
 });
 
