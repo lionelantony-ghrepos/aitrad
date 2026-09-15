@@ -33,7 +33,7 @@ export const orderDraftSchema = z
   .object({
     symbol: z.string().min(1),
     side: orderSideSchema,
-    qty: z.number().finite(),
+    qty: numericSchema.finite(),
     order_type: orderTypeSchema,
     limit_price: z.number().finite().nullable().optional(),
     stop_price: z.number().finite().nullable().optional(),

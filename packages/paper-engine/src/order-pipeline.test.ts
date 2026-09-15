@@ -59,6 +59,59 @@ function facts(input: {
   });
 }
 
+describe("DT-VAL-01 COLLECT owns qty before HTTP 400", () => {
+  it("qty 0 and null limit on a limit order both reject via the table", async () => {
+    const evalPorts = ports();
+    const limitDraft: OrderDraft = {
+      ...draft,
+      qty: 0,
+      order_type: "limit",
+      limit_price: null,
+    };
+    const context = buildOrderFacts({
+      draft: limitDraft,
+      lastPrice: 200,
+      buyingPower: 100_000,
+      positionQty: 0,
+      equity: 100_000,
+      experienceLevel: "intermediate",
+      instrumentStatus: "active",
+      tickSize: 0.01,
+      instrumentBetaClass: "medium",
+      ordersToday: 0,
+      accountTier: null,
+      session: "open",
+    });
+    const [validation, risk, hours] = await Promise.all([
+      evaluateDomain("order_validation", context, evalPorts),
+      evaluateDomain("pre_trade_risk", context, evalPorts),
+      evaluateDomain("market_hours", context, evalPorts),
+    ]);
+    const preview = assemblePreview({
+      draft: limitDraft,
+      lastPrice: 200,
+      buyingPower: 100_000,
+      facts: context,
+      validationOutcome: validation.outcome,
+      riskOutcome: risk.outcome,
+      feeOutcome: { commission_usd: 0 },
+      hoursOutcome: hours.outcome,
+    });
+    const decision = decideOrderPlacement({
+      validation: { outcome: validation.outcome, auditId: validation.auditId },
+      risk: { outcome: risk.outcome, auditId: risk.auditId },
+      hours: { outcome: hours.outcome, auditId: hours.auditId },
+    });
+    expect(decision.status).toBe("rejected");
+    expect(decision.blockingTable).toBe("DT-VAL-01");
+    const failed = preview.rules.filter((row) => !row.passed);
+    expect(failed.map((row) => row.reason_code)).toEqual(
+      expect.arrayContaining(["VAL_QTY_POSITIVE", "VAL_LIMIT_REQUIRED"]),
+    );
+    expect(preview.passed).toBe(false);
+  });
+});
+
 describe("TC-014-03 insufficient funds rejected with DT-RISK-01 audit (AC-014-03)", () => {
   it("evaluates pre_trade_risk and stores RISK_BUYING_POWER plus audit id", async () => {
     const evalPorts = ports();

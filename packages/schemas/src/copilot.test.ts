@@ -53,6 +53,7 @@ describe("copilot schemas", () => {
     expect(proposeOrderToolInputSchema.parse({ symbol: "aapl", side: "buy", qty: 10 }).symbol).toBe(
       "aapl",
     );
+    expect(proposeOrderToolInputSchema.parse({ symbol: "aapl", side: "buy", qty: 0 }).qty).toBe(0);
     expect(
       copilotOrchestratorDecideRequestSchema.parse({
         op: "decide",
