@@ -1,4 +1,7 @@
 import type { NextConfig } from "next";
+import { applyInsforgeDotEnvLocal } from "./lib/insforge/apply-local-env";
+
+applyInsforgeDotEnvLocal(process.cwd());
 
 const nextConfig: NextConfig = {
   transpilePackages: [

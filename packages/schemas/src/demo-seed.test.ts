@@ -45,6 +45,7 @@ describe("seed-all contracts @TC-031-02", () => {
           role: "trader",
           display_name: "Dana",
           experience_level: "intermediate",
+          objectives: "paper trade",
         },
       ],
       portfolios: {

@@ -5,28 +5,32 @@
    "password": "Meridian!Demo1",
    "role": "trader",
    "display_name": "Dana Trader",
-   "experience_level": "intermediate"
+   "experience_level": "intermediate",
+   "objectives": "paper-trade US equities in the terminal"
   },
   {
    "email": "demo.novice@meridian.test",
    "password": "Meridian!Demo1",
    "role": "trader",
    "display_name": "Norm Novice",
-   "experience_level": "novice"
+   "experience_level": "novice",
+   "objectives": "learn the workspace with a small paper book"
   },
   {
    "email": "demo.admin@meridian.test",
    "password": "Meridian!Demo1",
    "role": "admin",
    "display_name": "Ada Admin",
-   "experience_level": "advanced"
+   "experience_level": "advanced",
+   "objectives": "operate rules, users, and health admin"
   },
   {
    "email": "demo.compliance@meridian.test",
    "password": "Meridian!Demo1",
    "role": "compliance",
    "display_name": "Cole Compliance",
-   "experience_level": "advanced"
+   "experience_level": "advanced",
+   "objectives": "review audit history without trading"
   }
  ],
  "portfolios": {

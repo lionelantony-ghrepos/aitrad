@@ -1,14 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { authRouteGate } from "@/lib/auth/auth-gate";
 import { isTraderAccessToken, readAccessTokenFromJar } from "@/lib/auth/insforge-cookies";
 import { isAuthStub, PROFILE_READY_COOKIE, STUB_USER_COOKIE } from "@/lib/auth/mode";
 
 export async function middleware(request: NextRequest): Promise<NextResponse> {
   const { pathname } = request.nextUrl;
-  const isProtected =
-    pathname.startsWith("/workspace") ||
-    pathname.startsWith("/onboarding") ||
-    pathname.startsWith("/admin");
-  const isAuthPage = pathname === "/login" || pathname === "/signup";
   const response = NextResponse.next({ request });
 
   let signedIn = false;
@@ -38,23 +34,9 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   }
 
   const ready = request.cookies.get(PROFILE_READY_COOKIE)?.value === "1";
-
-  if (isProtected && !signedIn) {
-    const login = new URL("/login", request.url);
-    login.searchParams.set("next", pathname);
-    return NextResponse.redirect(login);
-  }
-
-  if (isAuthPage && signedIn) {
-    return NextResponse.redirect(new URL(ready ? "/workspace" : "/onboarding", request.url));
-  }
-
-  if ((pathname.startsWith("/workspace") || pathname.startsWith("/admin")) && signedIn && !ready) {
-    return NextResponse.redirect(new URL("/onboarding", request.url));
-  }
-
-  if (pathname.startsWith("/onboarding") && signedIn && ready) {
-    return NextResponse.redirect(new URL("/workspace", request.url));
+  const gate = authRouteGate({ pathname, signedIn, profileReady: ready });
+  if (gate.action === "redirect") {
+    return NextResponse.redirect(new URL(gate.pathname, request.url));
   }
 
   return response;
