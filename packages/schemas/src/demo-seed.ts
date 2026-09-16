@@ -1,6 +1,16 @@
 import { z } from "zod";
 import { experienceLevelSchema } from "./entities";
 import { userRoleSchema } from "./admin-users";
+import { screenerCriteriaSchema } from "./screener";
+import { alertKindSchema } from "./alerts";
+import {
+  compiledMonitorConditionSchema,
+  monitorCadenceSchema,
+  monitorScopeSchema,
+} from "./monitors";
+import { orderSideSchema, orderTypeSchema, tifSchema } from "./orders";
+import { decisionRowSchema } from "./decision-table";
+import { copilotWriteToolNameSchema } from "./copilot";
 
 export const demoUserRecordSchema = z.object({
   email: z.string().email(),
@@ -89,3 +99,79 @@ export type ReleaseRunbookStep = z.infer<typeof releaseRunbookStepSchema>;
 
 export const RELEASE_RUNBOOK_STEPS: readonly ReleaseRunbookStep[] =
   releaseRunbookStepSchema.options;
+
+export const workspaceScreenFixtureSchema = z.object({
+  name: z.string().min(1),
+  criteria: screenerCriteriaSchema,
+});
+
+export const workspaceAlertRuleFixtureSchema = z.object({
+  name: z.string().min(1),
+  symbol: z.string().min(1),
+  kind: alertKindSchema,
+  condition: decisionRowSchema,
+});
+
+export const workspaceDemoFixtureSchema = z
+  .object({
+    screens: z.array(workspaceScreenFixtureSchema).min(1),
+    alert_rules: z.array(workspaceAlertRuleFixtureSchema).min(1),
+    alerts: z.array(
+      z.object({
+        rule_name: z.string().min(1),
+        symbol: z.string().min(1),
+        message: z.string().min(1),
+        read: z.boolean(),
+      }),
+    ),
+    working_orders: z.array(
+      z.object({
+        symbol: z.string().min(1),
+        side: orderSideSchema,
+        qty: z.number().positive(),
+        order_type: orderTypeSchema,
+        limit_price: z.number().positive().optional(),
+        stop_price: z.number().positive().optional(),
+        tif: tifSchema,
+        status: z.enum(["working", "cancelled", "rejected"]),
+      }),
+    ),
+    bracket: z.object({
+      symbol: z.string().min(1),
+      qty: z.number().positive(),
+      entry_limit: z.number().positive(),
+      take_profit: z.number().positive(),
+      stop_loss: z.number().positive(),
+    }),
+    monitors: z.array(
+      z.object({
+        name: z.string().min(1),
+        nl_instruction: z.string().min(1),
+        cadence: monitorCadenceSchema,
+        scope: monitorScopeSchema,
+        compiled_condition: compiledMonitorConditionSchema,
+      }),
+    ),
+    briefs: z.array(
+      z.object({
+        kind: z.enum(["morning", "instrument", "portfolio"]),
+        subject: z.string().min(1),
+        content_md: z.string().min(1),
+      }),
+    ),
+    copilot: z.object({
+      title: z.string().min(1),
+      messages: z
+        .array(z.object({ role: z.enum(["user", "assistant"]), content: z.string().min(1) }))
+        .min(1),
+      action: z.object({
+        tool: copilotWriteToolNameSchema,
+        status: z.enum(["proposed", "approved", "rejected"]),
+        payload: z.record(z.unknown()),
+        policy_outcome: z.unknown(),
+      }),
+    }),
+  })
+  .strict();
+
+export type WorkspaceDemoFixture = z.infer<typeof workspaceDemoFixtureSchema>;

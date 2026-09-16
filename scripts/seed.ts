@@ -46,6 +46,50 @@ function loadInstruments() {
   return parseInstrumentsJson(JSON.parse(readFileSync(file, "utf8")) as unknown);
 }
 
+function backfillHashEmbeddingsIfNeeded(): void {
+  const npxBin = process.platform === "win32" ? "npx.cmd" : "npx";
+  const pendingRaw = execFileSync(
+    npxBin,
+    [
+      "-y",
+      "@insforge/cli",
+      "db",
+      "query",
+      "SELECT COUNT(*)::int AS pending FROM public.news_items n LEFT JOIN public.news_embeddings e ON e.news_id = n.id WHERE e.news_id IS NULL",
+      "--json",
+    ],
+    { encoding: "utf8", cwd: repoRoot },
+  );
+  const pendingParsed = JSON.parse(pendingRaw) as { rows?: Array<{ pending?: number }> };
+  const pending = Number(pendingParsed.rows?.[0]?.pending ?? 0);
+  if (pending === 0) {
+    return;
+  }
+  process.stdout.write(`Inserting ${pending} local hash embeddings (no Model Gateway)…\n`);
+  execFileSync(
+    npxBin,
+    [
+      "-y",
+      "@insforge/cli",
+      "db",
+      "query",
+      `INSERT INTO public.news_embeddings (news_id, embedding, embedding_model)
+       SELECT n.id,
+         (
+           SELECT ARRAY(
+             SELECT (((hashtext(n.id::text || g.i::text) % 1000)::numeric / 1000.0) - 0.5)::float4
+             FROM generate_series(1, 1536) AS g(i)
+           )
+         )::vector,
+         'seed.hash-v1'
+       FROM public.news_items n
+       LEFT JOIN public.news_embeddings e ON e.news_id = n.id
+       WHERE e.news_id IS NULL`,
+    ],
+    { encoding: "utf8", cwd: repoRoot, stdio: "inherit" },
+  );
+}
+
 function querySeedCounts(): SeedCounts {
   const npxBin = process.platform === "win32" ? "npx.cmd" : "npx";
   const raw = execFileSync(
@@ -213,34 +257,43 @@ export async function runUniverseSeed(): Promise<void> {
 
   const functionsOrigin = env.INSFORGE_URL.replace(/\/+$/, "");
   process.stdout.write("Backfilling news_embeddings via embed-worker…\n");
-  for (let i = 0; i < 80; i += 1) {
-    const response = await fetch(`${functionsOrigin}/functions/embed-worker`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${env.INSFORGE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ op: "backfill" }),
-    });
-    const payload = (await response.json().catch(() => null)) as {
-      scanned?: number;
-      embedded?: number;
-      error?: string;
-    } | null;
-    if (response.status === 504) {
-      process.stdout.write("  embed-worker timeout, retrying smaller batch…\n");
-      continue;
+  try {
+    for (let i = 0; i < 80; i += 1) {
+      const response = await fetch(`${functionsOrigin}/functions/embed-worker`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${env.INSFORGE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ op: "backfill" }),
+      });
+      const payload = (await response.json().catch(() => null)) as {
+        scanned?: number;
+        embedded?: number;
+        error?: string;
+      } | null;
+      if (response.status === 504) {
+        process.stdout.write("  embed-worker timeout, retrying smaller batch…\n");
+        continue;
+      }
+      if (!response.ok) {
+        process.stdout.write(
+          `  embed-worker ${response.status}; falling back to local hash vectors\n`,
+        );
+        break;
+      }
+      process.stdout.write(
+        `  embed-worker scanned=${payload?.scanned ?? "?"} embedded=${payload?.embedded ?? "?"}\n`,
+      );
+      if ((payload?.scanned ?? 0) === 0) {
+        break;
+      }
     }
-    if (!response.ok) {
-      throw new Error(`EMBED_WORKER_${response.status}:${payload?.error ?? "failed"}`);
-    }
-    process.stdout.write(
-      `  embed-worker scanned=${payload?.scanned ?? "?"} embedded=${payload?.embedded ?? "?"}\n`,
-    );
-    if ((payload?.scanned ?? 0) === 0) {
-      break;
-    }
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    process.stdout.write(`  embed-worker unreachable (${message}); using local hash vectors\n`);
   }
+  backfillHashEmbeddingsIfNeeded();
 
   process.stdout.write("SQL count check:\n");
   process.stdout.write(`${SEED_COUNT_SQL}\n`);

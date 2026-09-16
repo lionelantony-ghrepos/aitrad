@@ -37,13 +37,6 @@ export default withFunctionLog(
       return json(401, { error: "UNAUTHENTICATED" });
     }
 
-    const seedCashRaw = Deno.env.get("PAPER_ACCOUNT_SEED_CASH");
-    const seedCurrency = Deno.env.get("PAPER_ACCOUNT_SEED_CURRENCY") ?? "USD";
-    const cashBalance = seedCashRaw === undefined ? Number.NaN : Number(seedCashRaw);
-    if (!Number.isFinite(cashBalance)) {
-      return json(500, { error: "POLICY_UNAVAILABLE" });
-    }
-
     const client = createClient({
       baseUrl: Deno.env.get("INSFORGE_INTERNAL_URL") ?? Deno.env.get("INSFORGE_BASE_URL"),
       accessToken: userToken,
@@ -100,6 +93,12 @@ export default withFunctionLog(
 
     let account = existingAccount;
     if (!account) {
+      const seedCashRaw = Deno.env.get("PAPER_ACCOUNT_SEED_CASH");
+      const seedCurrency = Deno.env.get("PAPER_ACCOUNT_SEED_CURRENCY") ?? "USD";
+      const cashBalance = seedCashRaw === undefined ? Number.NaN : Number(seedCashRaw);
+      if (!Number.isFinite(cashBalance)) {
+        return json(500, { error: "POLICY_UNAVAILABLE" });
+      }
       const { error } = await client.database
         .from("accounts")
         .insert([{ user_id: userId, cash_balance: cashBalance, currency: seedCurrency }]);

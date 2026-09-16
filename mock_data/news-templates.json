@@ -43,6 +43,13 @@
     -0.1,
     0.15
    ]
+  },
+  {
+   "headline": "Street tape: {bank} reiterates Overweight on {company} after {segment} checks",
+   "sentiment": [
+    0.2,
+    0.7
+   ]
   }
  ],
  "product": [
@@ -58,6 +65,13 @@
    "sentiment": [
     -0.7,
     -0.2
+   ]
+  },
+  {
+   "headline": "{company} posts record {segment} orders for {product} in {market}",
+   "sentiment": [
+    0.25,
+    0.8
    ]
   }
  ],
@@ -124,7 +138,9 @@
    "Barclays",
    "UBS",
    "Jefferies",
-   "Piper Sandler"
+   "Piper Sandler",
+   "Citi",
+   "Bank of America"
   ],
   "concern": [
    "valuation",

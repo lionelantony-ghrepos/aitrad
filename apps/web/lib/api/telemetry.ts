@@ -81,16 +81,29 @@ export async function ingestTelemetry(input: {
     });
   }
   const fetchImpl = input.fetchImpl ?? fetch;
-  const response = await fetchImpl(telemetryServiceUrl(input.baseUrl ?? ""), {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${input.accessToken}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(parsed),
-  });
-  const body: unknown = await response.json();
-  return { status: response.status, body };
+  try {
+    const response = await fetchImpl(telemetryServiceUrl(input.baseUrl ?? ""), {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${input.accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(parsed),
+      signal: AbortSignal.timeout(8000),
+    });
+    const text = await response.text();
+    let body: unknown = {};
+    if (text.length > 0) {
+      try {
+        body = JSON.parse(text) as unknown;
+      } catch {
+        body = { error: "TELEMETRY_UNAVAILABLE" };
+      }
+    }
+    return { status: response.status, body };
+  } catch {
+    return { status: 503, body: { error: "TELEMETRY_UNAVAILABLE" } };
+  }
 }
 
 export async function fetchHealthSnapshot(input: {
