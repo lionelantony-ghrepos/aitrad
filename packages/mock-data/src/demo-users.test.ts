@@ -37,6 +37,7 @@ describe("demo users fixture @TC-031-02", () => {
             role: "trader",
             display_name: "A",
             experience_level: "novice",
+            objectives: "learn",
           },
           {
             email: "dup@meridian.test",

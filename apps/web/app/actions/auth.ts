@@ -3,6 +3,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { isProfileWizardComplete, profileWizardPatch } from "@meridian/rules-engine";
+import { postAuthDestination } from "@/lib/auth/auth-gate";
 import { authorizeUser } from "@/lib/auth/authorize-user";
 import { credentialsSchema, profileWizardSchema } from "@meridian/schemas";
 import { appendAuditLog } from "@/lib/api/audit-service";
@@ -32,10 +33,7 @@ async function resolvePostAuthPath(
   nextHint: string,
 ): Promise<string> {
   const dest = await afterAuthenticated(userId, accessToken);
-  if (dest === "/onboarding") {
-    return dest;
-  }
-  return safeInternalPath(nextHint, dest);
+  return postAuthDestination(dest, safeInternalPath(nextHint, dest));
 }
 
 export async function signUpAction(formData: FormData): Promise<AuthActionResult> {

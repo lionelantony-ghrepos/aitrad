@@ -121,6 +121,7 @@ async function upsertProfile(
     display_name: user.display_name,
     persona: user.role,
     experience_level: user.experience_level,
+    ...(user.objectives ? { objectives: user.objectives } : {}),
   };
   if (Array.isArray(existing) && existing.length > 0) {
     const update = await db.from("profiles").update(payload).eq("user_id", userId);

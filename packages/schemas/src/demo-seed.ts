@@ -18,6 +18,7 @@ export const demoUserRecordSchema = z.object({
   role: userRoleSchema,
   display_name: z.string().min(1),
   experience_level: experienceLevelSchema,
+  objectives: z.string().min(1).optional(),
 });
 
 export type DemoUserRecord = z.infer<typeof demoUserRecordSchema>;
