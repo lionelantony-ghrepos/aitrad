@@ -1,0 +1,50 @@
+{
+  "description": "Secret-free local Docker InsForge defaults for this repo. Runtime keys and compose checkout stay gitignored.",
+  "cli": "npx -y @insforge/cli",
+  "startArgs": ["local", "start"],
+  "statusArgs": ["local", "status"],
+  "storageDefault": "local",
+  "composeSource": "CLI fetches deploy/setup.sh into gitignored .insforge/checkout/ on first start",
+  "defaultHost": "127.0.0.1",
+  "defaultPorts": {
+    "app": 7130,
+    "auth": 7131,
+    "deno": 7133,
+    "postgres": 5432,
+    "postgrest": 5430
+  },
+  "portBlockShiftOnCollision": 10,
+  "appUrl": "http://localhost:7130",
+  "clientEnvFile": ".env.local",
+  "clientEnvVars": ["NEXT_PUBLIC_INSFORGE_URL", "NEXT_PUBLIC_INSFORGE_ANON_KEY"],
+  "seedEnvFile": ".env",
+  "seedEnvVars": ["INSFORGE_URL", "INSFORGE_API_KEY", "MERIDIAN_EMBEDDING_MODE"],
+  "localEmbeddingMode": "hash",
+  "apiKeySource": "npx -y @insforge/cli local start --json  OR  local status --show-keys  OR  secrets get API_KEY",
+  "anonKeySource": ".env.local after local start, or secrets get ANON_KEY",
+  "neverCommit": [
+    ".insforge/",
+    ".insforge/checkout/.env",
+    ".env",
+    ".env.local",
+    "apps/web/.env.local"
+  ],
+  "seedSources": {
+    "instruments": "mock_data/instruments.json",
+    "fundamentals": "mock_data/fundamentals.json",
+    "newsTemplates": "mock_data/news-templates.json",
+    "demoUsers": "mock_data/demo-users.json",
+    "workspaceFixtures": "mock_data/workspace-fixtures.json",
+    "generatedNotStored": [
+      "daily and 1m bars (GBM from instruments.json, seed 42)",
+      "500 news items (from news-templates.json)",
+      "news embeddings (hash mode locally)"
+    ]
+  },
+  "reseed": {
+    "start": "npx -y @insforge/cli local start",
+    "migrate": "npx -y @insforge/cli db migrations up --all",
+    "seed": "pnpm seed:all",
+    "idempotent": true
+  }
+}

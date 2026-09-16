@@ -1,0 +1,93 @@
+# InsForge (this repo)
+
+Schema lives in [`migrations/`](migrations/). Bundled edge functions live in [`functions/`](functions/). Local Docker is started by the InsForge CLI; we do **not** vendor compose or secrets.
+
+Machine-readable defaults: [`local.config.json`](local.config.json).
+
+## Local Docker
+
+Requires Docker Engine with Compose **2.24.4+** (~1.5 GB). First start needs network (fetches `deploy/setup.sh`, pulls images). Later starts of the same directory reuse volumes.
+
+From the **repo root**:
+
+```bash
+npx -y @insforge/cli local start
+npx -y @insforge/cli local status
+```
+
+Default host ports (first instance on the machine):
+
+| Service   | Port |
+| --------- | ---- |
+| App / API | 7130 |
+| Auth      | 7131 |
+| Deno      | 7133 |
+| Postgres  | 5432 |
+| PostgREST | 5430 |
+
+If a port is taken, the CLI shifts the **whole block by 10** and prints the new app URL. Overrides: `--port-app`, `--port-auth`, `--port-deno`, `--port-postgres`, `--port-postgrest`. Storage default is filesystem (`--storage local`; `minio` / `rustfs` optional).
+
+`local start` links this directory, so `db`, `functions`, `secrets`, … target Docker with **no cloud login**. Platform commands (`whoami`, `list`, `create`) still talk to InsForge Cloud.
+
+### What is generated locally (gitignored)
+
+| Path                      | Role                                                                                       |
+| ------------------------- | ------------------------------------------------------------------------------------------ |
+| `.insforge/checkout/`     | Compose + images from upstream `setup.sh`                                                  |
+| `.insforge/checkout/.env` | Instance secrets (Postgres password, JWT, admin). Restore this file if it goes missing     |
+| `.insforge/project.json`  | Local link metadata (includes API key)                                                     |
+| `.env.local`              | App URL + **anon** key only (browser / Next)                                               |
+| `.env`                    | Server seed: `INSFORGE_URL` + `INSFORGE_API_KEY` (copy from status; never `NEXT_PUBLIC_*`) |
+
+Do not commit those paths. Templates: repo-root [`.env.example`](../.env.example), [`apps/web/.env.example`](../apps/web/.env.example).
+
+If `.insforge/checkout/.env` is deleted while volumes still exist, `local start` refuses (Postgres password is fixed at cluster create). Restore the file or `npx -y @insforge/cli local stop --delete-data` (destroys the local DB).
+
+### Fill seed env (no keys in git)
+
+After start:
+
+```bash
+npx -y @insforge/cli secrets get ANON_KEY
+npx -y @insforge/cli secrets get API_KEY
+```
+
+Write a gitignored repo-root `.env`:
+
+```
+INSFORGE_URL=http://localhost:7130
+INSFORGE_API_KEY=<API_KEY>
+MERIDIAN_EMBEDDING_MODE=hash
+```
+
+Use the printed app URL if the port shifted. `local start --json` / `local status --show-keys` also return live keys — do not paste that payload into the repo or chat logs.
+
+Copy `.env.local` into `apps/web/.env.local` if the Next app is not reading the repo-root file (same `NEXT_PUBLIC_INSFORGE_URL` / `NEXT_PUBLIC_INSFORGE_ANON_KEY` names as `apps/web/.env.example`).
+
+```bash
+npx -y @insforge/cli local stop            # keeps volumes
+npx -y @insforge/cli local stop --delete-data   # wipe DB + storage
+```
+
+## Schema, functions, re-seed
+
+Checked-in seed **inputs** (re-run anytime):
+
+| File                                | Used by                                    |
+| ----------------------------------- | ------------------------------------------ |
+| `mock_data/instruments.json`        | Universe + GBM bars                        |
+| `mock_data/fundamentals.json`       | DES / fundamentals                         |
+| `mock_data/news-templates.json`     | 500 backfill items + live ticker           |
+| `mock_data/demo-users.json`         | Demo auth users, trader book, watchlists   |
+| `mock_data/workspace-fixtures.json` | Screens, alerts, blotter, copilot fixtures |
+
+OHLCV history, quotes, generated news, and embeddings are **not** stored as JSON; `pnpm seed:all` regenerates them (deterministic seed 42). Local embeddings use `MERIDIAN_EMBEDDING_MODE=hash` so a Model Gateway key is not required.
+
+```bash
+npx -y @insforge/cli db migrations up --all
+pnpm seed:all
+```
+
+`pnpm seed:all` is idempotent (upserts). It expects `INSFORGE_URL` + `INSFORGE_API_KEY` in `.env` and a linked local (or cloud) project. Deploy bundled functions from [`functions/README.md`](functions/README.md) after a wipe or a new clone. Full release order: [RELEASE.md](../RELEASE.md).
+
+Expected counts: [docs/06](../docs/06-Mock-Data-and-Seeding.md) §5 (150 instruments, published decision tables, 500 news + embeddings, four demo users, six demo positions, three watchlists).

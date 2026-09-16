@@ -66,6 +66,12 @@ PBI-023 embeds **news** (and later filings) for the copilot. It must **not** ing
 
 Add further ADRs from [`_template-adr.md`](_template-adr.md) only for durable choices not already in doc 02.
 
+## Ops (local Docker)
+
+- [insforge/README.md](../../insforge/README.md) — ports, gitignored runtime vs committed config, migrate + `pnpm seed:all`
+- [insforge/local.config.json](../../insforge/local.config.json) — secret-free defaults
+- Seed inputs: [`mock_data/`](../../mock_data/) (instruments, fundamentals, news templates, demo users, workspace fixtures)
+
 ## Generated reference
 
 Produced by `pnpm docs:generate` (committed snapshots). CI fails if generation is stale.
