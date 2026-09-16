@@ -46,12 +46,19 @@ export function WorkspaceShell({
   }, [e2eFeed, setConnection, noteTick]);
 
   useEffect(() => {
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), 4000);
     void fetch("/telemetry", {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ op: "realtime", state: connection }),
-    });
+      signal: controller.signal,
+    }).catch(() => undefined);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
   }, [connection]);
 
   const openPalette = useCallback(() => {
