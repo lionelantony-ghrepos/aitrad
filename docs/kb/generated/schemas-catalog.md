@@ -116,6 +116,9 @@ Exported `*Schema` bindings discovered by static scan. Full OpenAPI from Zod is 
 - demo-seed.ts: fullSeedCountsSchema
 - demo-seed.ts: releaseRunbookStepSchema
 - demo-seed.ts: seedAllStepSchema
+- demo-seed.ts: workspaceAlertRuleFixtureSchema
+- demo-seed.ts: workspaceDemoFixtureSchema
+- demo-seed.ts: workspaceScreenFixtureSchema
 - entities.ts: accountInsertSchema
 - entities.ts: accountPatchSchema
 - entities.ts: accountSchema
