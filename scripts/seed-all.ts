@@ -6,6 +6,7 @@ import { FULL_SEED_COUNT_SQL, evaluateFullSeedCounts } from "@meridian/mock-data
 import { runUniverseSeed } from "./seed.ts";
 import { runRulesSeed } from "./seed-rules.ts";
 import { runDemoUserSeed } from "./seed-demo-users.ts";
+import { runWorkspaceSeed } from "./seed-workspace.ts";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -48,6 +49,8 @@ export async function runSeedAll(): Promise<void> {
   await runRulesSeed();
   process.stdout.write("seed-all: demo users, portfolio, watchlists, feed test mode\n");
   await runDemoUserSeed();
+  process.stdout.write("seed-all: workspace fixtures (screens, alerts, blotter, copilot)\n");
+  await runWorkspaceSeed();
   process.stdout.write("seed-all: verification report\n");
   const counts = queryFullSeedCounts();
   const report = evaluateFullSeedCounts(counts);

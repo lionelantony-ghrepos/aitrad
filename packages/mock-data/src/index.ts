@@ -90,6 +90,7 @@ export {
   type NewsTickerPlanInput,
 } from "./news";
 export { parseDemoUsersJson, traderPortfolio } from "./demo-users";
+export { parseWorkspaceFixturesJson, type WorkspaceDemoFixture } from "./workspace-fixtures";
 export {
   FULL_SEED_COUNT_SQL,
   SEED_ALL_STEPS,

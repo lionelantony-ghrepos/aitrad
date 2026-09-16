@@ -1,0 +1,214 @@
+{
+  "screens": [
+    {
+      "name": "Mega Cap Mosaic",
+      "criteria": {
+        "combinator": "and",
+        "groups": [
+          {
+            "combinator": "and",
+            "conditions": [
+              { "field": "market_cap_band", "op": "eq", "value": "mega" }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "Income & Yield",
+      "criteria": {
+        "combinator": "and",
+        "groups": [
+          {
+            "combinator": "and",
+            "conditions": [
+              { "field": "dividend_yield", "op": "gte", "value": 0.02 },
+              { "field": "pe", "op": "between", "value": [8, 28] }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "Oversold RSI",
+      "criteria": {
+        "combinator": "and",
+        "groups": [
+          {
+            "combinator": "and",
+            "conditions": [
+              { "field": "rsi_14", "op": "lte", "value": 35 },
+              { "field": "volume", "op": "gt", "value": 1000000 }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "Tech Tape",
+      "criteria": {
+        "combinator": "and",
+        "groups": [
+          {
+            "combinator": "and",
+            "conditions": [{ "field": "sector", "op": "eq", "value": "Technology" }]
+          }
+        ]
+      }
+    }
+  ],
+  "alert_rules": [
+    {
+      "name": "AAPL above 200",
+      "symbol": "AAPL",
+      "kind": "price_cross_above",
+      "condition": {
+        "id": "alert",
+        "priority": 1,
+        "conditions": [{ "input": "last", "op": "gt", "value": 200 }],
+        "outputs": { "decision": "fire" }
+      }
+    },
+    {
+      "name": "NVDA day drop",
+      "symbol": "NVDA",
+      "kind": "pct_chg",
+      "condition": {
+        "id": "alert",
+        "priority": 1,
+        "conditions": [{ "input": "pct_chg", "op": "lte", "value": -3 }],
+        "outputs": { "decision": "fire" }
+      }
+    },
+    {
+      "name": "SPY volume spike",
+      "symbol": "SPY",
+      "kind": "volume",
+      "condition": {
+        "id": "alert",
+        "priority": 1,
+        "conditions": [{ "input": "volume", "op": "gt", "value": 80000000 }],
+        "outputs": { "decision": "fire" }
+      }
+    }
+  ],
+  "alerts": [
+    {
+      "rule_name": "NVDA day drop",
+      "symbol": "NVDA",
+      "message": "NVDA % chg crossed the seeded day-drop alert.",
+      "read": false
+    },
+    {
+      "rule_name": "AAPL above 200",
+      "symbol": "AAPL",
+      "message": "AAPL last crossed above 200 (seeded blotter/news tape check).",
+      "read": true
+    }
+  ],
+  "working_orders": [
+    {
+      "symbol": "AMD",
+      "side": "buy",
+      "qty": 40,
+      "order_type": "limit",
+      "limit_price": 148.5,
+      "tif": "GTC",
+      "status": "working"
+    },
+    {
+      "symbol": "KO",
+      "side": "sell",
+      "qty": 50,
+      "order_type": "stop",
+      "stop_price": 68,
+      "tif": "DAY",
+      "status": "working"
+    },
+    {
+      "symbol": "MSFT",
+      "side": "buy",
+      "qty": 10,
+      "order_type": "limit",
+      "limit_price": 420,
+      "tif": "DAY",
+      "status": "cancelled"
+    }
+  ],
+  "bracket": {
+    "symbol": "AVGO",
+    "qty": 8,
+    "entry_limit": 165.4,
+    "take_profit": 178.2,
+    "stop_loss": 158.1
+  },
+  "monitors": [
+    {
+      "name": "Portfolio day shock",
+      "nl_instruction": "Tell me if any position drops 5% in a day.",
+      "cadence": "5m",
+      "scope": { "kind": "portfolio" },
+      "compiled_condition": {
+        "id": "monitor",
+        "priority": 1,
+        "conditions": [{ "input": "position_day_pct", "op": "lte", "value": -5 }],
+        "outputs": { "decision": "fire" }
+      }
+    },
+    {
+      "name": "AAPL tape watch",
+      "nl_instruction": "Watch AAPL and fire if last trades below 180.",
+      "cadence": "5m",
+      "scope": { "kind": "symbols", "symbols": ["AAPL"] },
+      "compiled_condition": {
+        "id": "monitor",
+        "priority": 1,
+        "conditions": [{ "input": "last", "op": "lt", "value": 180 }],
+        "outputs": { "decision": "fire" }
+      }
+    }
+  ],
+  "briefs": [
+    {
+      "kind": "morning",
+      "subject": "US cash session",
+      "content_md": "## Morning brief\nSeeded desk note in the style of a TWS Mosaic / TOS start-of-day tape: mega-cap leadership, rates, and the demo book.\n\n- Watchlist **Core Tech** vs overnight futures.\n- Income sleeve (KO/PG/JNJ) for dividend tape.\n- Paper book: AAPL, NVDA, MSFT, JPM, XOM, SPY.\n\nNot advice. Prices must come from quotes tools in live copilot turns."
+    },
+    {
+      "kind": "portfolio",
+      "subject": "PORT",
+      "content_md": "## Portfolio health\nSeeded snapshot of Dana Trader's paper book: six names, cash residual, sector mix across tech/financials/energy/beta.\n\nUse DES/PORT generate in-app for a live brief. This row exists so the Briefs tab is not empty after a fresh Docker wipe."
+    },
+    {
+      "kind": "instrument",
+      "subject": "AAPL",
+      "content_md": "## AAPL DES note\nSeeded research card: mega-cap US equity, consumer electronics + services mix, watch earnings and 52-week range on the DES panel.\n\nCite news ids from the News panel; do not invent prints."
+    }
+  ],
+  "copilot": {
+    "title": "Open tape — Core Tech",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Summarize overnight news on AAPL and NVDA and whether the paper book is concentrated."
+      },
+      {
+        "role": "assistant",
+        "content": "Seeded session. Use get_quote / search_news / get_portfolio in a live turn — this row is transcript furniture so Copilot is not empty. Orders stay proposed until you approve."
+      }
+    ],
+    "action": {
+      "tool": "propose_order",
+      "status": "proposed",
+      "payload": {
+        "symbol": "AMD",
+        "side": "buy",
+        "qty": 20,
+        "order_type": "limit",
+        "limit_price": 150,
+        "tif": "DAY"
+      },
+      "policy_outcome": { "decision": "propose", "table": "DT-AI-01" }
+    }
+  }
+}
