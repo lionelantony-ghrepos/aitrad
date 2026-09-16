@@ -23,7 +23,14 @@ Purpose: everything a coding agent needs to build Meridian with zero manual codi
    npx -y @insforge/cli local stop            # keeps volumes
    ```
 
-   Do not commit `.insforge/` or `.env.local`. Server-side seed needs `INSFORGE_URL` + `INSFORGE_API_KEY` in a gitignored `.env` (not `NEXT_PUBLIC_*`). Read the API key from `local start --json` / `local status --show-keys` into that file; do not paste keys into the repo or chat logs.
+   Do not commit `.insforge/` or `.env.local`. Server-side seed needs `INSFORGE_URL` + `INSFORGE_API_KEY` in a gitignored `.env` (not `NEXT_PUBLIC_*`). Read the API key from `local start --json` / `local status --show-keys` / `secrets get API_KEY` into that file; do not paste keys into the repo or chat logs. Set `MERIDIAN_EMBEDDING_MODE=hash` for local seed without a Model Gateway. Port table, env mapping, and re-seed: [insforge/README.md](../insforge/README.md) and [insforge/local.config.json](../insforge/local.config.json).
+
+   Re-seed (idempotent; inputs are `mock_data/*.json`):
+
+   ```bash
+   npx -y @insforge/cli db migrations up --all
+   pnpm seed:all
+   ```
 
    **B. Hosted InsForge Cloud**  
    Sign up at insforge.dev, create project `meridian-dev`; in Cursor, add the **InsForge MCP server** (Settings → MCP; paste project key). Set `apps/web/.env.local` from `apps/web/.env.example` to the `*.insforge.app` URL. Verify Cursor can list InsForge tools.

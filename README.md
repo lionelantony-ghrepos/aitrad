@@ -12,11 +12,12 @@ This GitHub repo is named `aitrad`; the product name in all specs is **Meridian*
 
 **Monorepo and PBIs through the merged 001–012 tree are in this repo.** Continue PBI-013 → PBI-031 in order from [docs/03](docs/03-PRD-PBIs-and-Cursor-Prompts.md). Local InsForge is Docker on Linux/WSL2; see Prerequisites.
 
-| Artifact                                 | Location                                                                               |
-| ---------------------------------------- | -------------------------------------------------------------------------------------- |
-| Product, architecture, PRD, tests, rules | [`docs/`](docs/00-README.md)                                                           |
-| Agent / Cursor profile                   | [`AGENTS.md`](AGENTS.md), [`.cursor/rules/aitrad.mdc`](.cursor/rules/aitrad.mdc)       |
-| Seed JSON                                | [`mock_data/`](mock_data/) (150 instruments, fundamentals, news templates, demo users) |
+| Artifact                                 | Location                                                                                               |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Product, architecture, PRD, tests, rules | [`docs/`](docs/00-README.md)                                                                           |
+| Agent / Cursor profile                   | [`AGENTS.md`](AGENTS.md), [`.cursor/rules/aitrad.mdc`](.cursor/rules/aitrad.mdc)                       |
+| Seed JSON                                | [`mock_data/`](mock_data/) (instruments, fundamentals, news templates, demo users, workspace fixtures) |
+| Local InsForge Docker                    | [`insforge/README.md`](insforge/README.md), [`insforge/local.config.json`](insforge/local.config.json) |
 
 ## What v1 includes
 
@@ -92,15 +93,15 @@ Policy is **not** encoded as magic numbers in UI or services. If a limit, fee, o
 
 1. **Linux or WSL2** with Node.js 20+ and **pnpm**; Cursor with Agent mode. Native Windows (outside WSL) is not a supported local backend path.
 2. **InsForge backend** — either:
-   - **Local Docker** (this workspace): Docker Engine + Compose 2.24.4+, then from the repo root `npx -y @insforge/cli local start`. That provisions Postgres / PostgREST / InsForge / Deno on loopback (default app port `7130`) and writes `.env.local`. Details in [docs/07](docs/07-Agent-Build-Guide.md) §1.
+   - **Local Docker** (this workspace): Docker Engine + Compose 2.24.4+, then from the repo root `npx -y @insforge/cli local start`. That provisions Postgres / PostgREST / InsForge / Deno on loopback (default app port `7130`) and writes `.env.local`. Ports, env names, and re-seed: [insforge/README.md](insforge/README.md). Session protocol: [docs/07](docs/07-Agent-Build-Guide.md) §1.
    - **Hosted:** an InsForge Cloud project plus the **InsForge MCP** in Cursor.
 3. One PBI per chat session; prepend the [PRD preamble](docs/03-PRD-PBIs-and-Cursor-Prompts.md); commit `feat(PBI-00X): …`.
 
-`.insforge/` (including the Docker checkout and keys) and `.env.local` are gitignored. Never commit them. Copy names only from `.env.example` / `apps/web/.env.example`.
+`.insforge/` (Docker checkout and keys) and `.env.local` / `.env` are gitignored. Never commit them. Copy names only from `.env.example` / `apps/web/.env.example`. Committed defaults: `insforge/local.config.json`.
 
 ## Demo users (after seed)
 
-Defined in `mock_data/demo-users.json` and doc 06. After `scripts/seed-all.ts` exists and has been run: trader / admin / compliance accounts use password `Meridian!Demo1`. **Paper accounts only.**
+Defined in `mock_data/demo-users.json` and doc 06. After `pnpm seed:all`: trader / novice / admin / compliance accounts use password `Meridian!Demo1`. **Paper accounts only.** Re-seed from the checked-in JSON; bars and news rows are generated, not stored.
 
 ## Compliance posture
 

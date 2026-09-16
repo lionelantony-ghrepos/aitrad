@@ -46,7 +46,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 
-# InsForge local Docker (checkout, keys, local.json) & AI agent skills
+# InsForge local Docker runtime only (checkout, keys, project.json).
+# Committed config: insforge/local.config.json and insforge/README.md.
 .insforge
 .agent
 .agents
