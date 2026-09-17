@@ -12,8 +12,6 @@ test.describe("P0 command palette @P0", () => {
   });
 
   test("DES NVDA, NEWS TSLA, AI hello route correctly @TC-009-02 @P0", async ({ page }) => {
-    await page.goto("/workspace");
-
     await runPalette(page, "DES NVDA");
     await expect(page.getByTestId("panel-des")).toBeVisible();
     await expect(page.getByTestId("des-symbol")).toHaveText("NVDA");

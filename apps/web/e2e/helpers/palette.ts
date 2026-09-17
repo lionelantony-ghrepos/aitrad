@@ -60,8 +60,8 @@ export async function openCommandPalette(page: Page): Promise<void> {
       }
     }
   }
-  await expect(palette).toBeVisible();
-  await expect(input).toBeVisible();
+  await expect(palette).toBeVisible({ timeout: 5_000 });
+  await expect(input).toBeVisible({ timeout: 5_000 });
 }
 
 export async function runPalette(page: Page, command: string): Promise<void> {
