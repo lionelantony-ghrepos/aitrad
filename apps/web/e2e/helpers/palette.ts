@@ -15,36 +15,53 @@ export async function waitForWorkspaceReady(page: Page, timeout = 20_000): Promi
  * a browser shortcut and elementHandle.press can hang until the test timeout.
  */
 export async function dispatchPaletteHotkey(page: Page): Promise<void> {
-  await page.evaluate(() => {
-    window.dispatchEvent(
-      new KeyboardEvent("keydown", {
-        key: "k",
-        code: "KeyK",
-        ctrlKey: true,
-        bubbles: true,
-        cancelable: true,
-      }),
-    );
-  });
+  // waitForFunction has an explicit timeout; page.evaluate can hang until the
+  // test timeout if the main thread is busy after dockview layout.
+  await page.waitForFunction(
+    () => {
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "k",
+          code: "KeyK",
+          ctrlKey: true,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+      return true;
+    },
+    undefined,
+    { timeout: 3_000 },
+  );
 }
 
 export async function openCommandPalette(page: Page): Promise<void> {
   await waitForWorkspaceReady(page);
   const palette = page.getByTestId("command-palette");
-  if (!(await palette.isVisible())) {
+  const input = page.getByTestId("palette-input");
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    if (await palette.isVisible().catch(() => false)) {
+      await expect(input).toBeVisible();
+      return;
+    }
     // Native Control+K is a Chromium shortcut. A normal click can hang after
     // "performing click action" on the command bar; force + hotkey fallback.
     try {
-      await page.getByTestId("open-palette").click({ force: true, timeout: 5_000 });
+      await page.getByTestId("open-palette").click({
+        force: true,
+        timeout: 2_000,
+        noWaitAfter: true,
+      });
     } catch {
-      await dispatchPaletteHotkey(page);
+      try {
+        await dispatchPaletteHotkey(page);
+      } catch {
+        /* main thread busy; retry */
+      }
     }
   }
-  if (!(await palette.isVisible().catch(() => false))) {
-    await dispatchPaletteHotkey(page);
-  }
   await expect(palette).toBeVisible();
-  await expect(page.getByTestId("palette-input")).toBeVisible();
+  await expect(input).toBeVisible();
 }
 
 export async function runPalette(page: Page, command: string): Promise<void> {

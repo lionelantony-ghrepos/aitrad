@@ -15,7 +15,6 @@ test.describe("P0 news, DES, alerts, screener @P0", () => {
   });
 
   test("NEWS TSLA shows only TSLA-tagged items @TC-019-01 @P0", async ({ page }) => {
-    await page.goto("/workspace");
     await runPalette(page, "NEWS TSLA");
     await expect(page.getByTestId("panel-news")).toBeVisible();
     await expect(page.getByTestId("news-symbol")).toHaveText("TSLA");
@@ -35,7 +34,6 @@ test.describe("P0 news, DES, alerts, screener @P0", () => {
   });
 
   test("DES NVDA renders stats @TC-020-01 @P0", async ({ page }) => {
-    await page.goto("/workspace");
     await runPalette(page, "DES NVDA");
     await expect(page.getByTestId("panel-des")).toBeVisible();
     await expect(page.getByTestId("des-symbol")).toHaveText("NVDA");
@@ -51,7 +49,6 @@ test.describe("P0 news, DES, alerts, screener @P0", () => {
   test("semantic search ranks the semis earnings fixture first @TC-023-02 @P0", async ({
     page,
   }) => {
-    await page.goto("/workspace");
     await runPalette(page, "NEWS TSLA");
     await expect(page.getByTestId("panel-news")).toBeVisible();
     await page.getByTestId("news-all-markets").check();
