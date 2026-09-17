@@ -67,6 +67,15 @@ test.describe("P0 copilot Q&A, order approval, monitor @P0", () => {
     });
   });
 
+  test("approve short sale is rejected by DT-RISK-01 @TC-026-02 @P0", async ({ page }) => {
+    await askCopilot(page, "sell 10 AAPL at market");
+    const card = page.getByTestId("copilot-approval-card");
+    await expect(card).toBeVisible({ timeout: 15_000 });
+    await page.getByTestId("copilot-approve").click();
+    await expect(card).toHaveAttribute("data-status", "executed");
+    await expect(page.getByTestId("copilot-approval-status")).toContainText("RISK_NO_SHORTING");
+  });
+
   test("portfolio-drop monitor fires once @TC-027-02 @P0", async ({ page }) => {
     await askCopilot(page, "tell me if any position drops 5% in a day");
     await expect(page.getByTestId("copilot-approval-card")).toBeVisible({ timeout: 15_000 });

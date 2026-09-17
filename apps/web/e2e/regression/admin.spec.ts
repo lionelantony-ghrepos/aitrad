@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { signUpThroughWizard } from "../helpers/onboard";
 import { setStubPersona } from "../helpers/persona";
 
-test.describe("P0 rules admin publish + audit chain @P0", () => {
+test.describe("P0 rules admin, users admin, audit chain @P0", () => {
   test.beforeEach(async ({ request }) => {
     await request.post("/api/e2e/reset");
   });
@@ -33,6 +33,22 @@ test.describe("P0 rules admin publish + audit chain @P0", () => {
     await page.goto("/admin/rules");
     await expect(page.getByTestId("rules-denied")).toBeVisible();
     await expect(page.getByTestId("rules-admin")).toHaveCount(0);
+  });
+
+  test("admin can list users and assign roles @TC-024-01 @P0", async ({ page }) => {
+    await signUpThroughWizard(page, `p0-users-admin-${Date.now()}@example.com`);
+    await setStubPersona(page, "admin");
+    await page.goto("/admin/users");
+    await expect(page.getByTestId("user-row").first()).toBeVisible();
+    await page.getByRole("button", { name: "compliance" }).first().click();
+    await expect(page.getByTestId("user-row").first()).toContainText("compliance");
+  });
+
+  test("trader is denied users admin @TC-024-01 @P0", async ({ page }) => {
+    await signUpThroughWizard(page, `p0-users-trader-${Date.now()}@example.com`);
+    await setStubPersona(page, "trader");
+    await page.goto("/admin/users");
+    await expect(page.getByTestId("users-denied")).toBeVisible();
   });
 
   test("admin verify_audit_chain reports ok @TC-029-03 @TC-031-01 @P0", async ({ page }) => {
