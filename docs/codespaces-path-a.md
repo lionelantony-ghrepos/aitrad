@@ -103,6 +103,8 @@ pnpm install
 pnpm seed:all
 ```
 
+If migrate was stuck mid-Path A on `0025_audit-chain.sql` (`Changing SQL session configuration is not allowed.`), pull this tip and re-run `npx -y @insforge/cli db migrations up --all`. Failed files are not recorded; the pending 0025 retry plus forward `0028_audit-insforge-compat.sql` (already-applied 0025 hosts) drop the blocked session-config statements.
+
 `pnpm seed:all` is idempotent. If `mock_data/market-snapshot/` is present, it applies that offline snapshot after the GBM universe. Expect demo users from `mock_data/demo-users.json` (docs/06).
 
 If workspace panels error on edge functions after a fresh clone, deploy from [insforge/functions/README.md](../insforge/functions/README.md) (not required just to reach login).
@@ -137,3 +139,4 @@ Idle timeout still consumes quota until stop. Do not leave an 8-core space runni
 - **#121:** snapshot overlay is optional for this smoke; merge/cherry-pick if you need frozen Yahoo-shaped quotes.
 - **No secrets in git.** `.insforge/`, `.env`, `.env.local` are gitignored.
 - Hosted InsForge Cloud is Path B (docs/07), not this checklist.
+- **Stuck migrate:** `0025` used function `SET search_path` / session-config helpers the InsForge runner rejects. After pulling this tip, re-run `db migrations up --all` (do not open a new space unless volumes are already wedged).

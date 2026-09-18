@@ -1,95 +1,8 @@
--- 0025 · audit_log hash chain, verify RPC, retention purge (PBI-029)
+-- 0028 · InsForge-compat audit RPCs (Path A migrate PE)
+-- Forward replacement for hosts that already applied 0025 with function
+-- session options / session-config helpers the InsForge runner rejects.
+-- Fresh Path A uses the edited 0025; this file is a no-op-shaped CREATE OR REPLACE.
 -- Idempotent. Do not wrap in BEGIN/COMMIT.
-
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
-
-ALTER TABLE public.audit_log
-  ADD COLUMN IF NOT EXISTS prev_hash TEXT;
-
-ALTER TABLE public.audit_log
-  ADD COLUMN IF NOT EXISTS row_hash TEXT;
-
-CREATE OR REPLACE FUNCTION public.audit_log_canonical(r public.audit_log)
-RETURNS text
-LANGUAGE sql
-IMMUTABLE
-AS $$
-  SELECT jsonb_build_object(
-    'action', r.action,
-    'created_at', r.created_at,
-    'entity_id', r.entity_id,
-    'entity_type', r.entity_type,
-    'id', r.id,
-    'payload', COALESCE(r.payload, '{}'::jsonb),
-    'user_id', r.user_id
-  )::text;
-$$;
-
-CREATE OR REPLACE FUNCTION public.audit_log_compute_hash(canonical text, prev_hash text)
-RETURNS text
-LANGUAGE sql
-IMMUTABLE
-AS $$
-  SELECT encode(digest(convert_to(canonical || COALESCE(prev_hash, ''), 'UTF8'), 'sha256'), 'hex');
-$$;
-
-CREATE OR REPLACE FUNCTION public.audit_log_set_chain()
-RETURNS trigger
-LANGUAGE plpgsql
-AS $$
-DECLARE
-  prev text;
-BEGIN
-  PERFORM pg_advisory_xact_lock(829029);
-  SELECT a.row_hash
-    INTO prev
-    FROM public.audit_log AS a
-    ORDER BY a.created_at DESC, a.id DESC
-    LIMIT 1;
-  NEW.prev_hash := COALESCE(prev, '');
-  NEW.row_hash := public.audit_log_compute_hash(public.audit_log_canonical(NEW), NEW.prev_hash);
-  RETURN NEW;
-END;
-$$;
-
-DROP TRIGGER IF EXISTS audit_log_no_update ON public.audit_log;
-DROP TRIGGER IF EXISTS audit_log_no_delete ON public.audit_log;
-DROP TRIGGER IF EXISTS audit_log_set_chain ON public.audit_log;
-
-DO $$
-DECLARE
-  r public.audit_log;
-  prev text := '';
-  computed text;
-BEGIN
-  FOR r IN
-    SELECT * FROM public.audit_log ORDER BY created_at ASC, id ASC
-  LOOP
-    computed := public.audit_log_compute_hash(public.audit_log_canonical(r), prev);
-    UPDATE public.audit_log
-      SET prev_hash = prev, row_hash = computed
-      WHERE id = r.id;
-    prev := computed;
-  END LOOP;
-END;
-$$;
-
-UPDATE public.audit_log SET prev_hash = '' WHERE prev_hash IS NULL;
-UPDATE public.audit_log SET row_hash = repeat('0', 64) WHERE row_hash IS NULL;
-
-ALTER TABLE public.audit_log
-  ALTER COLUMN prev_hash SET DEFAULT '';
-
-ALTER TABLE public.audit_log
-  ALTER COLUMN prev_hash SET NOT NULL;
-
-ALTER TABLE public.audit_log
-  ALTER COLUMN row_hash SET NOT NULL;
-
-CREATE TRIGGER audit_log_set_chain
-  BEFORE INSERT ON public.audit_log
-  FOR EACH ROW
-  EXECUTE FUNCTION public.audit_log_set_chain();
 
 CREATE OR REPLACE FUNCTION public.audit_log_append_only()
 RETURNS trigger
@@ -104,16 +17,6 @@ BEGIN
   RAISE EXCEPTION 'audit_log is append-only';
 END;
 $$;
-
-CREATE TRIGGER audit_log_no_update
-  BEFORE UPDATE ON public.audit_log
-  FOR EACH ROW
-  EXECUTE FUNCTION public.audit_log_append_only();
-
-CREATE TRIGGER audit_log_no_delete
-  BEFORE DELETE ON public.audit_log
-  FOR EACH ROW
-  EXECUTE FUNCTION public.audit_log_append_only();
 
 CREATE OR REPLACE FUNCTION public.verify_audit_chain(
   p_from timestamptz DEFAULT NULL,
@@ -215,10 +118,6 @@ BEGIN
   RETURN n;
 END;
 $$;
-
-CREATE INDEX IF NOT EXISTS audit_log_action_idx ON public.audit_log (action);
-CREATE INDEX IF NOT EXISTS audit_log_entity_idx ON public.audit_log (entity_type, entity_id);
-CREATE INDEX IF NOT EXISTS audit_log_row_hash_idx ON public.audit_log (row_hash);
 
 REVOKE ALL ON FUNCTION public.verify_audit_chain(timestamptz, timestamptz) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.verify_audit_chain(timestamptz, timestamptz) TO project_admin;

@@ -49,6 +49,9 @@ describe("PBI-029 migration 0025 audit chain", () => {
     expect(migrationSql).toContain("apply_audit_retention");
     expect(migrationSql).toContain("prev_hash");
     expect(migrationSql).toContain("row_hash");
+    const withoutComments = migrationSql.replace(/--.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "");
+    expect(withoutComments).not.toMatch(/SET\s+search_path/i);
+    expect(withoutComments).not.toMatch(/\bset_config\b/i);
   });
 });
 
