@@ -91,7 +91,7 @@ Policy is **not** encoded as magic numbers in UI or services. If a limit, fee, o
 
 ## Prerequisites
 
-1. **Linux or WSL2** with Node.js 20+ and **pnpm**; Cursor with Agent mode. Native Windows (outside WSL) is not a supported local backend path.
+1. **Linux or WSL2** with Node.js 20+ and **pnpm**; Cursor with Agent mode. Native Windows (outside WSL) is not a supported local backend path. **GitHub Codespaces (Path A, no laptop Docker):** [docs/codespaces-path-a.md](docs/codespaces-path-a.md) — 4-core / 16 GB first; stop the codespace when done (Free quota, spend limit $0).
 2. **InsForge backend** — either:
    - **Local Docker** (this workspace): Docker Engine + Compose 2.24.4+, then from the repo root `npx -y @insforge/cli local start`. That provisions Postgres / PostgREST / InsForge / Deno on loopback (default app port `7130`) and writes `.env.local`. Ports, env names, and re-seed: [insforge/README.md](insforge/README.md). Session protocol: [docs/07](docs/07-Agent-Build-Guide.md) §1.
    - **Hosted:** an InsForge Cloud project plus the **InsForge MCP** in Cursor.
