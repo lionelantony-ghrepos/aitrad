@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { signUpThroughWizard } from "./helpers/onboard";
-import { dispatchPaletteHotkey, waitForWorkspaceReady } from "./helpers/palette";
+import { runPalette, waitForWorkspaceReady } from "./helpers/palette";
 
 async function runMonitors(
   page: import("@playwright/test").Page,
@@ -36,11 +36,7 @@ test.describe("PBI-027 monitors", () => {
         .isVisible()
         .catch(() => false))
     ) {
-      await dispatchPaletteHotkey(page);
-      await expect(page.getByTestId("command-palette")).toBeVisible();
-      const input = page.getByTestId("palette-input");
-      await input.fill("AI tell me if any position drops 5% in a day", { force: true });
-      await input.press("Enter");
+      await runPalette(page, "AI tell me if any position drops 5% in a day");
     }
     await expect(page.getByTestId("panel-copilot")).toBeVisible();
     await page.getByTestId("copilot-input").fill("tell me if any position drops 5% in a day");
@@ -74,11 +70,7 @@ test.describe("PBI-027 monitors", () => {
         .isVisible()
         .catch(() => false))
     ) {
-      await dispatchPaletteHotkey(page);
-      await expect(page.getByTestId("command-palette")).toBeVisible();
-      const input = page.getByTestId("palette-input");
-      await input.fill("AI tell me if any position drops 5% in a day", { force: true });
-      await input.press("Enter");
+      await runPalette(page, "AI tell me if any position drops 5% in a day");
     }
     await expect(page.getByTestId("panel-copilot")).toBeVisible();
     await page.getByTestId("copilot-input").fill("tell me if any position drops 5% in a day");

@@ -1,7 +1,7 @@
 "use client";
 
 import { Command } from "cmdk";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import type { Instrument } from "@meridian/schemas";
 import { searchInstrumentsAction } from "@/app/actions/watchlists";
 import { focusPanel } from "@/lib/command-palette/focus-panel";
@@ -51,19 +51,25 @@ export function CommandPalette({
   const [hint, setHint] = useState("");
   const [recents, setRecents] = useState<string[]>([]);
   const [instruments, setInstruments] = useState<Instrument[]>([]);
+  /** True after the open-reset layout effect; Playwright waits on this so it does not type into a stale query. */
+  const [settled, setSettled] = useState(false);
   const { dockApi } = useWorkspaceRuntime();
   const setActiveSymbol = useSymbolContext((s) => s.setActiveSymbol);
   const setCopilotQuery = useCopilotDraft((s) => s.setQuery);
 
   const parsed = useMemo(() => parseCommand(value), [value]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!open) {
+      setValue("");
+      setHint("");
+      setSettled(false);
       return;
     }
     setValue("");
     setHint("");
     setRecents(loadCommandRecents(window.localStorage));
+    setSettled(true);
   }, [open]);
 
   useEffect(() => {
@@ -161,6 +167,8 @@ export function CommandPalette({
     <div
       className="fixed inset-0 z-50 flex items-start justify-center bg-background/70 pt-24"
       data-testid="command-palette"
+      data-settled={settled ? "1" : "0"}
+      data-query={value}
       role="dialog"
       aria-modal="true"
       aria-labelledby="palette-title"
@@ -218,6 +226,8 @@ export function CommandPalette({
                   <Command.Item
                     key={item.id}
                     value={item.id}
+                    data-testid="palette-item"
+                    data-command={item.command}
                     onSelect={() => {
                       void run(item.command);
                     }}
@@ -232,6 +242,8 @@ export function CommandPalette({
                 <Command.Item
                   key={item.id}
                   value={item.id}
+                  data-testid="palette-item"
+                  data-command={item.command}
                   onSelect={() => {
                     void run(item.command);
                   }}
