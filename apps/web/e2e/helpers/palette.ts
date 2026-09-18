@@ -11,7 +11,7 @@ import { expect, type Page } from "@playwright/test";
  *
  * ```ts
  * import { runPalette } from "../helpers/palette";
- * // default: open → set query → select first item
+ * // default: wait for dock + JS idle → hotkey open → type query → select item
  * await runPalette(page, "GIP MSFT");
  * await runPalette(page, "ORD");
  * // visible typing for OBS:
@@ -19,6 +19,8 @@ import { expect, type Page } from "@playwright/test";
  * // dock `data-ready` never flips (provision residual):
  * await runPalette(page, "DES NVDA", { requireDock: false });
  * ```
+ *
+ * Do not click the Ctrl+K button or `fill` the input from Playwright.
  */
 
 export type PaletteOptions = {
@@ -43,10 +45,20 @@ export async function waitForDockReady(page: Page, timeout = 20_000): Promise<vo
   await expect(page.getByTestId("workspace")).toHaveAttribute("data-ready", "1", { timeout });
 }
 
+/**
+ * Dockview + lightweight-charts can block JS after `data-ready=1`.
+ * `waitForFunction(() => true)` only returns once the page can run script;
+ * clicks and hotkey dispatch hang until then.
+ */
+export async function waitForMainThread(page: Page, timeout = 15_000): Promise<void> {
+  await page.waitForFunction(() => true, undefined, { timeout });
+}
+
 /** Dock API is up and the command bar can accept the palette chord / button. */
 export async function waitForWorkspaceReady(page: Page, timeout = 20_000): Promise<void> {
   await waitForCommandBar(page, timeout);
   await waitForDockReady(page, timeout);
+  await waitForMainThread(page, timeout);
 }
 
 /**
@@ -72,44 +84,37 @@ export async function dispatchPaletteHotkey(page: Page): Promise<void> {
       return true;
     },
     undefined,
-    { timeout: 3_000 },
+    { timeout: 10_000 },
   );
 }
 
-export async function openCommandPalette(
-  page: Page,
-  options: PaletteOptions = {},
-): Promise<void> {
+export async function openCommandPalette(page: Page, options: PaletteOptions = {}): Promise<void> {
   const requireDock = options.requireDock !== false;
   await waitForCommandBar(page);
   if (requireDock) {
     await waitForDockReady(page);
   }
+  await waitForMainThread(page);
   const palette = page.getByTestId("command-palette");
   const input = page.getByTestId("palette-input");
-  for (let attempt = 0; attempt < 6; attempt += 1) {
-    if (await palette.isVisible().catch(() => false)) {
-      await expect(input).toBeVisible();
-      await expect(palette).toHaveAttribute("data-settled", "1");
-      return;
-    }
-    // Native Control+K is a Chromium shortcut. A normal click can hang after
-    // "performing click action" on the command bar; force + hotkey fallback.
-    try {
-      await page.getByTestId("open-palette").click({
-        force: true,
-        timeout: 2_000,
-        noWaitAfter: true,
-      });
-    } catch {
-      try {
-        await dispatchPaletteHotkey(page);
-      } catch {
-        /* main thread busy; retry */
-      }
-    }
-  }
-  await expect(palette).toBeVisible({ timeout: 5_000 });
+  // Never click `open-palette` — Playwright click waits for the page to handle
+  // the mouse event and hangs while dockview/charts occupy the main thread.
+  await expect
+    .poll(
+      async () => {
+        if (await palette.isVisible().catch(() => false)) {
+          return true;
+        }
+        try {
+          await dispatchPaletteHotkey(page);
+        } catch {
+          await waitForMainThread(page, 5_000);
+        }
+        return palette.isVisible().catch(() => false);
+      },
+      { timeout: 15_000, intervals: [100, 250, 500] },
+    )
+    .toBe(true);
   await expect(input).toBeVisible({ timeout: 5_000 });
   await expect(palette).toHaveAttribute("data-settled", "1", { timeout: 5_000 });
 }
@@ -132,6 +137,7 @@ async function focusPaletteInput(page: Page): Promise<void> {
 
 /**
  * Set the cmdk query without Playwright `fill`.
+ * Real key events (not a polling native-setter) so React/cmdk update once.
  * Confirms React state via `data-query` (DOM value alone can lie).
  */
 export async function setPaletteQuery(
@@ -140,57 +146,16 @@ export async function setPaletteQuery(
   options: PaletteOptions = {},
 ): Promise<void> {
   const palette = page.getByTestId("command-palette");
-  const delay = options.typeDelayMs ?? 0;
   await expect(page.getByTestId("palette-input")).toBeVisible();
   await expect(palette).toHaveAttribute("data-settled", "1");
-
-  if (delay > 0) {
-    await focusPaletteInput(page);
-    await page.keyboard.type(command, { delay });
-  } else {
-    try {
-      await page.waitForFunction(
-        ({ cmd }) => {
-          const el = document.querySelector('[data-testid="palette-input"]');
-          const root = document.querySelector('[data-testid="command-palette"]');
-          if (!(el instanceof HTMLInputElement) || !(root instanceof HTMLElement)) {
-            return false;
-          }
-          if (root.getAttribute("data-query") !== cmd) {
-            const proto = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
-            const last = el.value;
-            proto?.call(el, cmd);
-            const tracker = (
-              el as HTMLInputElement & { _valueTracker?: { setValue: (next: string) => void } }
-            )._valueTracker;
-            tracker?.setValue(last);
-            el.dispatchEvent(
-              new InputEvent("input", {
-                bubbles: true,
-                cancelable: true,
-                data: cmd,
-                inputType: "insertText",
-              }),
-            );
-            el.dispatchEvent(new Event("input", { bubbles: true }));
-            el.dispatchEvent(new Event("change", { bubbles: true }));
-          }
-          return root.getAttribute("data-query") === cmd && el.value === cmd;
-        },
-        { cmd: command },
-        { timeout: 5_000 },
-      );
-    } catch {
-      await focusPaletteInput(page);
-      await page.keyboard.type(command, { delay: 15 });
-    }
-  }
-
+  await focusPaletteInput(page);
+  await page.keyboard.type(command, { delay: options.typeDelayMs ?? 0 });
   await expect(palette).toHaveAttribute("data-query", command, { timeout: 5_000 });
 }
 
-/** Activate the first matching palette row (or Enter on the input). */
+/** Activate the first matching palette row, then Enter as fallback. */
 export async function selectPaletteItem(page: Page): Promise<void> {
+  await expect(page.getByTestId("palette-item").first()).toBeVisible({ timeout: 5_000 });
   try {
     await page.waitForFunction(
       () => {
@@ -198,7 +163,7 @@ export async function selectPaletteItem(page: Page): Promise<void> {
         if (!(item instanceof HTMLElement)) {
           return false;
         }
-        item.click();
+        item.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
         return true;
       },
       undefined,
