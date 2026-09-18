@@ -26,14 +26,16 @@ Offline Yahoo-shaped quotes/bars/news live in `mock_data/market-snapshot/` from 
 
 1. On GitHub, switch to this branch (the PR branch, or `feature` after merge).
 2. **Code → Codespaces → Create codespace on \<branch\>**.
-3. Pick **4-core** if the UI asks. Wait until the devcontainer finishes (`post-create` only enables pnpm and checks Docker).
+3. Pick **4-core** if the UI asks. Wait until the devcontainer finishes (`post-create` only enables pnpm and checks Docker). If this codespace was created on the old Node 20 image, **rebuild** so it picks up Node 22.
 4. Confirm:
 
 ```bash
-node -v          # v20.11+
+node -v          # v22.x (Codespaces image; not 20.x)
 pnpm -v          # 9.15.9
 docker compose version
 ```
+
+Codespaces Path A uses **Node 22** (`mcr.microsoft.com/devcontainers/javascript-node:22-bookworm`) so pnpm can load `node:sqlite` (requires Node ≥22). Repo `package.json` `engines.node` may still say `>=20.11` for local Linux/WSL; do not drop a Codespace back to Node 20.
 
 Docker is **Docker-in-Docker** (nested daemon in the codespace). That is what InsForge Compose needs here; docker-outside-of-docker is not used (no usable host socket, bind-mount path issues).
 
@@ -127,6 +129,7 @@ Idle timeout still consumes quota until stop. Do not leave an 8-core space runni
 
 ## Caveats
 
+- **Node 22 on Codespaces:** the image is Node 22 even if local engines stay ≥20.11. Node 20.20.x fails pnpm with `node:sqlite`. Rebuild after this bump; do not `nvm use 20` in the codespace.
 - **4-core vs 8-core:** InsForge Compose + DinD + `pnpm seed:all` (hundreds of thousands of bars) can OOM on 16 GB. Bump to 8-core, re-run seed, then stop when done.
 - **DinD disk:** 4-core machines have 32 GB storage. Image pull + `node_modules` + seed should fit; a full rebuild after failed pulls may need a new codespace.
 - **#121:** snapshot overlay is optional for this smoke; merge/cherry-pick if you need frozen Yahoo-shaped quotes.

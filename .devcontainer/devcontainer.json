@@ -1,6 +1,6 @@
 {
   "name": "Meridian Path A",
-  "image": "mcr.microsoft.com/devcontainers/javascript-node:20-bookworm",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:22-bookworm",
   "features": {
     "ghcr.io/devcontainers/features/docker-in-docker:2": {
       "version": "latest",

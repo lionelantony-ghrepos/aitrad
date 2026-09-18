@@ -2,17 +2,18 @@
 # Minimal Codespaces Path A bootstrap. Does not pnpm install or seed.
 set -euo pipefail
 
+node_ver="$(node -v | sed 's/^v//')"
+echo "node ${node_ver}"
+IFS=. read -r major _minor _patch <<< "${node_ver}"
+if [ "${major}" -lt 22 ]; then
+  echo "ERROR: Codespaces Path A requires Node >= 22 (got ${node_ver}; pnpm node:sqlite)." >&2
+  echo "Rebuild this codespace from javascript-node:22-bookworm. Local laptop engines may still be >=20.11." >&2
+  exit 1
+fi
+
 echo "Meridian Path A: enabling pnpm 9.15.9 via corepack"
 corepack enable || sudo corepack enable
 corepack prepare pnpm@9.15.9 --activate
-
-node_ver="$(node -v | sed 's/^v//')"
-echo "node ${node_ver}"
-IFS=. read -r major minor _ <<< "${node_ver}"
-if [ "${major}" -lt 20 ] || { [ "${major}" -eq 20 ] && [ "${minor}" -lt 11 ]; }; then
-  echo "ERROR: Node >= 20.11 required (got ${node_ver})" >&2
-  exit 1
-fi
 
 echo "pnpm $(pnpm -v)"
 
