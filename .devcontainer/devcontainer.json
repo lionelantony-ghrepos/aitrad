@@ -8,9 +8,7 @@
       "installDockerBuildx": true,
       "dockerDashComposeVersion": "latest"
     },
-    "ghcr.io/devcontainers/features/sshd:1": {
-      "version": "latest"
-    }
+    "ghcr.io/devcontainers/features/sshd:1": {}
   },
   "remoteUser": "node",
   "hostRequirements": {
