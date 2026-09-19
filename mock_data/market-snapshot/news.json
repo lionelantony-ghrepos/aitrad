@@ -1,0 +1,722 @@
+[
+  {
+    "id": "f238729b-7b4b-5b36-af6e-d6ed30cef9c9",
+    "symbol": "AAPL",
+    "ts": "2026-09-17T12:16:19.000Z",
+    "headline": "Top strategist thinks the Federal Reserve interest rate hike won't fix this huge earnings risk",
+    "body": "AAPL: public-market headline captured for the Meridian paper terminal — \"Top strategist thinks the Federal Reserve interest rate hike won't fix this huge earnings risk\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "earnings",
+    "sentiment": 0
+  },
+  {
+    "id": "8d83ba3c-4b78-50d8-9b9a-df7e50178b48",
+    "symbol": "AAPL",
+    "ts": "2026-09-17T13:12:06.000Z",
+    "headline": "Apple iPhone Demand Should Hold Up On Higher Carrier Incentives, BofA Says",
+    "body": "AAPL: public-market headline captured for the Meridian paper terminal — \"Apple iPhone Demand Should Hold Up On Higher Carrier Incentives, BofA Says\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "2ae299fa-84d3-5be2-afc4-8b76f34cf05c",
+    "symbol": "AAPL",
+    "ts": "2026-09-17T12:00:41.000Z",
+    "headline": "The Same Stock but in 2 Different IRAs: By Retirement, the Tax Bill Is the Only Thing That Changes",
+    "body": "AAPL: public-market headline captured for the Meridian paper terminal — \"The Same Stock but in 2 Different IRAs: By Retirement, the Tax Bill Is the Only Thing That Changes\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "8a950a5c-6954-5f13-8491-00265864f404",
+    "symbol": "AAPL",
+    "ts": "2026-09-17T12:00:00.000Z",
+    "headline": "Apple Touts Big Emmy Wins: Will Marketing Do A Big Job?",
+    "body": "AAPL: public-market headline captured for the Meridian paper terminal — \"Apple Touts Big Emmy Wins: Will Marketing Do A Big Job?\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "b37b5ce0-4da5-52b8-9203-3ef475c34a02",
+    "symbol": "MSFT",
+    "ts": "2026-09-17T12:39:00.000Z",
+    "headline": "To AI From Flip Phones. Nokia’s Extended Microsoft Partnership Could Make the Stock Legit.",
+    "body": "MSFT: public-market headline captured for the Meridian paper terminal — \"To AI From Flip Phones. Nokia’s Extended Microsoft Partnership Could Make the Stock Legit.\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "7722eb24-1984-5362-9f5b-a9df90508d06",
+    "symbol": "MSFT",
+    "ts": "2026-09-17T12:30:02.000Z",
+    "headline": "The Biggest Catalyst for Alphabet Stock May Not Be Search",
+    "body": "MSFT: public-market headline captured for the Meridian paper terminal — \"The Biggest Catalyst for Alphabet Stock May Not Be Search\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "2a0a7fd3-7f81-56d3-9a53-708e08045170",
+    "symbol": "MSFT",
+    "ts": "2026-09-17T12:00:00.000Z",
+    "headline": "Causaly is Now Available in Microsoft Copilot",
+    "body": "MSFT: public-market headline captured for the Meridian paper terminal — \"Causaly is Now Available in Microsoft Copilot\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "13bfada9-75bb-5cca-8f4f-3e69d681d7e1",
+    "symbol": "MSFT",
+    "ts": "2026-09-17T11:59:37.000Z",
+    "headline": "Nokia stock jumps as Microsoft AI data partnership expands",
+    "body": "MSFT: public-market headline captured for the Meridian paper terminal — \"Nokia stock jumps as Microsoft AI data partnership expands\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "6cd5020c-5e66-5e9d-9593-a1d8eb0207a0",
+    "symbol": "NVDA",
+    "ts": "2026-09-17T13:44:08.000Z",
+    "headline": "10-year Treasury yield eases, oil falls to $100: AlphaCheck",
+    "body": "NVDA: public-market headline captured for the Meridian paper terminal — \"10-year Treasury yield eases, oil falls to $100: AlphaCheck\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "macro",
+    "sentiment": 0
+  },
+  {
+    "id": "e6d53537-f1f1-59be-98d5-33588a40f874",
+    "symbol": "NVDA",
+    "ts": "2026-09-17T14:09:36.000Z",
+    "headline": "Snap Advances 3% as Specs Glasses Add Salesforce and NVIDIA Enterprise Tools; Meta Holds Steady",
+    "body": "NVDA: public-market headline captured for the Meridian paper terminal — \"Snap Advances 3% as Specs Glasses Add Salesforce and NVIDIA Enterprise Tools; Meta Holds Steady\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "37b0fb58-b536-5c93-bbf6-2644d174c535",
+    "symbol": "NVDA",
+    "ts": "2026-09-17T13:50:00.000Z",
+    "headline": "Semiconductor Stocks Just Tumbled. This Tech ETF Soared 6% Instead. Here's Why.",
+    "body": "NVDA: public-market headline captured for the Meridian paper terminal — \"Semiconductor Stocks Just Tumbled. This Tech ETF Soared 6% Instead. Here's Why.\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "17dd06ad-042c-5d62-a349-3a4c584d3b82",
+    "symbol": "NVDA",
+    "ts": "2026-09-17T13:28:20.000Z",
+    "headline": "Nebius Stock Jumps On Cloud Computing Price Hikes",
+    "body": "NVDA: public-market headline captured for the Meridian paper terminal — \"Nebius Stock Jumps On Cloud Computing Price Hikes\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "f25e4ce9-1d87-5229-9acf-b8aa02a23abd",
+    "symbol": "AMD",
+    "ts": "2026-09-17T14:13:37.000Z",
+    "headline": "Advanced Micro Devices (AMD) Expands ROCm Support To RISC V Datacenter Servers",
+    "body": "AMD: public-market headline captured for the Meridian paper terminal — \"Advanced Micro Devices (AMD) Expands ROCm Support To RISC V Datacenter Servers\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "e313d14d-7d08-5ba8-9acd-6d7ce14db7a7",
+    "symbol": "AMD",
+    "ts": "2026-09-17T12:16:34.000Z",
+    "headline": "Dow Jones Futures Rise After Hawkish Fed, Warsh Hit Stocks, Trump Fumes; AMD, Bloom Energy Eye Buy Points",
+    "body": "AMD: public-market headline captured for the Meridian paper terminal — \"Dow Jones Futures Rise After Hawkish Fed, Warsh Hit Stocks, Trump Fumes; AMD, Bloom Energy Eye Buy Points\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "macro",
+    "sentiment": 0
+  },
+  {
+    "id": "fc3cb346-e33b-51a1-bf03-677bfc330a09",
+    "symbol": "AMD",
+    "ts": "2026-09-17T12:05:01.000Z",
+    "headline": "Advanced Micro Devices vs. Texas Instruments: Which Tech Stock Is a Better Buy in 2026?",
+    "body": "AMD: public-market headline captured for the Meridian paper terminal — \"Advanced Micro Devices vs. Texas Instruments: Which Tech Stock Is a Better Buy in 2026?\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "5c27c53c-84aa-5012-8d89-18ecaea36914",
+    "symbol": "AMD",
+    "ts": "2026-09-17T11:04:33.000Z",
+    "headline": "Jim Cramer on Advanced Micro Devices (AMD): “Buy It”",
+    "body": "AMD: public-market headline captured for the Meridian paper terminal — \"Jim Cramer on Advanced Micro Devices (AMD): “Buy It”\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "17c458a2-6c30-519a-a7b7-e008359225b2",
+    "symbol": "AVGO",
+    "ts": "2026-09-17T12:55:14.000Z",
+    "headline": "Investors Want to Know When Broadcom’s Custom Hyperscaler Chips Will Move Share Prices",
+    "body": "AVGO: public-market headline captured for the Meridian paper terminal — \"Investors Want to Know When Broadcom’s Custom Hyperscaler Chips Will Move Share Prices\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "671bbd25-4784-5e9c-ae92-7ff968450ade",
+    "symbol": "AVGO",
+    "ts": "2026-09-17T12:51:25.000Z",
+    "headline": "Despite Hype, Broadcom Keeps Edging Sideways and Down: This Wall Street Analyst Says It Will Provide 75% Returns Soon",
+    "body": "AVGO: public-market headline captured for the Meridian paper terminal — \"Despite Hype, Broadcom Keeps Edging Sideways and Down: This Wall Street Analyst Says It Will Provide 75% Returns Soon\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "analyst",
+    "sentiment": 0
+  },
+  {
+    "id": "d021c2ce-179e-5808-b36a-bdb01c26fad1",
+    "symbol": "AVGO",
+    "ts": "2026-09-17T10:36:00.000Z",
+    "headline": "Semiconductor Sell-Off: 1 AI Chip Stock to Buy, 1 to Hold, and 1 to Sell After Broadcom's Beat",
+    "body": "AVGO: public-market headline captured for the Meridian paper terminal — \"Semiconductor Sell-Off: 1 AI Chip Stock to Buy, 1 to Hold, and 1 to Sell After Broadcom's Beat\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "earnings",
+    "sentiment": 0.35
+  },
+  {
+    "id": "e345618a-96e4-5ea3-982d-11e93d522605",
+    "symbol": "AVGO",
+    "ts": "2026-09-17T10:26:01.000Z",
+    "headline": "Billionaire Stanley Druckenmiller Dumped Broadcom and 11X'd His Fund's Stake in This Trillion-Dollar Dual-Industry Leader",
+    "body": "AVGO: public-market headline captured for the Meridian paper terminal — \"Billionaire Stanley Druckenmiller Dumped Broadcom and 11X'd His Fund's Stake in This Trillion-Dollar Dual-Industry Leader\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "96a0cb8d-07fa-52fc-9fa7-69f32fcbd1f3",
+    "symbol": "TSM",
+    "ts": "2026-09-16T20:32:52.000Z",
+    "headline": "TSMC Gains as 2-Nanometer Chips Enter the Smartphone Race",
+    "body": "TSM: public-market headline captured for the Meridian paper terminal — \"TSMC Gains as 2-Nanometer Chips Enter the Smartphone Race\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "31464ee0-19d6-54ca-a433-55bea34614dc",
+    "symbol": "TSM",
+    "ts": "2026-09-16T18:05:00.000Z",
+    "headline": "Prediction: $1,000 Invested in Taiwan Semiconductor (TSMC) Today Will Be Worth This Much by the End of the Decade",
+    "body": "TSM: public-market headline captured for the Meridian paper terminal — \"Prediction: $1,000 Invested in Taiwan Semiconductor (TSMC) Today Will Be Worth This Much by the End of the Decade\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "76112d55-d374-53d7-81be-4c207a82d528",
+    "symbol": "TSM",
+    "ts": "2026-09-16T16:10:31.000Z",
+    "headline": "Dow Jones Tech Titan Apple, Nvidia Chipmaker TSMC, AMD, Bloom Energy In Or Near Buy Zones",
+    "body": "TSM: public-market headline captured for the Meridian paper terminal — \"Dow Jones Tech Titan Apple, Nvidia Chipmaker TSMC, AMD, Bloom Energy In Or Near Buy Zones\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "4dc81df4-57af-5fb4-a99d-8f96efd9ea0b",
+    "symbol": "TSM",
+    "ts": "2026-09-16T14:45:35.000Z",
+    "headline": "Taiwan Semiconductor Is a No-Brainer Buy On Repeat And Not For The Reason You Think",
+    "body": "TSM: public-market headline captured for the Meridian paper terminal — \"Taiwan Semiconductor Is a No-Brainer Buy On Repeat And Not For The Reason You Think\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "32e2629f-2889-5ebd-970a-b593255956be",
+    "symbol": "PLTR",
+    "ts": "2026-09-17T12:10:22.000Z",
+    "headline": "Chipotle Turns to Palantir After a Summer of Outbreaks",
+    "body": "PLTR: public-market headline captured for the Meridian paper terminal — \"Chipotle Turns to Palantir After a Summer of Outbreaks\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "664e2281-932c-51b3-b9c7-baa9032b0712",
+    "symbol": "PLTR",
+    "ts": "2026-09-17T03:40:47.000Z",
+    "headline": "CMG Stock Ticks Up On AI Food Safety Bet With Palantir: Retail Bullish On ‘Ontological Burritos'",
+    "body": "PLTR: public-market headline captured for the Meridian paper terminal — \"CMG Stock Ticks Up On AI Food Safety Bet With Palantir: Retail Bullish On ‘Ontological Burritos'\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "a94087f3-b273-5bb0-be7a-c5a3c9cec6d7",
+    "symbol": "PLTR",
+    "ts": "2026-09-17T01:12:25.000Z",
+    "headline": "Nebius Group (NBIS) Is Down 12.9% After Becoming Palantir’s Preferred Sovereign AI Cloud Partner – Has The Bull Case Changed?",
+    "body": "PLTR: public-market headline captured for the Meridian paper terminal — \"Nebius Group (NBIS) Is Down 12.9% After Becoming Palantir’s Preferred Sovereign AI Cloud Partner – Has The Bull Case Changed?\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "36d3059b-d214-552a-ae93-2dca532411d9",
+    "symbol": "PLTR",
+    "ts": "2026-09-16T22:12:16.000Z",
+    "headline": "Palantir Technologies (PLTR) Tightens Rules On External Generative AI Models",
+    "body": "PLTR: public-market headline captured for the Meridian paper terminal — \"Palantir Technologies (PLTR) Tightens Rules On External Generative AI Models\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "ce5f608f-b69c-52e5-960a-daf386fdaeba",
+    "symbol": "SNOW",
+    "ts": "2026-09-17T13:55:34.000Z",
+    "headline": "Snowflake is Up 51% Year-to-Date: Wise Investors Are Acting Accordingly",
+    "body": "SNOW: public-market headline captured for the Meridian paper terminal — \"Snowflake is Up 51% Year-to-Date: Wise Investors Are Acting Accordingly\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "79e5aa28-51d6-59d8-b887-c2755f12b6e3",
+    "symbol": "SNOW",
+    "ts": "2026-09-17T13:55:01.000Z",
+    "headline": "Wall Street Analysts Think Snowflake (SNOW) Could Surge 28.74%: Read This Before Placing a Bet",
+    "body": "SNOW: public-market headline captured for the Meridian paper terminal — \"Wall Street Analysts Think Snowflake (SNOW) Could Surge 28.74%: Read This Before Placing a Bet\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0.35
+  },
+  {
+    "id": "2806c68c-98e8-54bb-8c43-6116de947eca",
+    "symbol": "SNOW",
+    "ts": "2026-09-16T15:46:00.000Z",
+    "headline": "Snowflake vs. Adobe: Which Enterprise AI Stock Is a Better Buy?",
+    "body": "SNOW: public-market headline captured for the Meridian paper terminal — \"Snowflake vs. Adobe: Which Enterprise AI Stock Is a Better Buy?\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "d2f4f40c-512c-5504-a7ab-46e430a7ddf9",
+    "symbol": "SNOW",
+    "ts": "2026-09-16T13:00:00.000Z",
+    "headline": "Gamma AI Alternative for Business Presentations.ai Automated Presentation Refresh From Salesforce, Snowflake and Google Sheets",
+    "body": "SNOW: public-market headline captured for the Meridian paper terminal — \"Gamma AI Alternative for Business Presentations.ai Automated Presentation Refresh From Salesforce, Snowflake and Google Sheets\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "6a03b360-aa36-5bab-9aee-fc96021a1d5e",
+    "symbol": "DDOG",
+    "ts": "2026-09-16T19:16:28.000Z",
+    "headline": "Datadog's Chief Product Officer Sells 12,700 Shares for $2.8 Million as the Stock Delivers a 59% One-Year Return",
+    "body": "DDOG: public-market headline captured for the Meridian paper terminal — \"Datadog's Chief Product Officer Sells 12,700 Shares for $2.8 Million as the Stock Delivers a 59% One-Year Return\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "8607cd4e-a444-527c-a7b5-0ae88451e573",
+    "symbol": "DDOG",
+    "ts": "2026-09-16T17:10:38.000Z",
+    "headline": "Datadog (DDOG) Stock Could Be A Bargain On Cash Flow",
+    "body": "DDOG: public-market headline captured for the Meridian paper terminal — \"Datadog (DDOG) Stock Could Be A Bargain On Cash Flow\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "e4392be0-f17d-5eed-ada1-70ea11e17a6f",
+    "symbol": "DDOG",
+    "ts": "2026-09-15T12:44:20.000Z",
+    "headline": "How Is Datadog’s Stock Performance Compared to Other Cloud Computing Stocks",
+    "body": "DDOG: public-market headline captured for the Meridian paper terminal — \"How Is Datadog’s Stock Performance Compared to Other Cloud Computing Stocks\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "b92ac900-c8f3-583c-b314-20aec0acfb3d",
+    "symbol": "DDOG",
+    "ts": "2026-09-14T13:00:04.000Z",
+    "headline": "Investors Heavily Search Datadog, Inc. (DDOG): Here is What You Need to Know",
+    "body": "DDOG: public-market headline captured for the Meridian paper terminal — \"Investors Heavily Search Datadog, Inc. (DDOG): Here is What You Need to Know\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "50e379c1-be5d-5502-933b-c3958e203343",
+    "symbol": "NET",
+    "ts": "2026-09-16T09:52:00.000Z",
+    "headline": "The Zacks Analyst Blog Highlights S&amp;P Global, Cloudflare, Canadian Natural Resources, Star Group and Hour Loop",
+    "body": "NET: public-market headline captured for the Meridian paper terminal — \"The Zacks Analyst Blog Highlights S&amp;P Global, Cloudflare, Canadian Natural Resources, Star Group and Hour Loop\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "analyst",
+    "sentiment": 0
+  },
+  {
+    "id": "492d1281-a54b-5560-8a5d-fb7d0da16399",
+    "symbol": "NET",
+    "ts": "2026-09-15T21:57:27.000Z",
+    "headline": "What Are You Actually Buying In Cloudflare Stock?",
+    "body": "NET: public-market headline captured for the Meridian paper terminal — \"What Are You Actually Buying In Cloudflare Stock?\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "0b5b8c6b-5326-5305-8dc0-1c127bfeca30",
+    "symbol": "NET",
+    "ts": "2026-09-15T20:13:00.000Z",
+    "headline": "Top Research Reports for S&amp;P Global, Cloudflare &amp; Canadian Natural",
+    "body": "NET: public-market headline captured for the Meridian paper terminal — \"Top Research Reports for S&amp;P Global, Cloudflare &amp; Canadian Natural\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "31d73c9e-ff08-5591-869c-e7f5037c97b6",
+    "symbol": "NET",
+    "ts": "2026-09-15T17:24:12.000Z",
+    "headline": "Cloudflare Hits Highs Amid Agentic AI Boom; Nears Pivot",
+    "body": "NET: public-market headline captured for the Meridian paper terminal — \"Cloudflare Hits Highs Amid Agentic AI Boom; Nears Pivot\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "753b08de-fbf9-5a96-95f0-a86167626696",
+    "symbol": "JPM",
+    "ts": "2026-09-16T20:15:51.000Z",
+    "headline": "JPMorgan CEO Jamie Dimon says small businesses are experiencing a 'mini boom'",
+    "body": "JPM: public-market headline captured for the Meridian paper terminal — \"JPMorgan CEO Jamie Dimon says small businesses are experiencing a 'mini boom'\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "d77b9803-17af-54ed-b0e3-7cdcd8e6e68e",
+    "symbol": "JPM",
+    "ts": "2026-09-17T13:28:19.000Z",
+    "headline": "JPMorgan Is Still Expanding Its Brand-New Digital Assets Team. Here’s What It’s Building",
+    "body": "JPM: public-market headline captured for the Meridian paper terminal — \"JPMorgan Is Still Expanding Its Brand-New Digital Assets Team. Here’s What It’s Building\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "b042441e-e87c-51e0-afb8-169608a65c8e",
+    "symbol": "JPM",
+    "ts": "2026-09-17T10:00:33.000Z",
+    "headline": "3 Stocks That Have Made Long-Term Investors Rich and Could Do It Again",
+    "body": "JPM: public-market headline captured for the Meridian paper terminal — \"3 Stocks That Have Made Long-Term Investors Rich and Could Do It Again\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "5eb8cd13-1009-58eb-a84c-18637856aaac",
+    "symbol": "JPM",
+    "ts": "2026-09-17T01:12:32.000Z",
+    "headline": "Why JPMorgan Chase (JPM) Is Back In The Spotlight",
+    "body": "JPM: public-market headline captured for the Meridian paper terminal — \"Why JPMorgan Chase (JPM) Is Back In The Spotlight\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "9da3dee2-22c8-5545-bd7c-ccae3379d415",
+    "symbol": "XOM",
+    "ts": "2026-09-17T14:05:00.000Z",
+    "headline": "Prediction: ExxonMobil's Low-Carbon Bets Finally Show Up in Guidance by 2027",
+    "body": "XOM: public-market headline captured for the Meridian paper terminal — \"Prediction: ExxonMobil's Low-Carbon Bets Finally Show Up in Guidance by 2027\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "a2b69f96-1725-5fe1-9071-b0f3d9663e12",
+    "symbol": "XOM",
+    "ts": "2026-09-17T13:36:58.000Z",
+    "headline": "Senate Majority Leader John Thune Floats a Diesel Export Ban as Prices Hit $6.31 a Gallon. Trump Team Not Convinced It Would Work",
+    "body": "XOM: public-market headline captured for the Meridian paper terminal — \"Senate Majority Leader John Thune Floats a Diesel Export Ban as Prices Hit $6.31 a Gallon. Trump Team Not Convinced It Would Work\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "b9a2c0ce-923a-5a13-bf83-9c13a61e2e90",
+    "symbol": "XOM",
+    "ts": "2026-09-16T23:29:22.000Z",
+    "headline": "XOM Keeps Climbing. Should You Climb On?",
+    "body": "XOM: public-market headline captured for the Meridian paper terminal — \"XOM Keeps Climbing. Should You Climb On?\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "eea49a58-627f-5e8a-8c8a-984bb723ffa5",
+    "symbol": "XOM",
+    "ts": "2026-09-16T21:56:35.000Z",
+    "headline": "Exxonmobil in talks to return to Venezuela, Bloomberg reports",
+    "body": "XOM: public-market headline captured for the Meridian paper terminal — \"Exxonmobil in talks to return to Venezuela, Bloomberg reports\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "efd876a8-244c-5622-bdbc-47f38b0c89ab",
+    "symbol": "SPY",
+    "ts": "2026-09-17T14:18:45.000Z",
+    "headline": "Applied Digital and TeraWulf Climb 5% as Oversold AI Capacity Names Bounce; Cipher Digital Edges Higher",
+    "body": "SPY: public-market headline captured for the Meridian paper terminal — \"Applied Digital and TeraWulf Climb 5% as Oversold AI Capacity Names Bounce; Cipher Digital Edges Higher\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "5c20836d-681a-585a-8b22-15c53aae3fae",
+    "symbol": "SPY",
+    "ts": "2026-09-17T13:18:01.000Z",
+    "headline": "Exchange-Traded Funds, Equity Futures Higher Pre-Bell Thursday Amid Economic Data, Fed Rate Hike",
+    "body": "SPY: public-market headline captured for the Meridian paper terminal — \"Exchange-Traded Funds, Equity Futures Higher Pre-Bell Thursday Amid Economic Data, Fed Rate Hike\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "macro",
+    "sentiment": 0
+  },
+  {
+    "id": "9c4676f4-7755-5215-b4b6-6ec1fd5cffe4",
+    "symbol": "SPY",
+    "ts": "2026-09-16T21:25:40.000Z",
+    "headline": "Buffer ETFs Promise 100 Percent Downside Protection. Here Is How That Actually Works and What You Give Up",
+    "body": "SPY: public-market headline captured for the Meridian paper terminal — \"Buffer ETFs Promise 100 Percent Downside Protection. Here Is How That Actually Works and What You Give Up\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "66674a3e-9a57-5d5a-b26c-6e4d3b3abaa1",
+    "symbol": "SPY",
+    "ts": "2026-09-16T20:15:27.000Z",
+    "headline": "Musk Warns of AI Control Problem After Agents Secretly Accessed OpenAI Servers for a Week",
+    "body": "SPY: public-market headline captured for the Meridian paper terminal — \"Musk Warns of AI Control Problem After Agents Secretly Accessed OpenAI Servers for a Week\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "e354c8ab-f421-58b3-bc5a-bea61eb6d5c6",
+    "symbol": "QQQ",
+    "ts": "2026-09-17T13:18:01.000Z",
+    "headline": "Exchange-Traded Funds, Equity Futures Higher Pre-Bell Thursday Amid Economic Data, Fed Rate Hike",
+    "body": "QQQ: public-market headline captured for the Meridian paper terminal — \"Exchange-Traded Funds, Equity Futures Higher Pre-Bell Thursday Amid Economic Data, Fed Rate Hike\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "macro",
+    "sentiment": 0
+  },
+  {
+    "id": "3b30b732-d7a7-59f5-b0ca-b8603fd47c45",
+    "symbol": "QQQ",
+    "ts": "2026-09-16T17:08:48.000Z",
+    "headline": "Exchange-Traded Funds Rise, US Equities Mixed After Midday",
+    "body": "QQQ: public-market headline captured for the Meridian paper terminal — \"Exchange-Traded Funds Rise, US Equities Mixed After Midday\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "6217a0f9-1ff5-5b34-952a-12d3df2ed369",
+    "symbol": "QQQ",
+    "ts": "2026-09-16T13:19:52.000Z",
+    "headline": "Exchange-Traded Funds, Equity Futures Higher Pre-Bell Wednesday Ahead of Fed's Rate Announcement",
+    "body": "QQQ: public-market headline captured for the Meridian paper terminal — \"Exchange-Traded Funds, Equity Futures Higher Pre-Bell Wednesday Ahead of Fed's Rate Announcement\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "macro",
+    "sentiment": 0
+  },
+  {
+    "id": "c0d193cf-c832-5e5a-a1d9-47ec1f1091af",
+    "symbol": "QQQ",
+    "ts": "2026-09-15T17:12:00.000Z",
+    "headline": "Exchange-Traded Funds, US Equities Fall After Midday",
+    "body": "QQQ: public-market headline captured for the Meridian paper terminal — \"Exchange-Traded Funds, US Equities Fall After Midday\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": -0.35
+  },
+  {
+    "id": "070adcd8-3660-5757-8b74-b7495cf0dc08",
+    "symbol": "TSLA",
+    "ts": "2026-09-17T12:44:45.000Z",
+    "headline": "Tesla to Operate Megacharger Sites at Three Forum Mobility Depots in California",
+    "body": "TSLA: public-market headline captured for the Meridian paper terminal — \"Tesla to Operate Megacharger Sites at Three Forum Mobility Depots in California\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "77f09f8a-4f96-5232-8072-c8b109bcc7e9",
+    "symbol": "TSLA",
+    "ts": "2026-09-17T12:30:14.000Z",
+    "headline": "Tesla's Cybercab Under the Microscope: NHTSA Demands Answers to 21 Safety Questions by Month-End",
+    "body": "TSLA: public-market headline captured for the Meridian paper terminal — \"Tesla's Cybercab Under the Microscope: NHTSA Demands Answers to 21 Safety Questions by Month-End\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "ded17385-9a8f-5bfe-928d-8db85078dd9c",
+    "symbol": "TSLA",
+    "ts": "2026-09-17T12:12:00.000Z",
+    "headline": "Why Falling EV Deliveries Aren’t a Problem for Tesla Stock",
+    "body": "TSLA: public-market headline captured for the Meridian paper terminal — \"Why Falling EV Deliveries Aren’t a Problem for Tesla Stock\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "a4da936a-6a29-5fc6-b970-f57337207789",
+    "symbol": "TSLA",
+    "ts": "2026-09-17T12:05:01.000Z",
+    "headline": "Prediction: Tesla Stock Will Be Worth This Much in 2031",
+    "body": "TSLA: public-market headline captured for the Meridian paper terminal — \"Prediction: Tesla Stock Will Be Worth This Much in 2031\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "01a6963c-42af-5a3d-9425-9d368703a0c2",
+    "symbol": "AMZN",
+    "ts": "2026-09-17T13:21:00.000Z",
+    "headline": "Generac Signs Amazon Generator Deal With $2.4B of Initial Deliveries",
+    "body": "AMZN: public-market headline captured for the Meridian paper terminal — \"Generac Signs Amazon Generator Deal With $2.4B of Initial Deliveries\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "mna",
+    "sentiment": 0
+  },
+  {
+    "id": "8ed5013f-ac82-548c-bb37-be48176d5084",
+    "symbol": "AMZN",
+    "ts": "2026-09-17T13:10:22.000Z",
+    "headline": "Asymmetry Keeps Me Hitting The Buy Button on Amazon",
+    "body": "AMZN: public-market headline captured for the Meridian paper terminal — \"Asymmetry Keeps Me Hitting The Buy Button on Amazon\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "5a99b81f-8ec2-5af4-977a-ba223f558854",
+    "symbol": "AMZN",
+    "ts": "2026-09-17T12:33:24.000Z",
+    "headline": "Amazon takes warrant stake in Generac in $8 billion generator deal",
+    "body": "AMZN: public-market headline captured for the Meridian paper terminal — \"Amazon takes warrant stake in Generac in $8 billion generator deal\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "mna",
+    "sentiment": 0
+  },
+  {
+    "id": "ec0b0330-3471-535e-925d-eeb08b4f7573",
+    "symbol": "AMZN",
+    "ts": "2026-09-17T12:16:08.000Z",
+    "headline": "5 Things to Know Before the Stock Market Opens on Thursday",
+    "body": "AMZN: public-market headline captured for the Meridian paper terminal — \"5 Things to Know Before the Stock Market Opens on Thursday\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "9367350c-7d1c-537f-b3e6-2ad9a202c06a",
+    "symbol": "GOOGL",
+    "ts": "2026-09-17T13:24:33.000Z",
+    "headline": "Lucid stock jumps on 25,000 robotaxi deal with Europe's Bolt",
+    "body": "GOOGL: public-market headline captured for the Meridian paper terminal — \"Lucid stock jumps on 25,000 robotaxi deal with Europe's Bolt\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "mna",
+    "sentiment": 0
+  },
+  {
+    "id": "2d5b6d84-ab27-526e-b6a6-58d21190d143",
+    "symbol": "GOOGL",
+    "ts": "2026-09-17T14:15:37.000Z",
+    "headline": "Is Goldman Sachs (GS) Becoming A Bigger Force In AI Finance And Private Markets?",
+    "body": "GOOGL: public-market headline captured for the Meridian paper terminal — \"Is Goldman Sachs (GS) Becoming A Bigger Force In AI Finance And Private Markets?\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "4e2a0cc1-a9e0-568d-ab91-b1bd69b14323",
+    "symbol": "GOOGL",
+    "ts": "2026-09-17T14:12:49.000Z",
+    "headline": "Google ad tech remedies ruling unsealed: what the judge ordered",
+    "body": "GOOGL: public-market headline captured for the Meridian paper terminal — \"Google ad tech remedies ruling unsealed: what the judge ordered\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "f56634b6-2535-5d0e-b357-d2dc4b4abcc3",
+    "symbol": "GOOGL",
+    "ts": "2026-09-17T14:12:06.000Z",
+    "headline": "Magnite Jumps 5% as Craig-Hallum Lifts Target to $32 on Google Auction Remedies; PubMatic Rises 6%, Trade Desk Barely Budges",
+    "body": "GOOGL: public-market headline captured for the Meridian paper terminal — \"Magnite Jumps 5% as Craig-Hallum Lifts Target to $32 on Google Auction Remedies; PubMatic Rises 6%, Trade Desk Barely Budges\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "8dd68bb6-866b-5a53-a332-ca3c90837504",
+    "symbol": "META",
+    "ts": "2026-09-17T14:09:36.000Z",
+    "headline": "Snap Advances 3% as Specs Glasses Add Salesforce and NVIDIA Enterprise Tools; Meta Holds Steady",
+    "body": "META: public-market headline captured for the Meridian paper terminal — \"Snap Advances 3% as Specs Glasses Add Salesforce and NVIDIA Enterprise Tools; Meta Holds Steady\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "5b7af3a1-6703-541a-97ba-fbe2572f83d2",
+    "symbol": "META",
+    "ts": "2026-09-17T13:27:41.000Z",
+    "headline": "Meta hit by German court ruling over fake Facebook and Instagram ads",
+    "body": "META: public-market headline captured for the Meridian paper terminal — \"Meta hit by German court ruling over fake Facebook and Instagram ads\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "3608582b-23e3-5c67-9479-b50901199f34",
+    "symbol": "META",
+    "ts": "2026-09-17T12:59:00.000Z",
+    "headline": "Meta Muse May Be Biggest AI Launch Since ChatGPT. It’s Just One of Many Catalysts for Meta Stock.",
+    "body": "META: public-market headline captured for the Meridian paper terminal — \"Meta Muse May Be Biggest AI Launch Since ChatGPT. It’s Just One of Many Catalysts for Meta Stock.\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  },
+  {
+    "id": "f20ba0cd-a713-5896-b6e9-01ab8c3ece0a",
+    "symbol": "META",
+    "ts": "2026-09-17T12:57:19.000Z",
+    "headline": "Meta plans smartglasses without camera after ‘pervert’ backlash",
+    "body": "META: public-market headline captured for the Meridian paper terminal — \"Meta plans smartglasses without camera after ‘pervert’ backlash\". This body is an original two-sentence summary for seed overlay, not a reprint of the source article. Treat it as delayed public information for paper trading only.",
+    "source": "Yahoo Finance RSS",
+    "event_type": "product",
+    "sentiment": 0
+  }
+]

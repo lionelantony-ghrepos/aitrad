@@ -61,6 +61,17 @@ export async function runSeedAll(): Promise<void> {
     throw new Error("SEED_ALL_COUNT_MISMATCH");
   }
   process.stdout.write("seed-all verification passed.\n");
+  applyFrozenMarketSnapshot();
+}
+
+/** Offline Path A overlay. Never hits Yahoo; freeze is `pnpm market:freeze`. */
+function applyFrozenMarketSnapshot(): void {
+  process.stdout.write("seed-all: applying frozen market snapshot (offline, no Yahoo)\n");
+  execFileSync(process.execPath, [path.join(repoRoot, "scripts", "overlay-live-market.mjs")], {
+    cwd: repoRoot,
+    stdio: "inherit",
+    env: process.env,
+  });
 }
 
 const invoked = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);

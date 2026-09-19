@@ -101,7 +101,7 @@ Policy is **not** encoded as magic numbers in UI or services. If a limit, fee, o
 
 ## Demo users (after seed)
 
-Defined in `mock_data/demo-users.json` and doc 06. After `pnpm seed:all`: trader / novice / admin / compliance accounts use password `Meridian!Demo1`. **Paper accounts only.** Re-seed from the checked-in JSON; bars and news rows are generated, not stored.
+Defined in `mock_data/demo-users.json` and doc 06. After `pnpm seed:all`: trader / novice / admin / compliance accounts use password `Meridian!Demo1`. **Paper accounts only.** Re-seed from the checked-in JSON; GBM bars and templated news are generated, then `mock_data/market-snapshot/` is applied offline (Yahoo refresh is `pnpm market:freeze` only).
 
 ## Compliance posture
 

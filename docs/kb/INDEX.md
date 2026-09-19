@@ -70,7 +70,7 @@ Add further ADRs from [`_template-adr.md`](_template-adr.md) only for durable ch
 
 - [insforge/README.md](../../insforge/README.md) — ports, gitignored runtime vs committed config, migrate + `pnpm seed:all`
 - [insforge/local.config.json](../../insforge/local.config.json) — secret-free defaults
-- Seed inputs: [`mock_data/`](../../mock_data/) (instruments, fundamentals, news templates, demo users, workspace fixtures)
+- Seed inputs: [`mock_data/`](../../mock_data/) (instruments, fundamentals, news templates, demo users, workspace fixtures, frozen `market-snapshot/`)
 
 ## Generated reference
 

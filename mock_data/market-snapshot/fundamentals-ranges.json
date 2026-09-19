@@ -1,0 +1,752 @@
+[
+  {
+    "symbol": "AAPL",
+    "week52_high": 344.57,
+    "week52_low": 236.65
+  },
+  {
+    "symbol": "MSFT",
+    "week52_high": 553.72,
+    "week52_low": 349.2
+  },
+  {
+    "symbol": "NVDA",
+    "week52_high": 236.54,
+    "week52_low": 164.27
+  },
+  {
+    "symbol": "GOOGL",
+    "week52_high": 408.61,
+    "week52_low": 235.84
+  },
+  {
+    "symbol": "AMZN",
+    "week52_high": 287.2,
+    "week52_low": 196
+  },
+  {
+    "symbol": "META",
+    "week52_high": 790.8,
+    "week52_low": 520.26
+  },
+  {
+    "symbol": "TSLA",
+    "week52_high": 498.83,
+    "week52_low": 297.38
+  },
+  {
+    "symbol": "AVGO",
+    "week52_high": 495,
+    "week52_low": 289.96
+  },
+  {
+    "symbol": "BRK.B",
+    "week52_high": 537.74,
+    "week52_low": 464.01
+  },
+  {
+    "symbol": "JPM",
+    "week52_high": 366.5,
+    "week52_low": 279.1
+  },
+  {
+    "symbol": "V",
+    "week52_high": 385.57,
+    "week52_low": 293.89
+  },
+  {
+    "symbol": "MA",
+    "week52_high": 601.62,
+    "week52_low": 464.52
+  },
+  {
+    "symbol": "LLY",
+    "week52_high": 1292.65,
+    "week52_low": 712.05
+  },
+  {
+    "symbol": "UNH",
+    "week52_high": 461.62,
+    "week52_low": 255.97
+  },
+  {
+    "symbol": "XOM",
+    "week52_high": 176.41,
+    "week52_low": 110.39
+  },
+  {
+    "symbol": "JNJ",
+    "week52_high": 281.07,
+    "week52_low": 173.33
+  },
+  {
+    "symbol": "WMT",
+    "week52_high": 135.16,
+    "week52_low": 98.88
+  },
+  {
+    "symbol": "PG",
+    "week52_high": 167.25,
+    "week52_low": 137.62
+  },
+  {
+    "symbol": "HD",
+    "week52_high": 421.39,
+    "week52_low": 289.1
+  },
+  {
+    "symbol": "COST",
+    "week52_high": 1096.5,
+    "week52_low": 844.06
+  },
+  {
+    "symbol": "ORCL",
+    "week52_high": 329.5,
+    "week52_low": 114.5
+  },
+  {
+    "symbol": "KO",
+    "week52_high": 92.49,
+    "week52_low": 65.35
+  },
+  {
+    "symbol": "PEP",
+    "week52_high": 171.48,
+    "week52_low": 133.63
+  },
+  {
+    "symbol": "BAC",
+    "week52_high": 65.23,
+    "week52_low": 46.12
+  },
+  {
+    "symbol": "ABBV",
+    "week52_high": 267.47,
+    "week52_low": 190.75
+  },
+  {
+    "symbol": "CVX",
+    "week52_high": 217.78,
+    "week52_low": 146.49
+  },
+  {
+    "symbol": "MRK",
+    "week52_high": 156.92,
+    "week52_low": 77.58
+  },
+  {
+    "symbol": "ADBE",
+    "week52_high": 370.86,
+    "week52_low": 190.12
+  },
+  {
+    "symbol": "CRM",
+    "week52_high": 269.11,
+    "week52_low": 146.32
+  },
+  {
+    "symbol": "NFLX",
+    "week52_high": 124.86,
+    "week52_low": 65.08
+  },
+  {
+    "symbol": "AMD",
+    "week52_high": 584.73,
+    "week52_low": 149.85
+  },
+  {
+    "symbol": "INTC",
+    "week52_high": 142.35,
+    "week52_low": 28.73
+  },
+  {
+    "symbol": "QCOM",
+    "week52_high": 259.92,
+    "week52_low": 121.99
+  },
+  {
+    "symbol": "TXN",
+    "week52_high": 334.03,
+    "week52_low": 152.73
+  },
+  {
+    "symbol": "MU",
+    "week52_high": 1255,
+    "week52_low": 154.65
+  },
+  {
+    "symbol": "AMAT",
+    "week52_high": 739.67,
+    "week52_low": 183.83
+  },
+  {
+    "symbol": "LRCX",
+    "week52_high": 438.5,
+    "week52_low": 125
+  },
+  {
+    "symbol": "KLAC",
+    "week52_high": 307.37,
+    "week52_low": 98.1
+  },
+  {
+    "symbol": "ASML",
+    "week52_high": 1999.96,
+    "week52_low": 916.03
+  },
+  {
+    "symbol": "TSM",
+    "week52_high": 479,
+    "week52_low": 257.98
+  },
+  {
+    "symbol": "CSCO",
+    "week52_high": 130.37,
+    "week52_low": 66.81
+  },
+  {
+    "symbol": "IBM",
+    "week52_high": 332.46,
+    "week52_low": 199.19
+  },
+  {
+    "symbol": "ACN",
+    "week52_high": 291.09,
+    "week52_low": 118.15
+  },
+  {
+    "symbol": "NOW",
+    "week52_high": 194.73,
+    "week52_low": 81.24
+  },
+  {
+    "symbol": "INTU",
+    "week52_high": 705.08,
+    "week52_low": 252.84
+  },
+  {
+    "symbol": "SNOW",
+    "week52_high": 384.56,
+    "week52_low": 118.3
+  },
+  {
+    "symbol": "PLTR",
+    "week52_high": 207.52,
+    "week52_low": 106.37
+  },
+  {
+    "symbol": "DDOG",
+    "week52_high": 292.72,
+    "week52_low": 98.01
+  },
+  {
+    "symbol": "NET",
+    "week52_high": 335.95,
+    "week52_low": 158.83
+  },
+  {
+    "symbol": "CRWD",
+    "week52_high": 249.83,
+    "week52_low": 85.68
+  },
+  {
+    "symbol": "PANW",
+    "week52_high": 398.88,
+    "week52_low": 139.57
+  },
+  {
+    "symbol": "ZS",
+    "week52_high": 336.99,
+    "week52_low": 114.63
+  },
+  {
+    "symbol": "FTNT",
+    "week52_high": 175.6,
+    "week52_low": 73.55
+  },
+  {
+    "symbol": "SHOP",
+    "week52_high": 182.19,
+    "week52_low": 94
+  },
+  {
+    "symbol": "SQ",
+    "week52_high": 86.92,
+    "week52_low": 48.21
+  },
+  {
+    "symbol": "PYPL",
+    "week52_high": 79.22,
+    "week52_low": 38.46
+  },
+  {
+    "symbol": "COIN",
+    "week52_high": 402.16,
+    "week52_low": 139.11
+  },
+  {
+    "symbol": "HOOD",
+    "week52_high": 153.86,
+    "week52_low": 63.52
+  },
+  {
+    "symbol": "GS",
+    "week52_high": 1153.99,
+    "week52_low": 740.01
+  },
+  {
+    "symbol": "MS",
+    "week52_high": 232.25,
+    "week52_low": 151.84
+  },
+  {
+    "symbol": "WFC",
+    "week52_high": 97.76,
+    "week52_low": 72.78
+  },
+  {
+    "symbol": "C",
+    "week52_high": 147.96,
+    "week52_low": 93.66
+  },
+  {
+    "symbol": "SCHW",
+    "week52_high": 114.53,
+    "week52_low": 83.96
+  },
+  {
+    "symbol": "BLK",
+    "week52_high": 1219.94,
+    "week52_low": 917.39
+  },
+  {
+    "symbol": "AXP",
+    "week52_high": 387.49,
+    "week52_low": 290.97
+  },
+  {
+    "symbol": "SPGI",
+    "week52_high": 522.47,
+    "week52_low": 361.03
+  },
+  {
+    "symbol": "ICE",
+    "week52_high": 176.05,
+    "week52_low": 121.79
+  },
+  {
+    "symbol": "CME",
+    "week52_high": 329.16,
+    "week52_low": 218.31
+  },
+  {
+    "symbol": "PGR",
+    "week52_high": 248.17,
+    "week52_low": 189.2
+  },
+  {
+    "symbol": "ALL",
+    "week52_high": 277.22,
+    "week52_low": 188.08
+  },
+  {
+    "symbol": "MET",
+    "week52_high": 100.93,
+    "week52_low": 67.33
+  },
+  {
+    "symbol": "PFE",
+    "week52_high": 29.21,
+    "week52_low": 23.58
+  },
+  {
+    "symbol": "BMY",
+    "week52_high": 68.64,
+    "week52_low": 42.52
+  },
+  {
+    "symbol": "AMGN",
+    "week52_high": 447.03,
+    "week52_low": 269.77
+  },
+  {
+    "symbol": "GILD",
+    "week52_high": 157.29,
+    "week52_low": 108.46
+  },
+  {
+    "symbol": "VRTX",
+    "week52_high": 560.25,
+    "week52_low": 374.17
+  },
+  {
+    "symbol": "REGN",
+    "week52_high": 859.34,
+    "week52_low": 541
+  },
+  {
+    "symbol": "MRNA",
+    "week52_high": 176.66,
+    "week52_low": 22.28
+  },
+  {
+    "symbol": "BIIB",
+    "week52_high": 225.8,
+    "week52_low": 135.39
+  },
+  {
+    "symbol": "ISRG",
+    "week52_high": 603.88,
+    "week52_low": 328.57
+  },
+  {
+    "symbol": "MDT",
+    "week52_high": 106.33,
+    "week52_low": 73.31
+  },
+  {
+    "symbol": "ABT",
+    "week52_high": 137.49,
+    "week52_low": 81.97
+  },
+  {
+    "symbol": "SYK",
+    "week52_high": 392.55,
+    "week52_low": 267
+  },
+  {
+    "symbol": "BSX",
+    "week52_high": 105.65,
+    "week52_low": 42.2
+  },
+  {
+    "symbol": "TMO",
+    "week52_high": 658.4,
+    "week52_low": 435.27
+  },
+  {
+    "symbol": "DHR",
+    "week52_high": 242.8,
+    "week52_low": 160.93
+  },
+  {
+    "symbol": "CVS",
+    "week52_high": 110.68,
+    "week52_low": 69.51
+  },
+  {
+    "symbol": "CI",
+    "week52_high": 315.47,
+    "week52_low": 239.51
+  },
+  {
+    "symbol": "HUM",
+    "week52_high": 428.88,
+    "week52_low": 163.11
+  },
+  {
+    "symbol": "MCD",
+    "week52_high": 341.75,
+    "week52_low": 247.83
+  },
+  {
+    "symbol": "SBUX",
+    "week52_high": 110.51,
+    "week52_low": 77.99
+  },
+  {
+    "symbol": "CMG",
+    "week52_high": 42.82,
+    "week52_low": 28.04
+  },
+  {
+    "symbol": "NKE",
+    "week52_high": 76.97,
+    "week52_low": 35.73
+  },
+  {
+    "symbol": "LULU",
+    "week52_high": 225.98,
+    "week52_low": 95.35
+  },
+  {
+    "symbol": "TJX",
+    "week52_high": 170,
+    "week52_low": 122.78
+  },
+  {
+    "symbol": "LOW",
+    "week52_high": 293.06,
+    "week52_low": 193.35
+  },
+  {
+    "symbol": "TGT",
+    "week52_high": 170.75,
+    "week52_low": 83.44
+  },
+  {
+    "symbol": "DG",
+    "week52_high": 158.23,
+    "week52_low": 95.11
+  },
+  {
+    "symbol": "BKNG",
+    "week52_high": 225,
+    "week52_low": 150.14
+  },
+  {
+    "symbol": "ABNB",
+    "week52_high": 193.45,
+    "week52_low": 110.81
+  },
+  {
+    "symbol": "MAR",
+    "week52_high": 410.98,
+    "week52_low": 256.76
+  },
+  {
+    "symbol": "UBER",
+    "week52_high": 101.99,
+    "week52_low": 65.41
+  },
+  {
+    "symbol": "DASH",
+    "week52_high": 285.5,
+    "week52_low": 143.3
+  },
+  {
+    "symbol": "F",
+    "week52_high": 17.78,
+    "week52_low": 11.11
+  },
+  {
+    "symbol": "GM",
+    "week52_high": 91.85,
+    "week52_low": 54.33
+  },
+  {
+    "symbol": "DIS",
+    "week52_high": 117.09,
+    "week52_low": 92.19
+  },
+  {
+    "symbol": "CMCSA",
+    "week52_high": 32.86,
+    "week52_low": 21.28
+  },
+  {
+    "symbol": "T",
+    "week52_high": 29.47,
+    "week52_low": 19.89
+  },
+  {
+    "symbol": "VZ",
+    "week52_high": 51.68,
+    "week52_low": 38.39
+  },
+  {
+    "symbol": "TMUS",
+    "week52_high": 242.37,
+    "week52_low": 165.66
+  },
+  {
+    "symbol": "SPOT",
+    "week52_high": 745,
+    "week52_low": 405
+  },
+  {
+    "symbol": "RBLX",
+    "week52_high": 142,
+    "week52_low": 33.88
+  },
+  {
+    "symbol": "EA",
+    "week52_high": 210.2,
+    "week52_low": 164.5
+  },
+  {
+    "symbol": "TTWO",
+    "week52_high": 265.94,
+    "week52_low": 187.63
+  },
+  {
+    "symbol": "PINS",
+    "week52_high": 37.05,
+    "week52_low": 13.84
+  },
+  {
+    "symbol": "BA",
+    "week52_high": 254.35,
+    "week52_low": 176.77
+  },
+  {
+    "symbol": "LMT",
+    "week52_high": 692,
+    "week52_low": 437.25
+  },
+  {
+    "symbol": "RTX",
+    "week52_high": 226.88,
+    "week52_low": 155.64
+  },
+  {
+    "symbol": "NOC",
+    "week52_high": 774,
+    "week52_low": 479.02
+  },
+  {
+    "symbol": "GE",
+    "week52_high": 388.84,
+    "week52_low": 268.91
+  },
+  {
+    "symbol": "CAT",
+    "week52_high": 1073.46,
+    "week52_low": 448.87
+  },
+  {
+    "symbol": "DE",
+    "week52_high": 705.88,
+    "week52_low": 433
+  },
+  {
+    "symbol": "HON",
+    "week52_high": 260.28,
+    "week52_low": 195.87
+  },
+  {
+    "symbol": "UPS",
+    "week52_high": 122.41,
+    "week52_low": 82
+  },
+  {
+    "symbol": "FDX",
+    "week52_high": 345.37,
+    "week52_low": 180.99
+  },
+  {
+    "symbol": "UNP",
+    "week52_high": 315.99,
+    "week52_low": 215.53
+  },
+  {
+    "symbol": "DAL",
+    "week52_high": 95.68,
+    "week52_low": 55.03
+  },
+  {
+    "symbol": "UAL",
+    "week52_high": 138.77,
+    "week52_low": 84.64
+  },
+  {
+    "symbol": "COP",
+    "week52_high": 141.62,
+    "week52_low": 85.57
+  },
+  {
+    "symbol": "SLB",
+    "week52_high": 60.46,
+    "week52_low": 31.64
+  },
+  {
+    "symbol": "EOG",
+    "week52_high": 154.16,
+    "week52_low": 101.59
+  },
+  {
+    "symbol": "OXY",
+    "week52_high": 67.45,
+    "week52_low": 38.8
+  },
+  {
+    "symbol": "NEE",
+    "week52_high": 98.75,
+    "week52_low": 69.37
+  },
+  {
+    "symbol": "DUK",
+    "week52_high": 134.49,
+    "week52_low": 113.9
+  },
+  {
+    "symbol": "SO",
+    "week52_high": 100.84,
+    "week52_low": 83.8
+  },
+  {
+    "symbol": "LIN",
+    "week52_high": 548.2,
+    "week52_low": 387.78
+  },
+  {
+    "symbol": "FCX",
+    "week52_high": 80.24,
+    "week52_low": 35.15
+  },
+  {
+    "symbol": "NEM",
+    "week52_high": 135.29,
+    "week52_low": 76.05
+  },
+  {
+    "symbol": "PLD",
+    "week52_high": 153.35,
+    "week52_low": 111.03
+  },
+  {
+    "symbol": "AMT",
+    "week52_high": 197.41,
+    "week52_low": 160.06
+  },
+  {
+    "symbol": "SPY",
+    "week52_high": 779.37,
+    "week52_low": 629.28
+  },
+  {
+    "symbol": "QQQ",
+    "week52_high": 748.65,
+    "week52_low": 555.6
+  },
+  {
+    "symbol": "IWM",
+    "week52_high": 305.18,
+    "week52_low": 228.9
+  },
+  {
+    "symbol": "DIA",
+    "week52_high": 546.75,
+    "week52_low": 450.44
+  },
+  {
+    "symbol": "XLK",
+    "week52_high": 198.73,
+    "week52_low": 126.68
+  },
+  {
+    "symbol": "XLF",
+    "week52_high": 58.6,
+    "week52_low": 47.67
+  },
+  {
+    "symbol": "XLE",
+    "week52_high": 66.17,
+    "week52_low": 42.35
+  },
+  {
+    "symbol": "GLD",
+    "week52_high": 509.7,
+    "week52_low": 333.81
+  },
+  {
+    "symbol": "TLT",
+    "week52_high": 92.19,
+    "week52_low": 80.46
+  },
+  {
+    "symbol": "VTI",
+    "week52_high": 385.12,
+    "week52_low": 310.4
+  }
+]

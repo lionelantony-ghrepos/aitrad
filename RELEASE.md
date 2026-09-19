@@ -29,6 +29,19 @@ pnpm seed:all
 
 Expect: 150 instruments, published decision tables, 500 news items + embeddings, four demo users (`demo.trader@meridian.test`, `demo.novice@meridian.test`, `demo.admin@meridian.test`, `demo.compliance@meridian.test`), trader book of six positions and three watchlists. Non-zero exit on count mismatch.
 
+After the GBM count gate, `seed:all` applies the **committed** Yahoo-shaped snapshot in `mock_data/market-snapshot/` (quotes, latest daily bars, 52-week ranges, priority 1m bars, original two-sentence news summaries). That overlay is offline — Path A / CI / `seed:all` must **never** hit Yahoo.
+
+Refresh fixtures once (live Yahoo, not a gate), commit, then re-seed offline:
+
+```bash
+pnpm market:freeze
+git add mock_data/market-snapshot
+# commit the JSON + SOURCE.md, then:
+pnpm seed:all
+```
+
+See `mock_data/market-snapshot/SOURCE.md`. Optional live DB apply without rewriting fixtures: `pnpm market:overlay:live` (local only).
+
 ## 3. verify_audit_chain
 
 ```bash
