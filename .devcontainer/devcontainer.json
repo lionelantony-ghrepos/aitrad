@@ -1,0 +1,69 @@
+{
+  "name": "Meridian Path A",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:22-bookworm",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "version": "latest",
+      "moby": true,
+      "installDockerBuildx": true,
+      "dockerDashComposeVersion": "latest"
+    },
+    "ghcr.io/devcontainers/features/sshd:1": {}
+  },
+  "remoteUser": "node",
+  "hostRequirements": {
+    "cpus": 4,
+    "memory": "16gb",
+    "storage": "32gb"
+  },
+  "forwardPorts": [3000, 7130],
+  "portsAttributes": {
+    "3000": {
+      "label": "Next.js",
+      "onAutoForward": "notify",
+      "visibility": "private",
+      "requireLocalPort": true,
+      "protocol": "http"
+    },
+    "7130": {
+      "label": "InsForge",
+      "onAutoForward": "notify",
+      "visibility": "private",
+      "requireLocalPort": true,
+      "protocol": "http"
+    },
+    "5432": {
+      "label": "Postgres (localhost only)",
+      "onAutoForward": "ignore",
+      "visibility": "private"
+    },
+    "5430": {
+      "label": "PostgREST (localhost only)",
+      "onAutoForward": "ignore",
+      "visibility": "private"
+    },
+    "7131": {
+      "label": "InsForge Auth (localhost only)",
+      "onAutoForward": "silent",
+      "visibility": "private"
+    },
+    "7133": {
+      "label": "InsForge Deno (localhost only)",
+      "onAutoForward": "silent",
+      "visibility": "private"
+    }
+  },
+  "otherPortsAttributes": {
+    "onAutoForward": "silent",
+    "visibility": "private"
+  },
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "customizations": {
+    "vscode": {
+      "extensions": ["dbaeumer.vscode-eslint", "esbenp.prettier-vscode"]
+    },
+    "codespaces": {
+      "openFiles": ["docs/codespaces-path-a.md"]
+    }
+  }
+}

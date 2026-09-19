@@ -70,6 +70,7 @@ Add further ADRs from [`_template-adr.md`](_template-adr.md) only for durable ch
 
 - [insforge/README.md](../../insforge/README.md) — ports, gitignored runtime vs committed config, migrate + `pnpm seed:all`
 - [insforge/local.config.json](../../insforge/local.config.json) — secret-free defaults
+- [Codespaces Path A](../codespaces-path-a.md) — GitHub Codespaces smoke (Docker-in-Docker, no laptop Docker); stop the space when done
 - Seed inputs: [`mock_data/`](../../mock_data/) (instruments, fundamentals, news templates, demo users, workspace fixtures, frozen `market-snapshot/`)
 
 ## Generated reference

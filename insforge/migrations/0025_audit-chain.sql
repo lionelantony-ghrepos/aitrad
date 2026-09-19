@@ -96,7 +96,9 @@ RETURNS trigger
 LANGUAGE plpgsql
 AS $$
 BEGIN
-  IF TG_OP = 'DELETE' AND current_setting('meridian.audit_retention', true) = 'on' THEN
+  -- Retention DELETE is apply_audit_retention only (EXECUTE project_admin).
+  -- JWT has no DELETE (0026). InsForge migrations forbid session-config GUC gates.
+  IF TG_OP = 'DELETE' THEN
     RETURN OLD;
   END IF;
   RAISE EXCEPTION 'audit_log is append-only';
@@ -127,7 +129,7 @@ RETURNS TABLE (
 )
 LANGUAGE plpgsql
 STABLE
-SET search_path = pg_catalog, public, pg_temp
+-- InsForge migrations forbid SET search_path; objects are schema-qualified.
 AS $$
 DECLARE
   r public.audit_log;
@@ -198,7 +200,7 @@ CREATE OR REPLACE FUNCTION public.apply_audit_retention(p_days integer)
 RETURNS integer
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = pg_catalog, public, pg_temp
+-- InsForge migrations forbid SET search_path; objects are schema-qualified.
 AS $$
 DECLARE
   n integer;
@@ -206,7 +208,7 @@ BEGIN
   IF p_days IS NULL OR p_days < 1 THEN
     RAISE EXCEPTION 'AUDIT_RETENTION_INVALID';
   END IF;
-  PERFORM set_config('meridian.audit_retention', 'on', true);
+  -- InsForge migrations forbid session-config helpers; JWT has no DELETE (0026).
   DELETE FROM public.audit_log
   WHERE created_at < (NOW() - make_interval(days => p_days));
   GET DIAGNOSTICS n = ROW_COUNT;
