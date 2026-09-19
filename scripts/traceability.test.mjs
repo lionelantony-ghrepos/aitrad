@@ -3,7 +3,13 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
-import { collectTaggedIds, missingP0Tags, parseP0TestIds } from "./traceability.mjs";
+import {
+  collectTaggedIds,
+  missingP0Tags,
+  missingRegressionE2eTags,
+  parseP0TestIds,
+  REQUIRED_REGRESSION_E2E,
+} from "./traceability.mjs";
 import { parseVerifyAuditChainRows } from "./verify-audit-parse.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -22,6 +28,20 @@ describe("traceability @TC-031-01", () => {
     const plan = "| TC-099-01 | missing | P0 | ☐ |\n";
     const tagged = collectTaggedIds("test @TC-001-01 and TC-031-01");
     assert.deepEqual(missingP0Tags(plan, tagged), ["TC-099-01"]);
+  });
+
+  it("requires Path A e2e TCs in apps/web/e2e/regression", () => {
+    assert.ok(REQUIRED_REGRESSION_E2E.includes("TC-003-01"));
+    assert.ok(REQUIRED_REGRESSION_E2E.includes("TC-019-01"));
+    assert.ok(REQUIRED_REGRESSION_E2E.includes("TC-020-01"));
+    assert.ok(REQUIRED_REGRESSION_E2E.includes("TC-023-02"));
+    assert.ok(REQUIRED_REGRESSION_E2E.includes("TC-024-01"));
+    assert.ok(REQUIRED_REGRESSION_E2E.includes("TC-026-02"));
+    const tagged = collectTaggedIds("@TC-004-01 @TC-026-01");
+    const missing = missingRegressionE2eTags(tagged);
+    assert.ok(missing.includes("TC-003-01"));
+    assert.ok(missing.includes("TC-026-02"));
+    assert.ok(!missing.includes("TC-004-01"));
   });
 });
 

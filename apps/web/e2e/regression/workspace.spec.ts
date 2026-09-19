@@ -1,15 +1,61 @@
 import { expect, test } from "@playwright/test";
 import { STUB_AAPL_INSTRUMENT_ID, STUB_MSFT_INSTRUMENT_ID } from "../../lib/auth/stub-store";
+import { LAYOUT_STORAGE_KEY } from "../../lib/layout-storage";
 import { TEST_TICK_BATCH_EVENT } from "../../lib/quotes/transport";
 import { signUpThroughWizard } from "../helpers/onboard";
+import { waitForWorkspaceReady } from "../helpers/palette";
 
-test.describe("P0 watchlist, chart, palette @P0", () => {
+function layoutGrid(raw: string | null): unknown {
+  if (raw === null) {
+    return null;
+  }
+  const parsed = JSON.parse(raw) as { dockview?: { grid?: unknown } };
+  return parsed.dockview?.grid ?? null;
+}
+
+test.describe("P0 watchlist, chart, layout @P0", () => {
   test.beforeEach(async ({ page, request }) => {
     await request.post("/api/e2e/reset");
     await signUpThroughWizard(
       page,
       `p0-wl-${Date.now()}-${Math.random().toString(16).slice(2)}@example.com`,
     );
+  });
+
+  test("resize then reload keeps layout @TC-003-01 @P0", async ({ page }) => {
+    await page.goto("/workspace");
+    await waitForWorkspaceReady(page);
+    await expect(page.getByTestId("workspace")).toBeVisible();
+    await expect(page.getByTestId("panel-chart")).toBeVisible();
+
+    await expect
+      .poll(async () => page.evaluate((key) => localStorage.getItem(key), LAYOUT_STORAGE_KEY))
+      .not.toBeNull();
+
+    const sash = page.locator(".dv-sash.dv-enabled").first();
+    await expect(sash).toBeVisible();
+    const box = await sash.boundingBox();
+    expect(box).not.toBeNull();
+    if (!box) {
+      throw new Error("sash bounding box missing");
+    }
+
+    const before = await page.evaluate((key) => localStorage.getItem(key), LAYOUT_STORAGE_KEY);
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2 + 90, box.y + box.height / 2 + 40, { steps: 8 });
+    await page.mouse.up();
+
+    await expect
+      .poll(async () => page.evaluate((key) => localStorage.getItem(key), LAYOUT_STORAGE_KEY))
+      .not.toBe(before);
+
+    const afterResize = await page.evaluate((key) => localStorage.getItem(key), LAYOUT_STORAGE_KEY);
+    await page.reload();
+    await waitForWorkspaceReady(page);
+    await expect(page.getByTestId("panel-chart")).toBeVisible();
+    const afterReload = await page.evaluate((key) => localStorage.getItem(key), LAYOUT_STORAGE_KEY);
+    expect(layoutGrid(afterReload)).toEqual(layoutGrid(afterResize));
   });
 
   test("create list, add AAPL twice @TC-007-01 @P0", async ({ page }) => {
