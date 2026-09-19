@@ -1,20 +1,15 @@
 import { expect, test } from "@playwright/test";
 import { signUpThroughWizard } from "../helpers/onboard";
-import { dispatchPaletteHotkey, waitForWorkspaceReady } from "../helpers/palette";
+import { runPalette } from "../helpers/palette";
 
 async function askCopilot(page: import("@playwright/test").Page, message: string): Promise<void> {
-  await waitForWorkspaceReady(page);
   if (
     !(await page
       .getByTestId("panel-copilot")
       .isVisible()
       .catch(() => false))
   ) {
-    await dispatchPaletteHotkey(page);
-    await expect(page.getByTestId("command-palette")).toBeVisible();
-    const input = page.getByTestId("palette-input");
-    await input.fill(`AI ${message}`, { force: true });
-    await input.press("Enter");
+    await runPalette(page, `AI ${message}`);
   }
   await expect(page.getByTestId("panel-copilot")).toBeVisible();
   await page.getByTestId("copilot-input").fill(message);
